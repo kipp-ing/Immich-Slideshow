@@ -18,7 +18,7 @@ Dieses Projekt nutzt XcodeBuildMCP für Builds, Tests und Simulator.
 - SwiftUI-Previews zur visuellen Verifikation nutzen, wenn Apple-Xcode-MCP aktiv ist.
 
 ## Arbeitsweise (verbindlich)
-- **TDD**: Test zuerst (rot), dann minimale Implementierung (grün), dann Refactor. Details in `docs/tdd-workflow.md`.
+- **TDD**: Test zuerst (rot), dann minimale Implementierung (grün), dann Refactor. Details in `tdd-workflow.md`.
 - **SDD via Spec Kit**: Kein Feature-Code ohne vorherige Spec + Plan + Tasks. Siehe `.specify/`.
 - Jedes Modul ist isoliert testbar (Protokolle + Dependency Injection, keine versteckten Singletons).
 - Netzwerk hinter einem Protokoll (`ImmichAPI`), damit Tests ohne echten Server laufen (Mock/Stub).
