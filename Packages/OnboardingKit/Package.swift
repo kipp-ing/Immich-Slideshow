@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "OnboardingKit",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v18),
         .macOS(.v14),
@@ -18,7 +19,8 @@ let package = Package(
             name: "OnboardingKit",
             dependencies: [
                 .product(name: "ImmichClient", package: "ImmichClient"),
-            ]
+            ],
+            resources: [.process("Localizable.xcstrings")]
         ),
         .testTarget(
             name: "OnboardingKitTests",
