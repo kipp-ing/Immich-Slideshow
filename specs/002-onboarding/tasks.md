@@ -93,8 +93,8 @@ durchlaufen (gültige URL/Key/Album) → `step == done`, Config gespeichert, Key
 ### Implementation for User Story 2
 
 - [X] T023 [US2] `StartupGate` (kombiniert `ConfigStore` + `KeychainStore`) in `Packages/OnboardingKit/Sources/OnboardingKit/StartupGate.swift`. Test T022 grün.
-- [ ] T024 [US2] App-Routing in `Immich Slideshow/Immich_SlideshowApp.swift` nutzt `StartupGate.initialStep()` beim Start, um Onboarding (ab erstem fehlenden Schritt) vs. Hauptscreen zu wählen.
-- [ ] T025 [US2] Simulator-Verifikation (XcodeBuildMCP): nach abgeschlossenem Onboarding App neu starten → direkt Hauptscreen (kein Schritt); unvollständiger Zustand → Onboarding. (SC-004)
+- [X] T024 [US2] App-Routing in `Immich Slideshow/Immich_SlideshowApp.swift` nutzt `StartupGate.initialStep()` beim Start, um Onboarding (ab erstem fehlenden Schritt) vs. Hauptscreen zu wählen.
+- [X] T025 [US2] Simulator-Verifikation (XcodeBuildMCP): nach abgeschlossenem Onboarding App neu starten → direkt Hauptscreen (kein Schritt); unvollständiger Zustand → Onboarding. (SC-004)
 
 **Checkpoint**: US1 + US2 — Erstsetup einmalig, danach direkter Einstieg.
 
