@@ -1,0 +1,45 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Address of your Immich instance. Only HTTPS is supported." : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Adresse deiner Immich-Instanz. Nur HTTPS wird unterstützt." } } }
+    },
+    "API Key" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "API-Schlüssel" } } }
+    },
+    "Choose album" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Album wählen" } } }
+    },
+    "Connect" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Verbinden" } } }
+    },
+    "Continue" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Weiter" } } }
+    },
+    "Create an album in Immich and try again." : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Lege in Immich ein Album an und versuche es erneut." } } }
+    },
+    "Create one in Immich under Account Settings → API Keys." : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "In Immich unter Kontoeinstellungen → API-Schlüssel erzeugen." } } }
+    },
+    "No albums" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Alben" } } }
+    },
+    "Reset" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Zurücksetzen" } } }
+    },
+    "Server address" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Serveradresse" } } }
+    },
+    "Setup" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Einrichtung" } } }
+    },
+    "Setup complete" : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Einrichtung abgeschlossen" } } }
+    },
+    "The slideshow will follow in a later step." : {
+      "localizations" : { "de" : { "stringUnit" : { "state" : "translated", "value" : "Die Slideshow folgt in einem späteren Schritt." } } }
+    }
+  },
+  "version" : "1.0"
+}

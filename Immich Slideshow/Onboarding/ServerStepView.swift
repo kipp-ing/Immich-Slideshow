@@ -22,9 +22,9 @@ struct ServerStepView: View {
                     .disabled(viewModel.isBusy)
                     .accessibilityIdentifier("onboarding.serverURL")
             } header: {
-                Text("Server-Adresse")
+                Text("Server address")
             } footer: {
-                Text("Adresse deiner Immich-Instanz. Nur HTTPS wird unterstützt.")
+                Text("Address of your Immich instance. Only HTTPS is supported.")
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -39,7 +39,7 @@ struct ServerStepView: View {
                     Task { await viewModel.submitServerURL() }
                 } label: {
                     HStack {
-                        Text("Weiter")
+                        Text("Continue")
                         if viewModel.isBusy {
                             Spacer()
                             ProgressView()
