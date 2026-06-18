@@ -20,6 +20,7 @@ struct APIKeyStepView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .disabled(viewModel.isBusy)
+                    .accessibilityIdentifier("onboarding.apiKey")
             } header: {
                 Text("API-Key")
             } footer: {
@@ -46,6 +47,7 @@ struct APIKeyStepView: View {
                     }
                 }
                 .disabled(viewModel.isBusy || viewModel.apiKeyInput.isEmpty)
+                .accessibilityIdentifier("onboarding.apiKey.connect")
             }
         }
     }

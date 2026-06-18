@@ -22,11 +22,19 @@ Verified the **real `ImmichClient` decode path** (not just curl) end-to-end via 
 `serverVersion()`→`"2.7.5"`, `albums()`→446 decoded, `assets(albumID:)`→59 (`type: IMAGE`),
 `preview(assetID:)`→484 KB JPEG. Every assumed route + decode shape matches the running API.
 
-⚠️ **Remaining gap — interactive UI walkthrough.** The full "type URL → key → pick album → relaunch →
-main screen" path is still undriven: this session's XcodeBuildMCP exposes only **read-side** UI
-automation (`snapshot_ui`/`screenshot`), not tap/type. Step-1 render reconfirmed via screenshot
-(light/simple). To drive the full flow next time, enable write-side UI automation in XcodeBuildMCP,
-or seed config+keychain and verify StartupGate routes to the main screen.
+✅ **UI walkthrough gap CLOSED (2026-06-18) — the Xcode way: hermetic XCUITest.** The full
+"type URL → key → pick album → main screen" path now runs deterministically as a committed XCUITest
+(`Immich SlideshowUITests/Immich_SlideshowUITests.swift`:
+`testOnboardingHappyPathReachesMainScreen` + `testFreshLaunchShowsServerStep`). It launches with
+`app.launchArguments = ["--uitest"]`, which trips a **DEBUG-only seam** in `Immich_SlideshowApp.swift`
+(`UITestSupport`) injecting a stub `ImmichAPI` + in-memory config/keychain — no network, no real
+Keychain, CI-safe. Views carry accessibility identifiers (`onboarding.serverURL`,
+`onboarding.server.continue`, `onboarding.apiKey`, `onboarding.apiKey.connect`, `onboarding.album.<id>`,
+`main.completed`). Full `test_sim` suite green: **13/13**. Run just the flow with
+`-only-testing:Immich SlideshowUITests/Immich_SlideshowUITests/testOnboardingHappyPathReachesMainScreen`
+to skip the slow launch-perf suite. `axe`/MCP write-side automation deliberately **not** used — XCUITest
+is the first-party, repeatable path. (The live-server contract check stays curl/temp-test ad-hoc; the
+in-app flow is now fully covered offline.)
 
 ## What's done on 002 (all committed on `002-onboarding`)
 - **Spec → Plan → Tasks** via Spec Kit, all in `specs/002-onboarding/` (spec.md, plan.md, research.md,
