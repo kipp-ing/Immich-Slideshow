@@ -4,10 +4,18 @@ _Last updated: 2026-06-18. Branch: `002-onboarding` (branched off the 001 work; 
 merged to `main`** — 002 builds on top of it)._
 
 ## TL;DR
-Feature **001 ImmichClient is complete + verified** (14/14 host tests; app + library compile/link on
-the iPad sim via XcodeBuildMCP). Feature **002 Onboarding is fully spec'd/planned/tasked**, and
-**T001–T010 are done**: the new `Packages/OnboardingKit` package exists with shared types + stores +
-fakes, **6 host tests green**. **Next up: US1 (T011–T021)** — the MVP onboarding flow.
+Feature **001 ImmichClient is complete + verified**. Feature **002 Onboarding: Setup + Foundational +
+US1 (MVP) are done** — **T001–T021 complete**. The three-step flow (Server → API-Key → Album) builds
+and runs on the iPad sim; the real keychain round-trip is green app-hosted. **Next up: US2 (T022–T025)**
+— `StartupGate` to skip onboarding on relaunch when the saved state is complete.
+
+Test counts: ImmichClient **17** host + OnboardingKit **14** host; app-hosted sim suite **11/11**
+(incl. `OnboardingKeychainTests` real keychain round-trip). Verify with `test_sim` (scheme
+"Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — already the session default).
+
+⚠️ **Still-open real-world flag (T015)**: `GET /api/server/version` and its `{major,minor,patch}` decode
+are still **assumed** — all US1 tests are mocked, so nothing failed, but verify against the live Immich
+(`/api/openapi.json`) before trusting step-1 reachability in the field (Constitution IV).
 
 ## What's done on 002 (all committed on `002-onboarding`)
 - **Spec → Plan → Tasks** via Spec Kit, all in `specs/002-onboarding/` (spec.md, plan.md, research.md,
@@ -20,20 +28,35 @@ fakes, **6 host tests green**. **Next up: US1 (T011–T021)** — the MVP onboar
   - Test fakes `InMemoryConfigStore` / `InMemoryKeychainStore` (forced-save-error option)
   - `ConfigStoreTests` — 6 host tests green (TDD: T009 red before T010)
 
-## Next: User Story 1 (MVP) — T011–T021 in `specs/002-onboarding/tasks.md`
-Recommended split (it's pre-marked in tasks.md):
-- **Codex batch → T011–T016** (host-testable, MockTransport/fakes):
-  - T011/T015: add `serverVersion()` to `ImmichAPI` + `ImmichClient` (step-1 reachability)
-  - T012–T014/T016: `OnboardingViewModel` (`@Observable`) — server/key/album flow, `ImmichError`→message
-    mapping, single album-fetch, `isBusy`
-- **Claude inline → T017–T021** (need the simulator):
-  - T017 keychain round-trip test (red) → T018 real `KeychainAPIKeyStore` (Security)
-  - T019 SwiftUI step views, T020 app routing, T021 link `OnboardingKit` into the app target (pbxproj) +
-    `test_sim` verification
+## US1 done (T011–T021) — what landed
+- **T011–T016** (Codex batch, committed `385c243`): `serverVersion()` on `ImmichAPI`/`ImmichClient`
+  (`GET /api/server/version` → `"major.minor.patch"`); `OnboardingViewModel` (`@Observable`) with
+  `submitServerURL()`/`submitAPIKey()`/`selectAlbum(id:)`, `ImmichError`→message mapping, single
+  `albums()` validation, `isBusy` guard. `reset()` deliberately **not** added yet (US3/T027).
+- **T017–T021** (Claude inline, committed `7901e1c`): real `KeychainAPIKeyStore` (Security,
+  `kSecClassGenericPassword`, fixed service/account) + app-hosted round-trip test; SwiftUI step views
+  under `Immich Slideshow/Onboarding/` (`OnboardingFlowView` + Server/APIKey/Album, SecureField for the
+  key); app routing in `Immich_SlideshowApp.swift` (complete state → `ContentView`, else flow);
+  `OnboardingKit` linked into app + test targets via `project.pbxproj`.
 
-⚠️ **Open real-world flag (T015)**: the reachability route `GET /api/server/version` is **assumed** —
-verify against the live Immich (`/api/openapi.json`) before relying on it (Constitution IV). The Codex
-batch is fully mockable, so it does not block on this.
+## Next: User Story 2 — T022–T025 in `specs/002-onboarding/tasks.md`
+- **T022 [P]** (Codex-suitable, host): `StartupGateTests` — every row of the decision table
+  (complete→`done`; key missing→`apiKey`; album-ID missing→`album`/`apiKey`; URL missing→`server`).
+- **T023**: `StartupGate(config:keychain:)` → `initialStep()` in
+  `Packages/OnboardingKit/Sources/OnboardingKit/StartupGate.swift`.
+- **T024** (Claude inline): replace the temp completeness check in `Immich_SlideshowApp.swift` with
+  `StartupGate.initialStep()` so relaunch resumes at the first missing step.
+- **T025** (Claude inline): sim verification via XcodeBuildMCP — complete state relaunch → straight to
+  main screen; incomplete → onboarding.
+
+> pbxproj pattern for new local packages (used for OnboardingKit): add to 6 spots — PBXBuildFile (one
+> per target frameworks), each target's PBXFrameworksBuildPhase `files`, each target's
+> `packageProductDependencies`, project `packageReferences`, plus the `XCLocalSwiftPackageReference`
+> and `XCSwiftPackageProductDependency` sections. Synthetic IDs `3DAA0100…0008–000C` are OnboardingKit's.
+
+⚠️ **Open real-world flag (T015)**: `GET /api/server/version` route + `{major,minor,patch}` decode are
+**assumed** (all US1 tests mocked). Verify against the live Immich (`/api/openapi.json`) before relying
+on step-1 reachability in the field (Constitution IV).
 
 ## Environment / gotchas (hard-won this session — keep honoring)
 - **XcodeBuildMCP**: `.mcp.json` must invoke `npx -y xcodebuildmcp@latest **mcp**` (the `mcp`
