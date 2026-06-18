@@ -79,6 +79,15 @@ for shared/concurrent state and timing, security-critical/cross-cutting code
 simulator to verify. Don't create Xcode files (schemes, etc.) while a Codex job runs
 in the same tree — it may "tidy" untracked out-of-scope files.
 
+Operational details:
+- Codex needs `--disable-sandbox` + `CLANG_MODULE_CACHE_PATH=/private/tmp/...` for
+  SwiftPM (the Home module caches aren't writable in its sandbox). That's a Codex-env
+  workaround only — **Claude re-verifies unsandboxed** as the real gate.
+- Codex does not auto-commit. Claude verifies (host `swift test` + scope review),
+  fixes `.gitignore` for any new package, then commits.
+- Poll a running job with `codex-agent capture <id>` grepping for `Worked for [0-9]`
+  (don't match `error:` — that fires on the expected red test in a TDD slice).
+
 ## Constraints to design *with*, not against
 (from [CLAUDE.md](../CLAUDE.md) — repeated here because they shape architecture)
 

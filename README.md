@@ -47,5 +47,4 @@ spec-driven, test-first workflow.
 
 - [docs/testing.md](docs/testing.md) — how the project is tested and how to run each layer.
 - [docs/engineering-notes.md](docs/engineering-notes.md) — learnings, gotchas, and conventions.
-- [tdd-workflow.md](tdd-workflow.md) — the red → green → refactor loop (German).
 - [CLAUDE.md](CLAUDE.md) — architecture, modules, constraints, and the working agreement.

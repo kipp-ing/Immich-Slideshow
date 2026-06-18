@@ -1,150 +1,35 @@
-# Handover — Onboarding (Feature 002)
+# Handover — Project State
 
-_Last updated: 2026-06-18. Branch: `002-onboarding` (branched off the 001 work; **001 not yet
-merged to `main`** — 002 builds on top of it)._
+_Last updated: 2026-06-18. Branch: `002-onboarding` (001 is **not yet merged to `main`**;
+002 builds on top of it)._
 
-## TL;DR
-Feature **001 ImmichClient is complete + verified**. Feature **002 Onboarding is COMPLETE** —
-**all T001–T032 done** (Setup, Foundational, US1 MVP, US2 relaunch-skip, US3 reset, Polish). The
-three-step flow (Server → API-Key → Album) builds and runs on the iPad sim; real keychain round-trip +
-reset (real key removal) green app-hosted; `StartupGate` routes relaunch; security review clean (key
-keychain-only, zero logging). **Next up: a new feature** — likely SlideshowView or PowerManager
-(see CLAUDE.md Module list). Start with `/speckit-specify` for the next feature.
+This file is just the **live state + next steps**. Durable knowledge lives in the docs:
 
-Test counts: ImmichClient **17** host + OnboardingKit **19** host (incl. StartupGate + reset);
-app-hosted sim suite green (incl. `OnboardingKeychainTests` + `OnboardingResetTests` real-keychain).
-Verify with `test_sim` (scheme "Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — the
-session default). Fresh-install onboarding UI confirmed via screenshot (server step, light/simple).
+- [docs/testing.md](docs/testing.md) — how to run each test layer, the `--uitest` seam, the live-server check.
+- [docs/engineering-notes.md](docs/engineering-notes.md) — learnings, gotchas, conventions, Codex workflow.
+- [CLAUDE.md](CLAUDE.md) — architecture, modules, constraints, working agreement.
 
-✅ **T015 real-world flag CLOSED (2026-06-18) against live Immich `2.7.5` (`bilder.kippings.de`).**
-Verified the **real `ImmichClient` decode path** (not just curl) end-to-end via a temporary,
-**uncommitted** host test (creds passed via env, file deleted after; tree clean):
-`serverVersion()`→`"2.7.5"`, `albums()`→446 decoded, `assets(albumID:)`→59 (`type: IMAGE`),
-`preview(assetID:)`→484 KB JPEG. Every assumed route + decode shape matches the running API.
+## Status
 
-✅ **UI walkthrough gap CLOSED (2026-06-18) — the Xcode way: hermetic XCUITest.** The full
-"type URL → key → pick album → main screen" path now runs deterministically as a committed XCUITest
-(`Immich SlideshowUITests/Immich_SlideshowUITests.swift`:
-`testOnboardingHappyPathReachesMainScreen` + `testFreshLaunchShowsServerStep`). It launches with
-`app.launchArguments = ["--uitest"]`, which trips a **DEBUG-only seam** in `Immich_SlideshowApp.swift`
-(`UITestSupport`) injecting a stub `ImmichAPI` + in-memory config/keychain — no network, no real
-Keychain, CI-safe. Views carry accessibility identifiers (`onboarding.serverURL`,
-`onboarding.server.continue`, `onboarding.apiKey`, `onboarding.apiKey.connect`, `onboarding.album.<id>`,
-`main.completed`). Full `test_sim` suite green: **13/13**. Run just the flow with
-`-only-testing:Immich SlideshowUITests/Immich_SlideshowUITests/testOnboardingHappyPathReachesMainScreen`
-to skip the slow launch-perf suite. `axe`/MCP write-side automation deliberately **not** used — XCUITest
-is the first-party, repeatable path. (The live-server contract check stays curl/temp-test ad-hoc; the
-in-app flow is now fully covered offline.)
+- **Feature 001 — ImmichClient:** complete + verified, including the live **Immich 2.7.5**
+  contract check (real decode path: version / albums / assets / preview).
+- **Feature 002 — Onboarding:** **COMPLETE** (T001–T032). Three-step flow Server → API-Key → Album;
+  `StartupGate` routes relaunch; reset clears config + the real Keychain; security review clean
+  (key Keychain-only, zero logging).
+- **Tests green:** ImmichClient 17 host + OnboardingKit 19 host; app-hosted simulator suite plus the
+  hermetic onboarding XCUITest — `test_sim` **13/13**. See [docs/testing.md](docs/testing.md) to run them.
 
-## What's done on 002 (all committed on `002-onboarding`)
-- **Spec → Plan → Tasks** via Spec Kit, all in `specs/002-onboarding/` (spec.md, plan.md, research.md,
-  data-model.md, contracts/, quickstart.md, tasks.md). `/speckit-analyze` ran clean (0 critical);
-  fixes D1 (single album-fetch) + C1 (keychain test-before-impl) applied.
-- **T001–T010** — `Packages/OnboardingKit/` (depends on `ImmichClient`):
-  - `AppConfiguration`, `OnboardingStep`
-  - `ConfigStore` protocol + `UserDefaultsConfigStore` (https+host validation, injectable defaults)
-  - `KeychainStore` **protocol only** (real impl is T018)
-  - Test fakes `InMemoryConfigStore` / `InMemoryKeychainStore` (forced-save-error option)
-  - `ConfigStoreTests` — 6 host tests green (TDD: T009 red before T010)
+## Design notes worth keeping
 
-## US1 done (T011–T021) — what landed
-- **T011–T016** (Codex batch, committed `385c243`): `serverVersion()` on `ImmichAPI`/`ImmichClient`
-  (`GET /api/server/version` → `"major.minor.patch"`); `OnboardingViewModel` (`@Observable`) with
-  `submitServerURL()`/`submitAPIKey()`/`selectAlbum(id:)`, `ImmichError`→message mapping, single
-  `albums()` validation, `isBusy` guard. `reset()` deliberately **not** added yet (US3/T027).
-- **T017–T021** (Claude inline, committed `7901e1c`): real `KeychainAPIKeyStore` (Security,
-  `kSecClassGenericPassword`, fixed service/account) + app-hosted round-trip test; SwiftUI step views
-  under `Immich Slideshow/Onboarding/` (`OnboardingFlowView` + Server/APIKey/Album, SecureField for the
-  key); app routing in `Immich_SlideshowApp.swift` (complete state → `ContentView`, else flow);
-  `OnboardingKit` linked into app + test targets via `project.pbxproj`.
+- **`StartupGate.initialStep()`** → `.done` (config + key) / `.apiKey` (config, no key) / `.server` (else).
+  The spec's "album-ID missing → album" row is **unreachable**: `ConfigStore.load()` is all-or-nothing and
+  the view model only persists at `selectAlbum`, so partial state never exists — it folds to `.server`
+  per FR-011. Mid-flow resume at `album` would require persisting the URL after step 1 (a contract change,
+  out of scope).
 
-## US2 done (T022–T025) — what landed
-- **T022–T023** (Codex, committed `71bf65c`): `StartupGate(config:keychain:).initialStep()` →
-  `.done` (complete config + key) / `.apiKey` (complete config, no key) / `.server` (else). 4 host tests.
-  **Design note:** the spec's "album-ID missing → album" row is unreachable — `ConfigStore.load()` is
-  all-or-nothing and the VM only persists at `selectAlbum`, so partial state never exists. It folds to
-  `.server` per FR-011. (If product later wants mid-flow resume at `album`, that needs persisting the
-  URL after step 1 — a contract change, not currently in scope.)
-- **T024–T025** (Claude inline, committed `16c8e14`): `Immich_SlideshowApp.swift` derives the initial
-  step from `StartupGate` instead of the temp check. Sim: 11/11 green, fresh-install server step renders.
-  ⚠️ The full "complete config → relaunch → main screen" path can't be driven end-to-end in the sim
-  without a live Immich (onboarding submits hit a real server); covered by the 4 StartupGate host tests.
+## Next up
 
-## Next: User Story 3 — T026–T029, then Polish T030–T032 in `specs/002-onboarding/tasks.md`
-- **T026 [P]** (Codex-suitable, host): test `OnboardingViewModel.reset()` → `ConfigStore.clear()` +
-  `KeychainStore.delete()`, clears inputs, `step = .server`. In `OnboardingViewModelTests.swift`.
-- **T027**: implement `reset()` in `OnboardingViewModel.swift` (was deliberately omitted in US1).
-- **T028** (Claude inline): a reset entry point in `ContentView.swift` (placeholder main screen) /
-  a simple settings action that calls `reset()` and returns to onboarding. Note ContentView is still
-  the stock "Hello, world!" placeholder — wire the reset action there.
-- **T029** (Claude inline): sim verification — trigger reset → onboarding restarts at step 1; the
-  previously saved key is gone from the real `KeychainAPIKeyStore`.
-
-> pbxproj pattern for new local packages (used for OnboardingKit): add to 6 spots — PBXBuildFile (one
-> per target frameworks), each target's PBXFrameworksBuildPhase `files`, each target's
-> `packageProductDependencies`, project `packageReferences`, plus the `XCLocalSwiftPackageReference`
-> and `XCSwiftPackageProductDependency` sections. Synthetic IDs `3DAA0100…0008–000C` are OnboardingKit's.
-
-✅ **T015 real-world flag CLOSED (2026-06-18)** — verified against live Immich `2.7.5`
-(`bilder.kippings.de`) through the real `ImmichClient` decoders. See the TL;DR for the chain + counts.
-
-## Hiccups this session (avoid re-tripping)
-- **Cross-module re-export needs an explicit import.** `OnboardingViewModel.albums` is `[Album]` where
-  `Album` lives in `ImmichClient`. A SwiftUI view that only `import OnboardingKit` and touches
-  `album.id` / `album.name` fails to compile ("property not available due to missing import of defining
-  module 'ImmichClient'"). Fix: `import ImmichClient` in any view that uses `Album` members
-  (`AlbumStepView.swift` does). Swift does **not** auto-re-export the transitive module's members.
-- **`cd` in a Bash call drifts the cwd for later calls.** A `cd Packages/OnboardingKit && swift test`
-  left the shell there; the next `git add <repo-relative path>` failed with "pathspec did not match".
-  Use `(cd … && …)` subshells, or absolute paths, or `cd /Users/jan/dev/repos/Immich-Slideshow &&` up
-  front. The Bash tool persists working dir between calls.
-- **Pre-link SourceKit noise.** "No such module 'OnboardingKit'/'ImmichClient'" diagnostics fire on the
-  new view/test files until the pbxproj linkage (T021) lands and a sim build runs. They're transient —
-  the `test_sim`/`build_sim` build is the real signal, not the editor diagnostics.
-- **`test_sim` is slow (~2–7 min).** It drags in the UITest launch suite (perf + multiple launches).
-  Expect minutes; the structured result lists every case. For pure logic, the host `swift test` (sub-second)
-  is the faster inner loop; reserve `test_sim` for the keychain/UI/linking gate.
-
-## Environment / gotchas (hard-won this session — keep honoring)
-- **XcodeBuildMCP**: `.mcp.json` must invoke `npx -y xcodebuildmcp@latest **mcp**` (the `mcp`
-  subcommand). Without it the server prints usage and the client gets `-32000`. Enabled in
-  `.claude/settings.local.json`. After a fresh start, run `/mcp` to confirm it's connected.
-- **`preferXcodebuild: true`** for `build_sim`/`test_sim` — the incremental builder (xcodemake) chokes
-  on project changes; set it via `session_set_defaults`. Default sim: **iPad Pro 11" (M5)**,
-  id `9B6E6F8A-D3A6-4FBC-942B-E51E120CAA35`.
-- **SPM package *test* targets can't run on the simulator via the app `.xcodeproj`** (only library
-  products surface as schemes). So: package logic → host `swift test`; real-target/simulator coverage →
-  the **app-hosted** test bundle `Immich SlideshowTests` (it links the packages; see 001). This is why
-  T017's keychain test lives in the app test target. (Also saved in project memory.)
-- **`.gitignore`** ignores `Packages/*`; each local package needs an explicit allow line. Already added:
-  `!Packages/ImmichClient/`, `!Packages/OnboardingKit/`.
-- **Don't create Xcode files (schemes, etc.) while a Codex job runs in the same tree** — Codex "tidies"
-  untracked out-of-scope files and deleted a scheme once. Sequence such edits, or keep the tree clean.
-
-## Workflow: Claude orchestrates, Codex implements
-- Brief via `.claude/scripts/codex-brief.sh "<task>" <files...>` (set `VERIFY_PACKAGE=Packages/OnboardingKit`
-  for 002 logic), then `codex-agent start "$(...)" -s workspace-write -r medium`. Omit `--map` (no
-  `docs/CODEBASE_MAP.md`).
-- **Codex needs `--disable-sandbox` + `CLANG_MODULE_CACHE_PATH=/private/tmp/...`** for SwiftPM (non-writable
-  Home caches). Env artifact only — **Claude re-verifies unsandboxed** as the real gate.
-- **Codex does not auto-commit.** Claude verifies (host `swift test` + reviews diff for scope), fixes
-  `.gitignore` if a new package, marks tasks `[X]`, then commits with `Co-authored-by: Codex`.
-- Spell out the **micro-order** (red→green) in briefs for TDD slices; state explicit scope ("protocol
-  only, no real impl") to prevent over-reach.
-- Poll a running job for completion with `codex-agent capture <id>` grepping for `Worked for [0-9]`
-  (don't match `error:` — that fires on the expected red test).
-
-## Verification commands (host fallback)
-```bash
-# OnboardingKit host tests:
-cd "Packages/OnboardingKit" && swift build && swift test     # 6 green
-# ImmichClient host tests:
-cd "Packages/ImmichClient" && swift build && swift test       # 14 green
-```
-Simulator/app gate goes through XcodeBuildMCP (`build_sim`/`test_sim`, scheme "Immich Slideshow",
-`preferXcodebuild: true`).
-
-## Constraints honored (keep honoring)
-- No secrets in code/UserDefaults/logs; API key only via `KeychainStore` (Keychain), sent as `x-api-key`.
-- No TLS validation disabled; HTTPS only (URL validation rejects non-https).
-- TDD first (Constitution I); modules behind injected protocols; no singletons.
+A new feature — likely **SlideshowView** or **PowerManager** (see the module list in
+[CLAUDE.md](CLAUDE.md)). Start with `/speckit-specify`. For any new SwiftUI flow, reuse the hermetic
+XCUITest seam (`UITestSupport`; see [docs/testing.md](docs/testing.md)) so the UI is testable offline
+from day one.
