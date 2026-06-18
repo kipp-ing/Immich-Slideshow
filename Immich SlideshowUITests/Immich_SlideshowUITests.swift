@@ -35,9 +35,17 @@ final class Immich_SlideshowUITests: XCTestCase {
 
     @MainActor
     func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+        // Measures launch time. Each iteration launches a fresh app, stops the
+        // measurement once it is up, and terminates it before the next pass —
+        // this avoids the flaky "unexpected number of metrics" the stock
+        // template hits when iterations overlap on the simulator.
+        let options = XCTMeasureOptions()
+        options.invocationOptions = [.manuallyStop]
+        measure(metrics: [XCTApplicationLaunchMetric()], options: options) {
+            let app = XCUIApplication()
+            app.launch()
+            stopMeasuring()
+            app.terminate()
         }
     }
 }

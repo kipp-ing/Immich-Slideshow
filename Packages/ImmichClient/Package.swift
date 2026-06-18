@@ -10,12 +10,17 @@ let package = Package(
     ],
     products: [
         .library(name: "ImmichClient", targets: ["ImmichClient"]),
+        .library(name: "ImmichClientTestSupport", targets: ["ImmichClientTestSupport"]),
     ],
     targets: [
         .target(name: "ImmichClient"),
+        .target(
+            name: "ImmichClientTestSupport",
+            dependencies: ["ImmichClient"]
+        ),
         .testTarget(
             name: "ImmichClientTests",
-            dependencies: ["ImmichClient"]
+            dependencies: ["ImmichClient", "ImmichClientTestSupport"]
         ),
     ]
 )

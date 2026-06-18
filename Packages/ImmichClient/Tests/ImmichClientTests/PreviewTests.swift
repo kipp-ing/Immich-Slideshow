@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import ImmichClient
+import ImmichClientTestSupport
 
 @Test func previewSendsGetRequestWithPreviewSizeQueryAndReturnsRawData() async throws {
     let baseURL = try #require(URL(string: "https://photos.example.test"))
