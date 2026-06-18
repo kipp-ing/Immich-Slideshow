@@ -124,9 +124,9 @@ durchlaufen (gültige URL/Key/Album) → `step == done`, Config gespeichert, Key
 
 **Purpose**: Endabsicherung, quickstart-Validierung, Sicherheitsreview.
 
-- [ ] T030 [P] `quickstart.md`-Validierung durchspielen; Akzeptanz-Mapping SC-001…SC-006 bestätigen.
-- [ ] T031 [P] Sicherheitsreview: API-Key erscheint nirgends in UserDefaults/Logs/committeten Dateien; `apiKeyInput` wird nie persistiert (Konstitution III). SecureField im UI.
-- [ ] T032 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests + Onboarding-Flow grün; Host-Suite (`OnboardingKit` + `ImmichClient`) grün.
+- [X] T030 [P] `quickstart.md`-Validierung durchspielen; Akzeptanz-Mapping SC-001…SC-006 bestätigen.
+- [X] T031 [P] Sicherheitsreview: API-Key erscheint nirgends in UserDefaults/Logs/committeten Dateien; `apiKeyInput` wird nie persistiert (Konstitution III). SecureField im UI.
+- [X] T032 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests + Onboarding-Flow grün; Host-Suite (`OnboardingKit` + `ImmichClient`) grün.
 
 ---
 
