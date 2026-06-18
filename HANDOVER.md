@@ -5,13 +5,15 @@ merged to `main`** — 002 builds on top of it)._
 
 ## TL;DR
 Feature **001 ImmichClient is complete + verified**. Feature **002 Onboarding: Setup + Foundational +
-US1 (MVP) are done** — **T001–T021 complete**. The three-step flow (Server → API-Key → Album) builds
-and runs on the iPad sim; the real keychain round-trip is green app-hosted. **Next up: US2 (T022–T025)**
-— `StartupGate` to skip onboarding on relaunch when the saved state is complete.
+US1 (MVP) + US2 are done** — **T001–T025 complete**. The three-step flow (Server → API-Key → Album)
+builds and runs on the iPad sim; the real keychain round-trip is green app-hosted; `StartupGate` routes
+relaunch (complete state → main screen, else first missing step). **Next up: US3 (T026–T029)** — `reset()`
+on the ViewModel + a reset entry point, then **Polish (T030–T032)**.
 
-Test counts: ImmichClient **17** host + OnboardingKit **14** host; app-hosted sim suite **11/11**
-(incl. `OnboardingKeychainTests` real keychain round-trip). Verify with `test_sim` (scheme
-"Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — already the session default).
+Test counts: ImmichClient **17** host + OnboardingKit **18** host (incl. 4 StartupGate); app-hosted sim
+suite **11/11** (incl. `OnboardingKeychainTests` real keychain round-trip). Verify with `test_sim`
+(scheme "Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — already the session default).
+Fresh-install onboarding UI confirmed via screenshot (server step renders, light/simple).
 
 ⚠️ **Still-open real-world flag (T015)**: `GET /api/server/version` and its `{major,minor,patch}` decode
 are still **assumed** — all US1 tests are mocked, so nothing failed, but verify against the live Immich
@@ -39,15 +41,27 @@ are still **assumed** — all US1 tests are mocked, so nothing failed, but verif
   key); app routing in `Immich_SlideshowApp.swift` (complete state → `ContentView`, else flow);
   `OnboardingKit` linked into app + test targets via `project.pbxproj`.
 
-## Next: User Story 2 — T022–T025 in `specs/002-onboarding/tasks.md`
-- **T022 [P]** (Codex-suitable, host): `StartupGateTests` — every row of the decision table
-  (complete→`done`; key missing→`apiKey`; album-ID missing→`album`/`apiKey`; URL missing→`server`).
-- **T023**: `StartupGate(config:keychain:)` → `initialStep()` in
-  `Packages/OnboardingKit/Sources/OnboardingKit/StartupGate.swift`.
-- **T024** (Claude inline): replace the temp completeness check in `Immich_SlideshowApp.swift` with
-  `StartupGate.initialStep()` so relaunch resumes at the first missing step.
-- **T025** (Claude inline): sim verification via XcodeBuildMCP — complete state relaunch → straight to
-  main screen; incomplete → onboarding.
+## US2 done (T022–T025) — what landed
+- **T022–T023** (Codex, committed `71bf65c`): `StartupGate(config:keychain:).initialStep()` →
+  `.done` (complete config + key) / `.apiKey` (complete config, no key) / `.server` (else). 4 host tests.
+  **Design note:** the spec's "album-ID missing → album" row is unreachable — `ConfigStore.load()` is
+  all-or-nothing and the VM only persists at `selectAlbum`, so partial state never exists. It folds to
+  `.server` per FR-011. (If product later wants mid-flow resume at `album`, that needs persisting the
+  URL after step 1 — a contract change, not currently in scope.)
+- **T024–T025** (Claude inline, committed `16c8e14`): `Immich_SlideshowApp.swift` derives the initial
+  step from `StartupGate` instead of the temp check. Sim: 11/11 green, fresh-install server step renders.
+  ⚠️ The full "complete config → relaunch → main screen" path can't be driven end-to-end in the sim
+  without a live Immich (onboarding submits hit a real server); covered by the 4 StartupGate host tests.
+
+## Next: User Story 3 — T026–T029, then Polish T030–T032 in `specs/002-onboarding/tasks.md`
+- **T026 [P]** (Codex-suitable, host): test `OnboardingViewModel.reset()` → `ConfigStore.clear()` +
+  `KeychainStore.delete()`, clears inputs, `step = .server`. In `OnboardingViewModelTests.swift`.
+- **T027**: implement `reset()` in `OnboardingViewModel.swift` (was deliberately omitted in US1).
+- **T028** (Claude inline): a reset entry point in `ContentView.swift` (placeholder main screen) /
+  a simple settings action that calls `reset()` and returns to onboarding. Note ContentView is still
+  the stock "Hello, world!" placeholder — wire the reset action there.
+- **T029** (Claude inline): sim verification — trigger reset → onboarding restarts at step 1; the
+  previously saved key is gone from the real `KeychainAPIKeyStore`.
 
 > pbxproj pattern for new local packages (used for OnboardingKit): add to 6 spots — PBXBuildFile (one
 > per target frameworks), each target's PBXFrameworksBuildPhase `files`, each target's
