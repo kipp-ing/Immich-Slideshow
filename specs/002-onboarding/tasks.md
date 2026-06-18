@@ -108,11 +108,11 @@ durchlaufen (gültige URL/Key/Album) → `step == done`, Config gespeichert, Key
 
 ### Tests for User Story 3 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T026 [P] [US3] Test: `OnboardingViewModel.reset()` ruft `ConfigStore.clear()` + `KeychainStore.delete()`, leert Eingaben und setzt `step = server`. In `Packages/OnboardingKit/Tests/OnboardingKitTests/OnboardingViewModelTests.swift`. (FR-012, SC-006)
+- [X] T026 [P] [US3] Test: `OnboardingViewModel.reset()` ruft `ConfigStore.clear()` + `KeychainStore.delete()`, leert Eingaben und setzt `step = server`. In `Packages/OnboardingKit/Tests/OnboardingKitTests/OnboardingViewModelTests.swift`. (FR-012, SC-006)
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] `reset()` in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingViewModel.swift` implementieren. Test T026 grün.
+- [X] T027 [US3] `reset()` in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingViewModel.swift` implementieren. Test T026 grün.
 - [ ] T028 [US3] Reset-Einstieg im Hauptscreen-Platzhalter (`Immich Slideshow/ContentView.swift`) bzw. einer schlichten Settings-Aktion, die `reset()` auslöst und zurück ins Onboarding führt.
 - [ ] T029 [US3] Simulator-Verifikation (XcodeBuildMCP): Reset auslösen → Onboarding startet bei Schritt 1, zuvor gespeicherter Key ist via realem `KeychainAPIKeyStore` entfernt. (SC-006)
 

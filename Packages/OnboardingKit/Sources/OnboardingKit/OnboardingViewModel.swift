@@ -99,6 +99,17 @@ import Observation
         step = .done
     }
 
+    public func reset() {
+        config.clear()
+        keychain.delete()
+        step = .server
+        serverURLInput = ""
+        apiKeyInput = ""
+        albums = []
+        selectedAlbumID = nil
+        errorMessage = nil
+    }
+
     private func normalizedURL() -> URL? {
         let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
