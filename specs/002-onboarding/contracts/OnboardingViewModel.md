@@ -27,8 +27,7 @@ public final class OnboardingViewModel {
 
     // Zustand: step, serverURLInput, apiKeyInput, albums, selectedAlbumID, isBusy, errorMessage
     public func submitServerURL() async   // Schritt 1
-    public func submitAPIKey() async      // Schritt 2
-    public func loadAlbums() async        // Schritt 3 (laden)
+    public func submitAPIKey() async      // Schritt 2 (validiert UND lädt die Albumliste)
     public func selectAlbum(id: String) async  // Schritt 3 (wählen + abschließen)
     public func reset()                   // US3
 }
@@ -43,13 +42,14 @@ public final class OnboardingViewModel {
   - Validiert/normalisiert `serverURLInput` zu `https`-URL; ungültig → `errorMessage`, bleibt bei `server` (FR-003).
   - Ruft `serverVersion()`; Erfolg → `step = apiKey`. `.unreachable`/`.invalidResponse` → Meldung, bleibt `server` (FR-004, SC-003).
 - **submitAPIKey()**
-  - Baut Client mit eingegebener URL + Key; ruft `albums()` zur Validierung.
-  - Erfolg → `keychain.save(key)`; `albums` zwischenspeichern; `step = album` (FR-005).
+  - Baut Client mit eingegebener URL + Key; ruft **einmal** `albums()` zur Validierung.
+  - Erfolg → `keychain.save(key)`; die **bei der Validierung geladene** Albumliste in `albums`
+    übernehmen (kein zweiter Abruf). Ist `albums` leer → Hinweis (FR-013), bleibt bei `apiKey` und
+    erlaubt Korrektur; sonst `step = album` (FR-005/FR-008).
   - `.unauthorized` → „Ungültiger API-Key", bleibt `apiKey` (SC-002). `.unreachable`/`.invalidResponse` → Meldung, bleibt `apiKey`.
   - Schlägt `keychain.save` fehl → Schritt **nicht** erfolgreich, Meldung (Edge Case).
-- **loadAlbums()** / **selectAlbum(id:)**
-  - Leere Liste → Hinweis, kein Fehler, keine Auswahl möglich (FR-013).
-  - Auswahl: `config.save(AppConfiguration(baseURL, id))`; `step = done` (FR-009).
+- **selectAlbum(id:)**
+  - `config.save(AppConfiguration(baseURL, id))`; `step = done` (FR-009).
 - **reset()**
   - `config.clear()` + `keychain.delete()`; `step = server`; Eingaben/Key-Input geleert (FR-012, SC-006).
 
@@ -63,6 +63,6 @@ public final class OnboardingViewModel {
 
 - StartupGate: alle Zeilen der Entscheidungstabelle.
 - submitServerURL: ungültige URL; Erfolg; `.unreachable`.
-- submitAPIKey: Erfolg (Key landet im Fake-Keychain); `.unauthorized`; Keychain-Schreibfehler.
-- selectAlbum: Erfolg (Config gespeichert, `done`); leere Liste → Hinweis.
+- submitAPIKey: Erfolg (Key im Fake-Keychain, `albums` befüllt → `album`); leere Liste → Hinweis (bleibt `apiKey`); `.unauthorized`; Keychain-Schreibfehler.
+- selectAlbum: Erfolg (Config gespeichert, `done`).
 - reset: Config + Key entfernt, zurück zu `server`.
