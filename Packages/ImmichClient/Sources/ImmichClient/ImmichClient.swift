@@ -11,24 +11,14 @@ public struct ImmichClient: ImmichAPI {
 
     public func albums() async throws -> [Album] {
         let request = makeRequest(path: "api/albums")
-        let (data, response) = try await transport.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw ImmichError.invalidResponse
-        }
-
-        return try JSONDecoder().decode([Album].self, from: data)
+        let data = try await responseData(for: request)
+        return try decode([Album].self, from: data)
     }
 
     public func assets(albumID: String) async throws -> [Asset] {
         let request = makeRequest(path: "api/albums/\(albumID)")
-        let (data, response) = try await transport.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw ImmichError.invalidResponse
-        }
-
-        return try JSONDecoder().decode(AlbumDetail.self, from: data).assets
+        let data = try await responseData(for: request)
+        return try decode(AlbumDetail.self, from: data).assets
     }
 
     public func preview(assetID: String) async throws -> Data {
@@ -36,13 +26,7 @@ public struct ImmichClient: ImmichAPI {
             path: "api/assets/\(assetID)/thumbnail",
             queryItems: [URLQueryItem(name: "size", value: "preview")]
         )
-        let (data, response) = try await transport.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw ImmichError.invalidResponse
-        }
-
-        return data
+        return try await responseData(for: request)
     }
 
     private func makeRequest(path: String, queryItems: [URLQueryItem] = []) -> URLRequest {
@@ -56,5 +40,37 @@ public struct ImmichClient: ImmichAPI {
         request.httpMethod = "GET"
         request.setValue(config.apiKey, forHTTPHeaderField: "x-api-key")
         return request
+    }
+
+    private func responseData(for request: URLRequest) async throws -> Data {
+        do {
+            let (data, response) = try await transport.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw ImmichError.invalidResponse
+            }
+
+            switch httpResponse.statusCode {
+            case 200..<300:
+                return data
+            case 401:
+                throw ImmichError.unauthorized
+            default:
+                throw ImmichError.invalidResponse
+            }
+        } catch let error as ImmichError {
+            throw error
+        } catch is URLError {
+            throw ImmichError.unreachable
+        }
+    }
+
+    private func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch let error as ImmichError {
+            throw error
+        } catch {
+            throw ImmichError.invalidResponse
+        }
     }
 }

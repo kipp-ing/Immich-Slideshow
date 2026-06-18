@@ -108,10 +108,10 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 **Purpose**: Fehler-Mapping (storyübergreifend), Endabsicherung.
 
-- [ ] T020 [P] Test: 401-Response → `ImmichError.unauthorized` in `Packages/ImmichClient/Tests/ImmichClientTests/ErrorTests.swift`. (SC-003, INV-3) — zuerst rot.
-- [ ] T021 [P] Test: `URLError(.timedOut)` aus Transport → `ImmichError.unreachable` in `ErrorTests.swift`. (SC-004, INV-4) — zuerst rot.
-- [ ] T022 [P] Test: non-2xx (≠401) / undekodierbare JSON → `ImmichError.invalidResponse` in `ErrorTests.swift`. (INV-6) — zuerst rot.
-- [ ] T023 Zentrales Fehler-Mapping in `ImmichClient.swift` (HTTP-Status & gefangene `URLError` → `ImmichError`) für alle drei Methoden; Tests T020–T022 grün. Sicherstellen: API-Key wird nie geloggt. (Konstitution III)
+- [X] T020 [P] Test: 401-Response → `ImmichError.unauthorized` in `Packages/ImmichClient/Tests/ImmichClientTests/ErrorTests.swift`. (SC-003, INV-3) — zuerst rot.
+- [X] T021 [P] Test: `URLError(.timedOut)` aus Transport → `ImmichError.unreachable` in `ErrorTests.swift`. (SC-004, INV-4) — zuerst rot.
+- [X] T022 [P] Test: non-2xx (≠401) / undekodierbare JSON → `ImmichError.invalidResponse` in `ErrorTests.swift`. (INV-6) — zuerst rot.
+- [X] T023 Zentrales Fehler-Mapping in `ImmichClient.swift` (HTTP-Status & gefangene `URLError` → `ImmichError`) für alle drei Methoden; Tests T020–T022 grün. Sicherstellen: API-Key wird nie geloggt. (Konstitution III)
 - [ ] T024 Refactor + `quickstart.md`-Validierung: gesamte Suite grün über XcodeBuildMCP; SC-001…SC-006 abgedeckt.
 - [ ] T025 App-Target „Immich Slideshow" bindet das lokale Paket `Packages/ImmichClient` als Abhängigkeit ein (nur Verknüpfung, kein UI). Build der App grün.
 
