@@ -21,9 +21,9 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 **Purpose**: Lokales SPM-Paket anlegen, baubar und testbar über XcodeBuildMCP.
 
-- [ ] T001 SPM-Paket-Gerüst anlegen: `Packages/ImmichClient/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host für Tests, Targets `ImmichClient` + `ImmichClientTests` mit Swift Testing).
-- [ ] T002 Quell- und Testverzeichnisse anlegen: `Packages/ImmichClient/Sources/ImmichClient/` und `Packages/ImmichClient/Tests/ImmichClientTests/`.
-- [ ] T003 Leeren Build über XcodeBuildMCP verifizieren (Paket baut, leere Testsuite läuft grün).
+- [X] T001 SPM-Paket-Gerüst anlegen: `Packages/ImmichClient/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host für Tests, Targets `ImmichClient` + `ImmichClientTests` mit Swift Testing).
+- [X] T002 Quell- und Testverzeichnisse anlegen: `Packages/ImmichClient/Sources/ImmichClient/` und `Packages/ImmichClient/Tests/ImmichClientTests/`.
+- [X] T003 Leeren Build verifizieren (Paket baut, Testsuite läuft grün auf dem Host via `swift build`/`swift test`; XcodeBuildMCP-Gate folgt mit dem App-Target-Konsum).
 
 **Checkpoint**: Paket existiert und baut.
 
