@@ -74,13 +74,13 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 ### Tests for User Story 2 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T014 [P] [US2] Test: Album-Detail-JSON mit `assets` → `[Asset]` (id/type), Request an `GET /api/albums/{id}`, in `Packages/ImmichClient/Tests/ImmichClientTests/AssetTests.swift`. (FR-004)
-- [ ] T015 [P] [US2] Test: leeres Album (`assets: []`) → `[]`, kein Fehler, in `AssetTests.swift`. (SC-005, INV-5)
+- [X] T014 [P] [US2] Test: Album-Detail-JSON mit `assets` → `[Asset]` (id/type), Request an `GET /api/albums/{id}`, in `Packages/ImmichClient/Tests/ImmichClientTests/AssetTests.swift`. (FR-004)
+- [X] T015 [P] [US2] Test: leeres Album (`assets: []`) → `[]`, kein Fehler, in `AssetTests.swift`. (SC-005, INV-5)
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] `Asset`-Modell (`id`, `type`, `Codable`, `Sendable`) + Album-Detail-Decodier-Hülle in `Packages/ImmichClient/Sources/ImmichClient/Models.swift`.
-- [ ] T017 [US2] `assets(albumID:)` in `ImmichClient.swift`: `GET /api/albums/{albumID}`, `assets` extrahieren, leeres Array korrekt. Tests T014/T015 grün.
+- [X] T016 [US2] `Asset`-Modell (`id`, `type`, `Codable`, `Sendable`) + Album-Detail-Decodier-Hülle in `Packages/ImmichClient/Sources/ImmichClient/Models.swift`.
+- [X] T017 [US2] `assets(albumID:)` in `ImmichClient.swift`: `GET /api/albums/{albumID}`, `assets` extrahieren, leeres Array korrekt. Tests T014/T015 grün.
 
 **Checkpoint**: US1 + US2 unabhängig funktionsfähig.
 

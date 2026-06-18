@@ -21,8 +21,14 @@ public struct ImmichClient: ImmichAPI {
     }
 
     public func assets(albumID: String) async throws -> [Asset] {
-        _ = albumID
-        throw ImmichError.invalidResponse
+        let request = makeRequest(path: "api/albums/\(albumID)")
+        let (data, response) = try await transport.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw ImmichError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(AlbumDetail.self, from: data).assets
     }
 
     public func preview(assetID: String) async throws -> Data {

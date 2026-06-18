@@ -13,7 +13,7 @@ public struct Album: Codable, Sendable {
     }
 }
 
-public struct Asset: Sendable {
+public struct Asset: Codable, Sendable {
     public let id: String
     public let type: String
 
@@ -21,4 +21,8 @@ public struct Asset: Sendable {
         self.id = id
         self.type = type
     }
+}
+
+struct AlbumDetail: Decodable, Sendable {
+    let assets: [Asset]
 }
