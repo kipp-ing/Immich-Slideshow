@@ -9,6 +9,13 @@ public struct ImmichClient: ImmichAPI {
         self.transport = transport
     }
 
+    public func serverVersion() async throws -> String {
+        let request = makeRequest(path: "api/server/version")
+        let data = try await responseData(for: request)
+        let version = try decode(ServerVersion.self, from: data)
+        return "\(version.major).\(version.minor).\(version.patch)"
+    }
+
     public func albums() async throws -> [Album] {
         let request = makeRequest(path: "api/albums")
         let data = try await responseData(for: request)
@@ -73,4 +80,10 @@ public struct ImmichClient: ImmichAPI {
             throw ImmichError.invalidResponse
         }
     }
+}
+
+private struct ServerVersion: Decodable {
+    let major: Int
+    let minor: Int
+    let patch: Int
 }
