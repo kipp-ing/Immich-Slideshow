@@ -32,13 +32,27 @@ public struct ImmichClient: ImmichAPI {
     }
 
     public func preview(assetID: String) async throws -> Data {
-        _ = assetID
-        throw ImmichError.invalidResponse
+        let request = makeRequest(
+            path: "api/assets/\(assetID)/thumbnail",
+            queryItems: [URLQueryItem(name: "size", value: "preview")]
+        )
+        let (data, response) = try await transport.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw ImmichError.invalidResponse
+        }
+
+        return data
     }
 
-    private func makeRequest(path: String) -> URLRequest {
+    private func makeRequest(path: String, queryItems: [URLQueryItem] = []) -> URLRequest {
         let url = config.baseURL.appending(path: path)
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = queryItems.isEmpty ? nil : queryItems
         var request = URLRequest(url: url)
+        if let componentURL = components?.url {
+            request.url = componentURL
+        }
         request.httpMethod = "GET"
         request.setValue(config.apiKey, forHTTPHeaderField: "x-api-key")
         return request

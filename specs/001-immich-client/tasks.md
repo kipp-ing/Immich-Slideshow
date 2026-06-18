@@ -94,11 +94,11 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 ### Tests for User Story 3 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T018 [P] [US3] Test: `preview(assetID:)`-Request an `GET /api/assets/{id}/thumbnail?size=preview` mit `x-api-key`, Antwort-`Data` wird durchgereicht, in `Packages/ImmichClient/Tests/ImmichClientTests/PreviewTests.swift`. (FR-005)
+- [X] T018 [P] [US3] Test: `preview(assetID:)`-Request an `GET /api/assets/{id}/thumbnail?size=preview` mit `x-api-key`, Antwort-`Data` wird durchgereicht, in `Packages/ImmichClient/Tests/ImmichClientTests/PreviewTests.swift`. (FR-005)
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] `preview(assetID:)` in `ImmichClient.swift`: Thumbnail-Request mit `size=preview` bauen, `Data` zurückgeben. Test T018 grün.
+- [X] T019 [US3] `preview(assetID:)` in `ImmichClient.swift`: Thumbnail-Request mit `size=preview` bauen, `Data` zurückgeben. Test T018 grün.
 
 **Checkpoint**: Alle Stories funktionsfähig.
 

@@ -1,0 +1,39 @@
+import Foundation
+import Testing
+@testable import ImmichClient
+
+@Test func previewSendsGetRequestWithPreviewSizeQueryAndReturnsRawData() async throws {
+    let baseURL = try #require(URL(string: "https://photos.example.test"))
+    let requestURL = try #require(URL(string: "https://photos.example.test/api/assets/asset-1/thumbnail?size=preview"))
+    let responseData = Data([0x89, 0x50, 0x4E, 0x47])
+    let response = try #require(HTTPURLResponse(
+        url: requestURL,
+        statusCode: 200,
+        httpVersion: nil,
+        headerFields: nil
+    ))
+    let transport = MockTransport(result: .success((responseData, response)))
+    let config = ServerConfig(baseURL: baseURL, apiKey: "secret-api-key")
+    let client = ImmichClient(config: config, transport: transport)
+
+    let preview = try await client.preview(assetID: "asset-1")
+
+    #expect(preview == responseData)
+
+    let requests = await transport.recordedRequests
+    let request = try #require(requests.only)
+    #expect(request.httpMethod == "GET")
+    #expect(request.url?.path == "/api/assets/asset-1/thumbnail")
+    #expect(request.url?.path.hasSuffix("/thumbnail") == true)
+    #expect(request.url?.path.contains("asset-1") == true)
+    #expect(URLComponents(url: try #require(request.url), resolvingAgainstBaseURL: false)?
+        .queryItems?
+        .contains(URLQueryItem(name: "size", value: "preview")) == true)
+    #expect(request.value(forHTTPHeaderField: "x-api-key") == config.apiKey)
+}
+
+private extension Array {
+    var only: Element? {
+        count == 1 ? self[0] : nil
+    }
+}
