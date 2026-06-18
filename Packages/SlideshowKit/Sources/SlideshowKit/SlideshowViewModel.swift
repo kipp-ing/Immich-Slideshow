@@ -38,7 +38,7 @@ public final class SlideshowViewModel {
 
         do {
             imageAssets = try await api.assets(albumID: albumID).filter { $0.type == "IMAGE" }
-            guard let firstAsset = imageAssets.first else {
+            guard !imageAssets.isEmpty else {
                 currentIndex = nil
                 currentAssetID = nil
                 currentImageData = nil
@@ -46,12 +46,17 @@ public final class SlideshowViewModel {
                 return
             }
 
-            let data = try await loadImageData(for: firstAsset.id)
-            currentIndex = 0
-            currentAssetID = firstAsset.id
-            currentImageData = data
-            phase = .playing
-            startTickerLoop()
+            if let loaded = await loadFirstAvailableImage(startingAt: 0) {
+                showLoadedImage(loaded)
+                phase = .playing
+                prefetchImages(after: loaded.index)
+                startTickerLoop()
+            } else {
+                currentIndex = nil
+                currentAssetID = nil
+                currentImageData = nil
+                phase = .failed
+            }
         } catch {
             phase = .failed
         }
@@ -62,17 +67,15 @@ public final class SlideshowViewModel {
             return
         }
 
-        let baseIndex = currentIndex ?? 0
+        let baseIndex = currentIndex ?? -1
         let nextIndex = (baseIndex + 1) % imageAssets.count
-        let nextAsset = imageAssets[nextIndex]
 
-        do {
-            let data = try await loadImageData(for: nextAsset.id)
-            currentIndex = nextIndex
-            currentAssetID = nextAsset.id
-            currentImageData = data
-        } catch {
+        if let loaded = await loadFirstAvailableImage(startingAt: nextIndex) {
+            showLoadedImage(loaded)
+            prefetchImages(after: loaded.index)
+        } else {
             phase = .failed
+            pause()
         }
     }
 
@@ -128,4 +131,64 @@ public final class SlideshowViewModel {
         cache.store(data, for: assetID)
         return data
     }
+
+    private func loadFirstAvailableImage(startingAt startIndex: Int) async -> LoadedImage? {
+        guard !imageAssets.isEmpty else {
+            return nil
+        }
+
+        for offset in 0..<imageAssets.count {
+            let index = (startIndex + offset) % imageAssets.count
+            let asset = imageAssets[index]
+
+            do {
+                let data = try await loadImageData(for: asset.id)
+                return LoadedImage(index: index, assetID: asset.id, data: data)
+            } catch {
+                continue
+            }
+        }
+
+        return nil
+    }
+
+    private func showLoadedImage(_ loaded: LoadedImage) {
+        currentIndex = loaded.index
+        currentAssetID = loaded.assetID
+        currentImageData = loaded.data
+    }
+
+    private func prefetchImages(after index: Int) {
+        guard !imageAssets.isEmpty else {
+            return
+        }
+
+        let depth = min(config.prefetchDepth, max(imageAssets.count - 1, 0))
+        guard depth > 0 else {
+            return
+        }
+
+        let assetIDs = (1...depth).map { offset in
+            imageAssets[(index + offset) % imageAssets.count].id
+        }
+        let api = api
+        let cache = cache
+
+        Task {
+            for assetID in assetIDs where cache.data(for: assetID) == nil {
+                do {
+                    let data = try await api.preview(assetID: assetID)
+                    cache.store(data, for: assetID)
+                } catch {
+                    continue
+                }
+            }
+        }
+    }
+}
+
+private struct LoadedImage {
+    let index: Int
+    let assetID: String
+    let data: Data
 }

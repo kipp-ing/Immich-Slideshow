@@ -141,3 +141,183 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     await model.advance()
     #expect(model.currentAssetID == "image-1")
 }
+
+@MainActor
+@Test func startPrefetchesNextImageWithoutBlockingDisplay() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    let cache = ImageCache(limit: 3)
+    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 3)
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker, cache: cache, config: config)
+    await model.start()
+
+    #expect(model.currentAssetID == "image-1")
+    await waitUntil(cache.contains("image-2"))
+    #expect(cache.contains("image-2"))
+    #expect(api.previewCallCount(for: "image-2") == 1)
+}
+
+@MainActor
+@Test func advanceUsesPrefetchedImageWithoutAdditionalPreviewCall() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    let cache = ImageCache(limit: 3)
+    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 3)
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker, cache: cache, config: config)
+    await model.start()
+    await waitUntil(cache.contains("image-2"))
+    #expect(api.previewCallCount(for: "image-2") == 1)
+
+    await model.advance()
+
+    #expect(model.currentAssetID == "image-2")
+    #expect(api.previewCallCount(for: "image-2") == 1)
+}
+
+@MainActor
+@Test func prefetchWrapsAndRespectsCacheLimitAcrossTicks() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    let cache = ImageCache(limit: 3)
+    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 2, cacheLimit: 3)
+    let assets = (1...6).map { Asset(id: "image-\($0)", type: "IMAGE") }
+    api.setAssets(assets, for: "album")
+    for value in 1...6 {
+        api.setPreviewData(Data([UInt8(value)]), for: "image-\(value)")
+    }
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker, cache: cache, config: config)
+    await model.start()
+    await waitUntil(cache.contains("image-2") && cache.contains("image-3"))
+
+    for expectedTick in 1...10 {
+        await ticker.waitUntilWaiting()
+        ticker.tick()
+        await ticker.waitUntilConsumedTickCount(expectedTick)
+        await settleMainActor()
+        #expect(cache.count <= config.cacheLimit)
+    }
+}
+
+@MainActor
+@Test func startSkipsInitialPreviewErrorsAndShowsFirstLoadableImage() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewError(ImmichError.unreachable, for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+
+    #expect(model.phase == .playing)
+    #expect(model.currentAssetID == "image-2")
+    #expect(model.currentImageData == Data([2]))
+}
+
+@MainActor
+@Test func advanceSkipsPreviewErrorAndShowsNextLoadableImage() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewError(ImmichError.unreachable, for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+    await model.advance()
+
+    #expect(model.phase == .playing)
+    #expect(model.currentAssetID == "image-3")
+    #expect(model.currentImageData == Data([3]))
+}
+
+@MainActor
+@Test func emptyAndVideoOnlyAlbumsEnterEmptyPhase() async {
+    let emptyAPI = StubImmichAPI()
+    emptyAPI.setAssets([], for: "empty")
+    let emptyModel = SlideshowViewModel(api: emptyAPI, albumID: "empty", ticker: ManualTicker())
+    await emptyModel.start()
+    #expect(emptyModel.phase == .empty)
+
+    let videoAPI = StubImmichAPI()
+    videoAPI.setAssets([
+        Asset(id: "video-1", type: "VIDEO"),
+        Asset(id: "video-2", type: "VIDEO")
+    ], for: "videos")
+    let videoModel = SlideshowViewModel(api: videoAPI, albumID: "videos", ticker: ManualTicker())
+    await videoModel.start()
+    #expect(videoModel.phase == .empty)
+}
+
+@MainActor
+@Test func assetsErrorFailsAndRetryStartsAgainWhenAssetsRecover() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssetsError(ImmichError.unreachable, for: "album")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+    #expect(model.phase == .failed)
+
+    api.setAssets([Asset(id: "image-1", type: "IMAGE")], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    await model.retry()
+
+    #expect(model.phase == .playing)
+    #expect(model.currentAssetID == "image-1")
+}
+
+@MainActor
+@Test func advanceFailsWhenEveryImageInRingNowFails() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    let cache = ImageCache(limit: 2)
+    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 2)
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker, cache: cache, config: config)
+    await model.start()
+    await waitUntil(cache.contains("image-2"))
+    cache.store(Data([9]), for: "unrelated-1")
+    cache.store(Data([10]), for: "unrelated-2")
+    api.setPreviewError(ImmichError.unreachable, for: "image-1")
+    api.setPreviewError(ImmichError.unreachable, for: "image-2")
+    api.setPreviewError(ImmichError.unreachable, for: "image-3")
+
+    await model.advance()
+
+    #expect(model.phase == .failed)
+    #expect(model.currentAssetID == "image-1")
+}

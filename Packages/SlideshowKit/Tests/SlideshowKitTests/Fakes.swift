@@ -75,6 +75,7 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
         var assetsByAlbumID: [String: [Asset]] = [:]
         var previewDataByAssetID: [String: Data] = [:]
         var previewErrorsByAssetID: [String: any Error] = [:]
+        var assetErrorsByAlbumID: [String: any Error] = [:]
         var albumList: [Album] = []
         var serverVersion = "stub"
         var serverVersionCallCount = 0
@@ -90,6 +91,14 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
     func setAssets(_ assets: [Asset], for albumID: String) {
         lock.withLock {
             state.assetsByAlbumID[albumID] = assets
+            state.assetErrorsByAlbumID[albumID] = nil
+        }
+    }
+
+    func setAssetsError(_ error: any Error, for albumID: String) {
+        lock.withLock {
+            state.assetErrorsByAlbumID[albumID] = error
+            state.assetsByAlbumID[albumID] = nil
         }
     }
 
@@ -122,8 +131,11 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
     }
 
     func assets(albumID: String) async throws -> [Asset] {
-        lock.withLock {
+        try lock.withLock {
             state.assetsCallCount += 1
+            if let error = state.assetErrorsByAlbumID[albumID] {
+                throw error
+            }
             return state.assetsByAlbumID[albumID] ?? []
         }
     }
