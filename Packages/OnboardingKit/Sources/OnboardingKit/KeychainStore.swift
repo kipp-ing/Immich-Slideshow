@@ -7,9 +7,9 @@ public protocol KeychainStore: Sendable {
     func delete()
 }
 
-/// Reale `KeychainStore`-Implementierung über die Security-API
-/// (`kSecClassGenericPassword`, fester Service/Account). Der API-Key liegt nie
-/// in UserDefaults oder Logs (Konstitution III).
+/// Real `KeychainStore` implementation using the Security API
+/// (`kSecClassGenericPassword`, fixed service/account). The API key is never
+/// stored in UserDefaults or logs (Constitution III).
 public struct KeychainAPIKeyStore: KeychainStore {
     public enum KeychainError: Error, Equatable {
         case unexpectedStatus(OSStatus)
@@ -35,7 +35,7 @@ public struct KeychainAPIKeyStore: KeychainStore {
     }
 
     public func save(_ apiKey: String) throws {
-        // Idempotentes Überschreiben: vorhandenen Eintrag entfernen, dann neu anlegen.
+        // Idempotent overwrite: remove the existing item, then add it again.
         SecItemDelete(baseQuery as CFDictionary)
 
         var attributes = baseQuery

@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Could not securely store the API key." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der API-Schlüssel konnte nicht sicher gespeichert werden."
+          }
+        }
+      }
+    },
+    "Invalid API key." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültiger API-Schlüssel."
+          }
+        }
+      }
+    },
+    "No albums found. Create an album in Immich." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Alben gefunden. Lege in Immich ein Album an."
+          }
+        }
+      }
+    },
+    "Please enter a valid HTTPS address." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitte eine gültige HTTPS-Adresse eingeben."
+          }
+        }
+      }
+    },
+    "Server not reachable." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server nicht erreichbar."
+          }
+        }
+      }
+    },
+    "Unexpected response from the server." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unerwartete Antwort vom Server."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

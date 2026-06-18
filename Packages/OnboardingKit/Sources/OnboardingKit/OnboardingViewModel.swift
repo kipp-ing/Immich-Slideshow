@@ -30,7 +30,7 @@ import Observation
         errorMessage = nil
 
         guard let url = normalizedURL() else {
-            errorMessage = "Bitte eine gültige HTTPS-Adresse eingeben."
+            errorMessage = String(localized: "Please enter a valid HTTPS address.", bundle: .module)
             return
         }
 
@@ -43,7 +43,7 @@ import Observation
         } catch let error as ImmichError {
             errorMessage = message(for: error)
         } catch {
-            errorMessage = "Unerwartete Antwort vom Server."
+            errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
         }
     }
 
@@ -52,7 +52,7 @@ import Observation
         errorMessage = nil
 
         guard let url = normalizedURL() else {
-            errorMessage = "Bitte eine gültige HTTPS-Adresse eingeben."
+            errorMessage = String(localized: "Please enter a valid HTTPS address.", bundle: .module)
             return
         }
 
@@ -66,20 +66,20 @@ import Observation
             errorMessage = message(for: error)
             return
         } catch {
-            errorMessage = "Unerwartete Antwort vom Server."
+            errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
             return
         }
 
         do {
             try keychain.save(apiKeyInput)
         } catch {
-            errorMessage = "API-Key konnte nicht sicher gespeichert werden."
+            errorMessage = String(localized: "Could not securely store the API key.", bundle: .module)
             return
         }
 
         albums = list
         if list.isEmpty {
-            errorMessage = "Keine Alben gefunden. Lege in Immich ein Album an."
+            errorMessage = String(localized: "No albums found. Create an album in Immich.", bundle: .module)
             return
         }
 
@@ -90,7 +90,7 @@ import Observation
         errorMessage = nil
 
         guard let url = normalizedURL() else {
-            errorMessage = "Bitte eine gültige HTTPS-Adresse eingeben."
+            errorMessage = String(localized: "Please enter a valid HTTPS address.", bundle: .module)
             return
         }
 
@@ -129,11 +129,11 @@ import Observation
     private func message(for error: ImmichError) -> String {
         switch error {
         case .unauthorized:
-            "Ungültiger API-Key."
+            String(localized: "Invalid API key.", bundle: .module)
         case .unreachable:
-            "Server nicht erreichbar."
+            String(localized: "Server not reachable.", bundle: .module)
         case .invalidResponse:
-            "Unerwartete Antwort vom Server."
+            String(localized: "Unexpected response from the server.", bundle: .module)
         }
     }
 }
