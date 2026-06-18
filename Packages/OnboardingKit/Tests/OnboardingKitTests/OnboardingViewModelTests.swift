@@ -140,3 +140,29 @@ private func makeResponse(path: String, statusCode: Int) throws -> HTTPURLRespon
         headerFields: nil
     ))
 }
+
+@Test func resetClearsPersistedStateAndReturnsToServerStep() {
+    let config = InMemoryConfigStore(configuration: AppConfiguration(
+        baseURL: URL(string: "https://photos.example.test")!,
+        selectedAlbumID: "a1"
+    ))
+    let keychain = InMemoryKeychainStore(apiKey: "key")
+    let vm = makeVM(transportResult: .failure(URLError(.badURL)), config: config, keychain: keychain)
+    vm.step = .album
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+    vm.albums = [Album(id: "a1", name: "Fam")]
+    vm.selectedAlbumID = "a1"
+    vm.errorMessage = "irgendwas"
+
+    vm.reset()
+
+    #expect(config.load() == nil)
+    #expect(keychain.read() == nil)
+    #expect(vm.step == .server)
+    #expect(vm.serverURLInput == "")
+    #expect(vm.apiKeyInput == "")
+    #expect(vm.albums.isEmpty)
+    #expect(vm.selectedAlbumID == nil)
+    #expect(vm.errorMessage == nil)
+}
