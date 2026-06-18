@@ -16,13 +16,17 @@ app-hosted sim suite green (incl. `OnboardingKeychainTests` + `OnboardingResetTe
 Verify with `test_sim` (scheme "Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — the
 session default). Fresh-install onboarding UI confirmed via screenshot (server step, light/simple).
 
-⚠️ **Two real-world paths remain mock-only** (no live Immich available this session): T015's
-`GET /api/server/version` route/decode, and the full UI walkthrough (complete onboarding → relaunch →
-main screen). Both are covered by host/app-hosted tests; verify against a live server before field use.
+✅ **T015 real-world flag CLOSED (2026-06-18) against live Immich `2.7.5` (`bilder.kippings.de`).**
+Verified the **real `ImmichClient` decode path** (not just curl) end-to-end via a temporary,
+**uncommitted** host test (creds passed via env, file deleted after; tree clean):
+`serverVersion()`→`"2.7.5"`, `albums()`→446 decoded, `assets(albumID:)`→59 (`type: IMAGE`),
+`preview(assetID:)`→484 KB JPEG. Every assumed route + decode shape matches the running API.
 
-⚠️ **Still-open real-world flag (T015)**: `GET /api/server/version` and its `{major,minor,patch}` decode
-are still **assumed** — all US1 tests are mocked, so nothing failed, but verify against the live Immich
-(`/api/openapi.json`) before trusting step-1 reachability in the field (Constitution IV).
+⚠️ **Remaining gap — interactive UI walkthrough.** The full "type URL → key → pick album → relaunch →
+main screen" path is still undriven: this session's XcodeBuildMCP exposes only **read-side** UI
+automation (`snapshot_ui`/`screenshot`), not tap/type. Step-1 render reconfirmed via screenshot
+(light/simple). To drive the full flow next time, enable write-side UI automation in XcodeBuildMCP,
+or seed config+keychain and verify StartupGate routes to the main screen.
 
 ## What's done on 002 (all committed on `002-onboarding`)
 - **Spec → Plan → Tasks** via Spec Kit, all in `specs/002-onboarding/` (spec.md, plan.md, research.md,
@@ -73,9 +77,8 @@ are still **assumed** — all US1 tests are mocked, so nothing failed, but verif
 > `packageProductDependencies`, project `packageReferences`, plus the `XCLocalSwiftPackageReference`
 > and `XCSwiftPackageProductDependency` sections. Synthetic IDs `3DAA0100…0008–000C` are OnboardingKit's.
 
-⚠️ **Open real-world flag (T015)**: `GET /api/server/version` route + `{major,minor,patch}` decode are
-**assumed** (all US1 tests mocked). Verify against the live Immich (`/api/openapi.json`) before relying
-on step-1 reachability in the field (Constitution IV).
+✅ **T015 real-world flag CLOSED (2026-06-18)** — verified against live Immich `2.7.5`
+(`bilder.kippings.de`) through the real `ImmichClient` decoders. See the TL;DR for the chain + counts.
 
 ## Hiccups this session (avoid re-tripping)
 - **Cross-module re-export needs an explicit import.** `OnboardingViewModel.albums` is `[Album]` where
