@@ -22,11 +22,9 @@ struct Immich_SlideshowApp: App {
             keychain: keychain
         )
 
-        // First-run check: only a complete state (config + key) skips onboarding.
-        // US2 (StartupGate) refines this into the precise first-missing-step logic.
-        if config.load() != nil, keychain.read() != nil {
-            viewModel.step = .done
-        }
+        // Resume at the first missing step on launch; only a complete state
+        // (config + key) routes straight to the main screen (FR-001/FR-011).
+        viewModel.step = StartupGate(config: config, keychain: keychain).initialStep()
 
         _viewModel = State(initialValue: viewModel)
     }
