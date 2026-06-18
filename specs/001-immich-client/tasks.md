@@ -39,7 +39,7 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 - [X] T005 [P] `ImmichError` enum (`.unauthorized`, `.unreachable`, `.invalidResponse`; `Error`, `Equatable`) in `Packages/ImmichClient/Sources/ImmichClient/ImmichError.swift`.
 - [X] T006 [P] `HTTPTransport`-Protokoll (`data(for:) async throws -> (Data, URLResponse)`, `Sendable`) + `URLSessionTransport`-Live-Impl in `Packages/ImmichClient/Sources/ImmichClient/HTTPTransport.swift`.
 - [X] T007 `MockTransport` (zeichnet `URLRequest`s auf; liefert konfigurierbare `(Data, URLResponse)` oder wirft konfigurierten Error) in `Packages/ImmichClient/Tests/ImmichClientTests/MockTransport.swift`.
-- [ ] T008 Skelett `ImmichClient: ImmichAPI` mit nicht-implementierten Methoden (werfen vorerst), Konstruktor `init(config:transport:)` in `Packages/ImmichClient/Sources/ImmichClient/ImmichClient.swift` und `ImmichAPI`-Protokoll in `Packages/ImmichClient/Sources/ImmichClient/ImmichAPI.swift`.
+- [X] T008 Skelett `ImmichClient: ImmichAPI` mit nicht-implementierten Methoden (werfen vorerst), Konstruktor `init(config:transport:)` in `Packages/ImmichClient/Sources/ImmichClient/ImmichClient.swift` und `ImmichAPI`-Protokoll in `Packages/ImmichClient/Sources/ImmichClient/ImmichAPI.swift`.
 
 **Checkpoint**: Foundation steht — User Stories können beginnen.
 
@@ -53,14 +53,14 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 ### Tests for User Story 1 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T009 [P] [US1] Test: gültige Album-JSON → `[Album]` verlustfrei (`albumName`→`name`), in `Packages/ImmichClient/Tests/ImmichClientTests/AlbumTests.swift`. (SC-002)
-- [ ] T010 [P] [US1] Test: `albums()`-Request geht an `GET /api/albums` und trägt Header `x-api-key` (über MockTransport-Aufzeichnung), in `Packages/ImmichClient/Tests/ImmichClientTests/AlbumTests.swift`. (SC-001, INV-1)
+- [X] T009 [P] [US1] Test: gültige Album-JSON → `[Album]` verlustfrei (`albumName`→`name`), in `Packages/ImmichClient/Tests/ImmichClientTests/AlbumTests.swift`. (SC-002)
+- [X] T010 [P] [US1] Test: `albums()`-Request geht an `GET /api/albums` und trägt Header `x-api-key` (über MockTransport-Aufzeichnung), in `Packages/ImmichClient/Tests/ImmichClientTests/AlbumTests.swift`. (SC-001, INV-1)
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] `Album`-Modell (`id`, `name`, `Codable`, `Sendable`, `CodingKeys` `albumName`→`name`) in `Packages/ImmichClient/Sources/ImmichClient/Models.swift`.
-- [ ] T012 [US1] `albums()` in `ImmichClient.swift`: Request bauen (baseURL + `/api/albums`, `x-api-key`), via Transport laden, 2xx→JSON dekodieren. Tests T009/T010 grün.
-- [ ] T013 [US1] Refactor: gemeinsame Request-Bauhilfe (Pfad anhängen, `x-api-key` setzen) extrahieren; Tests bleiben grün.
+- [X] T011 [US1] `Album`-Modell (`id`, `name`, `Codable`, `Sendable`, `CodingKeys` `albumName`→`name`) in `Packages/ImmichClient/Sources/ImmichClient/Models.swift`.
+- [X] T012 [US1] `albums()` in `ImmichClient.swift`: Request bauen (baseURL + `/api/albums`, `x-api-key`), via Transport laden, 2xx→JSON dekodieren. Tests T009/T010 grün.
+- [X] T013 [US1] Refactor: gemeinsame Request-Bauhilfe (Pfad anhängen, `x-api-key` setzen) extrahieren; Tests bleiben grün.
 
 **Checkpoint**: US1 unabhängig funktionsfähig (MVP).
 
