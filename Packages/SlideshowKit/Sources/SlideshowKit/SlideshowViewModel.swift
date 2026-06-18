@@ -1,0 +1,131 @@
+import Foundation
+import ImmichClient
+import Observation
+
+@MainActor
+@Observable
+public final class SlideshowViewModel {
+    public private(set) var phase: SlideshowPhase = .loading
+    public private(set) var currentAssetID: String?
+    public private(set) var currentImageData: Data?
+
+    private let api: any ImmichAPI
+    private let albumID: String
+    private let ticker: any SlideshowTicker
+    private let cache: ImageCache
+    private let config: SlideshowConfig
+    private var imageAssets: [Asset] = []
+    private var currentIndex: Int?
+    private var runTask: Task<Void, Never>?
+
+    public init(
+        api: any ImmichAPI,
+        albumID: String,
+        ticker: any SlideshowTicker,
+        cache: ImageCache = ImageCache(limit: SlideshowConfig.default.cacheLimit),
+        config: SlideshowConfig = .default
+    ) {
+        self.api = api
+        self.albumID = albumID
+        self.ticker = ticker
+        self.cache = cache
+        self.config = config
+    }
+
+    public func start() async {
+        pause()
+        phase = .loading
+
+        do {
+            imageAssets = try await api.assets(albumID: albumID).filter { $0.type == "IMAGE" }
+            guard let firstAsset = imageAssets.first else {
+                currentIndex = nil
+                currentAssetID = nil
+                currentImageData = nil
+                phase = .empty
+                return
+            }
+
+            let data = try await loadImageData(for: firstAsset.id)
+            currentIndex = 0
+            currentAssetID = firstAsset.id
+            currentImageData = data
+            phase = .playing
+            startTickerLoop()
+        } catch {
+            phase = .failed
+        }
+    }
+
+    public func advance() async {
+        guard phase == .playing, !imageAssets.isEmpty else {
+            return
+        }
+
+        let baseIndex = currentIndex ?? 0
+        let nextIndex = (baseIndex + 1) % imageAssets.count
+        let nextAsset = imageAssets[nextIndex]
+
+        do {
+            let data = try await loadImageData(for: nextAsset.id)
+            currentIndex = nextIndex
+            currentAssetID = nextAsset.id
+            currentImageData = data
+        } catch {
+            phase = .failed
+        }
+    }
+
+    public func retry() async {
+        guard phase == .failed else {
+            return
+        }
+
+        await start()
+    }
+
+    public func pause() {
+        runTask?.cancel()
+        runTask = nil
+    }
+
+    public func resume() {
+        guard phase == .playing else {
+            return
+        }
+
+        startTickerLoop()
+    }
+
+    private func startTickerLoop() {
+        pause()
+        let ticker = ticker
+        runTask = Task.detached { [weak self, ticker] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                do {
+                    try await ticker.waitForNextTick()
+                    if Task.isCancelled {
+                        break
+                    }
+                    await advance()
+                } catch is CancellationError {
+                    break
+                } catch {
+                    break
+                }
+            }
+        }
+    }
+
+    private func loadImageData(for assetID: String) async throws -> Data {
+        if let cached = cache.data(for: assetID) {
+            return cached
+        }
+
+        let data = try await api.preview(assetID: assetID)
+        cache.store(data, for: assetID)
+        return data
+    }
+}
