@@ -25,9 +25,9 @@ Simulator-Verifikationen macht Claude inline.
 
 **Purpose**: Lokales SPM-Paket `OnboardingKit` anlegen, baubar und host-testbar.
 
-- [ ] T001 SPM-Paket-Gerüst anlegen: `Packages/OnboardingKit/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host; Target `OnboardingKit` mit Dependency auf `ImmichClient`; Test-Target `OnboardingKitTests` mit Dependencies `OnboardingKit` + `ImmichClientTestSupport`).
-- [ ] T002 Quell- und Testverzeichnisse anlegen: `Packages/OnboardingKit/Sources/OnboardingKit/` und `Packages/OnboardingKit/Tests/OnboardingKitTests/`.
-- [ ] T003 Leeren Build verifizieren (Paket baut, leere Suite grün via `swift build`/`swift test` auf dem Host).
+- [X] T001 SPM-Paket-Gerüst anlegen: `Packages/OnboardingKit/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host; Target `OnboardingKit` mit Dependency auf `ImmichClient`; Test-Target `OnboardingKitTests` mit Dependencies `OnboardingKit` + `ImmichClientTestSupport`).
+- [X] T002 Quell- und Testverzeichnisse anlegen: `Packages/OnboardingKit/Sources/OnboardingKit/` und `Packages/OnboardingKit/Tests/OnboardingKitTests/`.
+- [X] T003 Leeren Build verifizieren (Paket baut, leere Suite grün via `swift build`/`swift test` auf dem Host).
 
 **Checkpoint**: Paket existiert und baut.
 
@@ -39,13 +39,13 @@ Simulator-Verifikationen macht Claude inline.
 
 **⚠️ CRITICAL**: Muss vor allen User Stories fertig sein.
 
-- [ ] T004 [P] `AppConfiguration` (baseURL: URL, selectedAlbumID: String; `Sendable`, `Equatable`) in `Packages/OnboardingKit/Sources/OnboardingKit/AppConfiguration.swift`.
-- [ ] T005 [P] `OnboardingStep` enum (`server`/`apiKey`/`album`/`done`; `Sendable`, `Equatable`) in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingStep.swift`.
-- [ ] T006 [P] `ConfigStore`-Protokoll (`load()`/`save(_:)`/`clear()`, `Sendable`) in `Packages/OnboardingKit/Sources/OnboardingKit/ConfigStore.swift`.
-- [ ] T007 [P] `KeychainStore`-Protokoll (`save(_:) throws`/`read()`/`delete()`, `Sendable`) in `Packages/OnboardingKit/Sources/OnboardingKit/KeychainStore.swift`.
-- [ ] T008 Test-Fakes `InMemoryConfigStore` und `InMemoryKeychainStore` (Letzterer mit optional erzwingbarem `save`-Fehler) in `Packages/OnboardingKit/Tests/OnboardingKitTests/Fakes.swift`.
-- [ ] T009 [P] Test (zuerst rot): `UserDefaultsConfigStore` persistiert/lädt/löscht baseURL + selectedAlbumID (eigene `UserDefaults`-Suite), in `Packages/OnboardingKit/Tests/OnboardingKitTests/ConfigStoreTests.swift`.
-- [ ] T010 `UserDefaultsConfigStore` implementieren in `Packages/OnboardingKit/Sources/OnboardingKit/ConfigStore.swift` bis T009 grün; `load()` liefert nur bei vollständiger Konfiguration eine `AppConfiguration`.
+- [X] T004 [P] `AppConfiguration` (baseURL: URL, selectedAlbumID: String; `Sendable`, `Equatable`) in `Packages/OnboardingKit/Sources/OnboardingKit/AppConfiguration.swift`.
+- [X] T005 [P] `OnboardingStep` enum (`server`/`apiKey`/`album`/`done`; `Sendable`, `Equatable`) in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingStep.swift`.
+- [X] T006 [P] `ConfigStore`-Protokoll (`load()`/`save(_:)`/`clear()`, `Sendable`) in `Packages/OnboardingKit/Sources/OnboardingKit/ConfigStore.swift`.
+- [X] T007 [P] `KeychainStore`-Protokoll (`save(_:) throws`/`read()`/`delete()`, `Sendable`) in `Packages/OnboardingKit/Sources/OnboardingKit/KeychainStore.swift`.
+- [X] T008 Test-Fakes `InMemoryConfigStore` und `InMemoryKeychainStore` (Letzterer mit optional erzwingbarem `save`-Fehler) in `Packages/OnboardingKit/Tests/OnboardingKitTests/Fakes.swift`.
+- [X] T009 [P] Test (zuerst rot): `UserDefaultsConfigStore` persistiert/lädt/löscht baseURL + selectedAlbumID (eigene `UserDefaults`-Suite), in `Packages/OnboardingKit/Tests/OnboardingKitTests/ConfigStoreTests.swift`.
+- [X] T010 `UserDefaultsConfigStore` implementieren in `Packages/OnboardingKit/Sources/OnboardingKit/ConfigStore.swift` bis T009 grün; `load()` liefert nur bei vollständiger Konfiguration eine `AppConfiguration`.
 
 **Checkpoint**: Foundation steht — User Stories können beginnen.
 

@@ -31,6 +31,7 @@ playground.xcworkspace
 # Ignore checked-out SPM dependency folders, but track our own local module(s).
 Packages/*
 !Packages/ImmichClient/
+!Packages/OnboardingKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*
