@@ -35,10 +35,10 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 
 **⚠️ CRITICAL**: Muss vor allen User Stories fertig sein.
 
-- [ ] T004 [P] `ServerConfig` (baseURL: URL, apiKey: String, `Sendable`) in `Packages/ImmichClient/Sources/ImmichClient/ServerConfig.swift`.
-- [ ] T005 [P] `ImmichError` enum (`.unauthorized`, `.unreachable`, `.invalidResponse`; `Error`, `Equatable`) in `Packages/ImmichClient/Sources/ImmichClient/ImmichError.swift`.
-- [ ] T006 [P] `HTTPTransport`-Protokoll (`data(for:) async throws -> (Data, URLResponse)`, `Sendable`) + `URLSessionTransport`-Live-Impl in `Packages/ImmichClient/Sources/ImmichClient/HTTPTransport.swift`.
-- [ ] T007 `MockTransport` (zeichnet `URLRequest`s auf; liefert konfigurierbare `(Data, URLResponse)` oder wirft konfigurierten Error) in `Packages/ImmichClient/Tests/ImmichClientTests/MockTransport.swift`.
+- [X] T004 [P] `ServerConfig` (baseURL: URL, apiKey: String, `Sendable`) in `Packages/ImmichClient/Sources/ImmichClient/ServerConfig.swift`.
+- [X] T005 [P] `ImmichError` enum (`.unauthorized`, `.unreachable`, `.invalidResponse`; `Error`, `Equatable`) in `Packages/ImmichClient/Sources/ImmichClient/ImmichError.swift`.
+- [X] T006 [P] `HTTPTransport`-Protokoll (`data(for:) async throws -> (Data, URLResponse)`, `Sendable`) + `URLSessionTransport`-Live-Impl in `Packages/ImmichClient/Sources/ImmichClient/HTTPTransport.swift`.
+- [X] T007 `MockTransport` (zeichnet `URLRequest`s auf; liefert konfigurierbare `(Data, URLResponse)` oder wirft konfigurierten Error) in `Packages/ImmichClient/Tests/ImmichClientTests/MockTransport.swift`.
 - [ ] T008 Skelett `ImmichClient: ImmichAPI` mit nicht-implementierten Methoden (werfen vorerst), Konstruktor `init(config:transport:)` in `Packages/ImmichClient/Sources/ImmichClient/ImmichClient.swift` und `ImmichAPI`-Protokoll in `Packages/ImmichClient/Sources/ImmichClient/ImmichAPI.swift`.
 
 **Checkpoint**: Foundation steht — User Stories können beginnen.
