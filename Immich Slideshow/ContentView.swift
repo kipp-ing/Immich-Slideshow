@@ -20,17 +20,17 @@ struct ContentView: View {
                 Image(systemName: "photo.stack")
                     .imageScale(.large)
                     .foregroundStyle(.tint)
-                Text("Einrichtung abgeschlossen")
+                Text("Setup complete")
                     .font(.headline)
                     .accessibilityIdentifier("main.completed")
-                Text("Die Slideshow folgt in einem späteren Schritt.")
+                Text("The slideshow will follow in a later step.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             .padding()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Zurücksetzen", systemImage: "arrow.counterclockwise", action: onReset)
+                    Button("Reset", systemImage: "arrow.counterclockwise", action: onReset)
                 }
             }
         }

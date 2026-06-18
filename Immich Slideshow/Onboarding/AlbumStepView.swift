@@ -17,9 +17,9 @@ struct AlbumStepView: View {
         Group {
             if viewModel.albums.isEmpty {
                 ContentUnavailableView {
-                    Label("Keine Alben", systemImage: "photo.on.rectangle")
+                    Label("No albums", systemImage: "photo.on.rectangle")
                 } description: {
-                    Text(viewModel.errorMessage ?? "Lege in Immich ein Album an und versuche es erneut.")
+                    Text(viewModel.errorMessage ?? "Create an album in Immich and try again.")
                 }
             } else {
                 List(viewModel.albums, id: \.id) { album in
@@ -40,6 +40,6 @@ struct AlbumStepView: View {
                 }
             }
         }
-        .navigationTitle("Album wählen")
+        .navigationTitle("Choose album")
     }
 }

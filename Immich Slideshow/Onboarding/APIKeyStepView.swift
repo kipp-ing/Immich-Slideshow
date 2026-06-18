@@ -15,16 +15,16 @@ struct APIKeyStepView: View {
     var body: some View {
         Form {
             Section {
-                SecureField("API-Key", text: $viewModel.apiKeyInput)
+                SecureField("API Key", text: $viewModel.apiKeyInput)
                     .textContentType(.password)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .disabled(viewModel.isBusy)
                     .accessibilityIdentifier("onboarding.apiKey")
             } header: {
-                Text("API-Key")
+                Text("API Key")
             } footer: {
-                Text("In Immich unter Konto-Einstellungen → API-Keys erzeugen.")
+                Text("Create one in Immich under Account Settings → API Keys.")
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -39,7 +39,7 @@ struct APIKeyStepView: View {
                     Task { await viewModel.submitAPIKey() }
                 } label: {
                     HStack {
-                        Text("Verbinden")
+                        Text("Connect")
                         if viewModel.isBusy {
                             Spacer()
                             ProgressView()

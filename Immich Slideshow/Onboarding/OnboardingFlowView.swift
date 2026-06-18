@@ -27,7 +27,7 @@ struct OnboardingFlowView: View {
                     EmptyView()
                 }
             }
-            .navigationTitle("Einrichtung")
+            .navigationTitle("Setup")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
