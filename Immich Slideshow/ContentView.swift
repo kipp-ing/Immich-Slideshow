@@ -22,6 +22,7 @@ struct ContentView: View {
                     .foregroundStyle(.tint)
                 Text("Einrichtung abgeschlossen")
                     .font(.headline)
+                    .accessibilityIdentifier("main.completed")
                 Text("Die Slideshow folgt in einem späteren Schritt.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

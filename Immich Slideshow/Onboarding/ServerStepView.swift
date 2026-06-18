@@ -20,6 +20,7 @@ struct ServerStepView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .disabled(viewModel.isBusy)
+                    .accessibilityIdentifier("onboarding.serverURL")
             } header: {
                 Text("Server-Adresse")
             } footer: {
@@ -46,6 +47,7 @@ struct ServerStepView: View {
                     }
                 }
                 .disabled(viewModel.isBusy || viewModel.serverURLInput.isEmpty)
+                .accessibilityIdentifier("onboarding.server.continue")
             }
         }
     }

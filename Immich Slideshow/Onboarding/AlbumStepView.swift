@@ -36,6 +36,7 @@ struct AlbumStepView: View {
                         }
                     }
                     .disabled(viewModel.isBusy)
+                    .accessibilityIdentifier("onboarding.album.\(album.id)")
                 }
             }
         }
