@@ -113,8 +113,8 @@ durchlaufen (gültige URL/Key/Album) → `step == done`, Config gespeichert, Key
 ### Implementation for User Story 3
 
 - [X] T027 [US3] `reset()` in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingViewModel.swift` implementieren. Test T026 grün.
-- [ ] T028 [US3] Reset-Einstieg im Hauptscreen-Platzhalter (`Immich Slideshow/ContentView.swift`) bzw. einer schlichten Settings-Aktion, die `reset()` auslöst und zurück ins Onboarding führt.
-- [ ] T029 [US3] Simulator-Verifikation (XcodeBuildMCP): Reset auslösen → Onboarding startet bei Schritt 1, zuvor gespeicherter Key ist via realem `KeychainAPIKeyStore` entfernt. (SC-006)
+- [X] T028 [US3] Reset-Einstieg im Hauptscreen-Platzhalter (`Immich Slideshow/ContentView.swift`) bzw. einer schlichten Settings-Aktion, die `reset()` auslöst und zurück ins Onboarding führt.
+- [X] T029 [US3] Simulator-Verifikation (XcodeBuildMCP): Reset auslösen → Onboarding startet bei Schritt 1, zuvor gespeicherter Key ist via realem `KeychainAPIKeyStore` entfernt. (SC-006)
 
 **Checkpoint**: Alle Stories funktionsfähig.
 

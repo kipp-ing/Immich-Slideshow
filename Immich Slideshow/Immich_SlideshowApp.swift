@@ -32,7 +32,7 @@ struct Immich_SlideshowApp: App {
     var body: some Scene {
         WindowGroup {
             if viewModel.step == .done {
-                ContentView()
+                ContentView(onReset: { viewModel.reset() })
             } else {
                 OnboardingFlowView(viewModel: viewModel)
             }
