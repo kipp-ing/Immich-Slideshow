@@ -28,7 +28,9 @@ playground.xcworkspace
 
 # Swift Package Manager
 .build/
-Packages/
+# Ignore checked-out SPM dependency folders, but track our own local module(s).
+Packages/*
+!Packages/ImmichClient/
 Package.pins
 Package.resolved
 *.xcodeproj/*
