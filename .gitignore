@@ -32,6 +32,7 @@ playground.xcworkspace
 Packages/*
 !Packages/ImmichClient/
 !Packages/OnboardingKit/
+!Packages/SlideshowKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*
