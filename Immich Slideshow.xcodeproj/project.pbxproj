@@ -10,6 +10,8 @@
 		3DAA01000000000000000003 /* ImmichClient in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000002 /* ImmichClient */; };
 		3DAA01000000000000000006 /* ImmichClient in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000004 /* ImmichClient */; };
 		3DAA01000000000000000007 /* ImmichClientTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000005 /* ImmichClientTestSupport */; };
+		3DAA0100000000000000000A /* OnboardingKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000009 /* OnboardingKit */; };
+		3DAA0100000000000000000C /* OnboardingKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA0100000000000000000B /* OnboardingKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +61,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3DAA01000000000000000003 /* ImmichClient in Frameworks */,
+				3DAA0100000000000000000A /* OnboardingKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,6 +71,7 @@
 			files = (
 				3DAA01000000000000000006 /* ImmichClient in Frameworks */,
 				3DAA01000000000000000007 /* ImmichClientTestSupport in Frameworks */,
+				3DAA0100000000000000000C /* OnboardingKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +126,7 @@
 			name = "Immich Slideshow";
 			packageProductDependencies = (
 				3DAA01000000000000000002 /* ImmichClient */,
+				3DAA01000000000000000009 /* OnboardingKit */,
 			);
 			productName = "Immich Slideshow";
 			productReference = 3DDA115E2FE2D16C0059B8FD /* Immich Slideshow.app */;
@@ -147,6 +152,7 @@
 			packageProductDependencies = (
 				3DAA01000000000000000004 /* ImmichClient */,
 				3DAA01000000000000000005 /* ImmichClientTestSupport */,
+				3DAA0100000000000000000B /* OnboardingKit */,
 			);
 			productName = "Immich SlideshowTests";
 			productReference = 3DDA116B2FE2D16E0059B8FD /* Immich SlideshowTests.xctest */;
@@ -209,6 +215,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3DAA01000000000000000001 /* XCLocalSwiftPackageReference "Packages/ImmichClient" */,
+				3DAA01000000000000000008 /* XCLocalSwiftPackageReference "Packages/OnboardingKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3DDA115F2FE2D16C0059B8FD /* Products */;
@@ -634,6 +641,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/ImmichClient;
 		};
+		3DAA01000000000000000008 /* XCLocalSwiftPackageReference "Packages/OnboardingKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/OnboardingKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -648,6 +659,14 @@
 		3DAA01000000000000000005 /* ImmichClientTestSupport */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ImmichClientTestSupport;
+		};
+		3DAA01000000000000000009 /* OnboardingKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OnboardingKit;
+		};
+		3DAA0100000000000000000B /* OnboardingKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OnboardingKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
