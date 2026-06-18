@@ -112,7 +112,7 @@ enthalten und werden **vor** der Implementierung geschrieben und müssen zuerst 
 - [X] T021 [P] Test: `URLError(.timedOut)` aus Transport → `ImmichError.unreachable` in `ErrorTests.swift`. (SC-004, INV-4) — zuerst rot.
 - [X] T022 [P] Test: non-2xx (≠401) / undekodierbare JSON → `ImmichError.invalidResponse` in `ErrorTests.swift`. (INV-6) — zuerst rot.
 - [X] T023 Zentrales Fehler-Mapping in `ImmichClient.swift` (HTTP-Status & gefangene `URLError` → `ImmichError`) für alle drei Methoden; Tests T020–T022 grün. Sicherstellen: API-Key wird nie geloggt. (Konstitution III)
-- [ ] T024 Refactor + `quickstart.md`-Validierung: gesamte Suite grün über XcodeBuildMCP; SC-001…SC-006 abgedeckt.
+- [X] T024 Refactor + `quickstart.md`-Validierung: Unit-Suite 14/14 grün (Host `swift test`, MockTransport — SC-001…SC-006 abgedeckt); iPadOS-Compile/Link verifiziert über XcodeBuildMCP (`build_sim` für Schemes `ImmichClient` und `Immich Slideshow`, iPad Pro 11" (M5), 0 Warnings/Errors). Hinweis: Paket-Testtarget ist nicht in ein Xcode-Test-Scheme eingebunden und die SwiftPM-MCP-Workflow-Tools sind standardmäßig deaktiviert, daher läuft die Suite auf dem Host statt über `test_sim`.
 - [X] T025 App-Target „Immich Slideshow" bindet das lokale Paket `Packages/ImmichClient` als Abhängigkeit ein (nur Verknüpfung, kein UI). Build der App grün.
 
 ---
