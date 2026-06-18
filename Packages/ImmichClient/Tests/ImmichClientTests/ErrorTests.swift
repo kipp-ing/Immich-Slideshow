@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import ImmichClient
+import ImmichClientTestSupport
 
 @Test func albumsMapsUnauthorizedStatusToUnauthorizedError() async throws {
     let client = try makeClient(

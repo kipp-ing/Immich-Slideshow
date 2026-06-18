@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import ImmichClient
+import ImmichClientTestSupport
 
 @Test func albumDetailJSONDecodesAssets() throws {
     let json = """

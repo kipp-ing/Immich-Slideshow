@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		3DAA01000000000000000003 /* ImmichClient in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000002 /* ImmichClient */; };
+		3DAA01000000000000000006 /* ImmichClient in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000004 /* ImmichClient */; };
+		3DAA01000000000000000007 /* ImmichClientTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000005 /* ImmichClientTestSupport */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +66,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DAA01000000000000000006 /* ImmichClient in Frameworks */,
+				3DAA01000000000000000007 /* ImmichClientTestSupport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,6 +145,8 @@
 			);
 			name = "Immich SlideshowTests";
 			packageProductDependencies = (
+				3DAA01000000000000000004 /* ImmichClient */,
+				3DAA01000000000000000005 /* ImmichClientTestSupport */,
 			);
 			productName = "Immich SlideshowTests";
 			productReference = 3DDA116B2FE2D16E0059B8FD /* Immich SlideshowTests.xctest */;
@@ -415,8 +421,7 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -459,8 +464,7 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -628,7 +632,7 @@
 /* Begin XCLocalSwiftPackageReference section */
 		3DAA01000000000000000001 /* XCLocalSwiftPackageReference "Packages/ImmichClient" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/ImmichClient";
+			relativePath = Packages/ImmichClient;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -636,6 +640,14 @@
 		3DAA01000000000000000002 /* ImmichClient */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ImmichClient;
+		};
+		3DAA01000000000000000004 /* ImmichClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ImmichClient;
+		};
+		3DAA01000000000000000005 /* ImmichClientTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ImmichClientTestSupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
