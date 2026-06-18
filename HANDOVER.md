@@ -4,16 +4,21 @@ _Last updated: 2026-06-18. Branch: `002-onboarding` (branched off the 001 work; 
 merged to `main`** — 002 builds on top of it)._
 
 ## TL;DR
-Feature **001 ImmichClient is complete + verified**. Feature **002 Onboarding: Setup + Foundational +
-US1 (MVP) + US2 are done** — **T001–T025 complete**. The three-step flow (Server → API-Key → Album)
-builds and runs on the iPad sim; the real keychain round-trip is green app-hosted; `StartupGate` routes
-relaunch (complete state → main screen, else first missing step). **Next up: US3 (T026–T029)** — `reset()`
-on the ViewModel + a reset entry point, then **Polish (T030–T032)**.
+Feature **001 ImmichClient is complete + verified**. Feature **002 Onboarding is COMPLETE** —
+**all T001–T032 done** (Setup, Foundational, US1 MVP, US2 relaunch-skip, US3 reset, Polish). The
+three-step flow (Server → API-Key → Album) builds and runs on the iPad sim; real keychain round-trip +
+reset (real key removal) green app-hosted; `StartupGate` routes relaunch; security review clean (key
+keychain-only, zero logging). **Next up: a new feature** — likely SlideshowView or PowerManager
+(see CLAUDE.md Module list). Start with `/speckit-specify` for the next feature.
 
-Test counts: ImmichClient **17** host + OnboardingKit **18** host (incl. 4 StartupGate); app-hosted sim
-suite **11/11** (incl. `OnboardingKeychainTests` real keychain round-trip). Verify with `test_sim`
-(scheme "Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — already the session default).
-Fresh-install onboarding UI confirmed via screenshot (server step renders, light/simple).
+Test counts: ImmichClient **17** host + OnboardingKit **19** host (incl. StartupGate + reset);
+app-hosted sim suite green (incl. `OnboardingKeychainTests` + `OnboardingResetTests` real-keychain).
+Verify with `test_sim` (scheme "Immich Slideshow", iPad Pro 11" M5, `preferXcodebuild: true` — the
+session default). Fresh-install onboarding UI confirmed via screenshot (server step, light/simple).
+
+⚠️ **Two real-world paths remain mock-only** (no live Immich available this session): T015's
+`GET /api/server/version` route/decode, and the full UI walkthrough (complete onboarding → relaunch →
+main screen). Both are covered by host/app-hosted tests; verify against a live server before field use.
 
 ⚠️ **Still-open real-world flag (T015)**: `GET /api/server/version` and its `{major,minor,patch}` decode
 are still **assumed** — all US1 tests are mocked, so nothing failed, but verify against the live Immich
