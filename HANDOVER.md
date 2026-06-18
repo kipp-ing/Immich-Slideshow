@@ -72,6 +72,23 @@ are still **assumed** — all US1 tests are mocked, so nothing failed, but verif
 **assumed** (all US1 tests mocked). Verify against the live Immich (`/api/openapi.json`) before relying
 on step-1 reachability in the field (Constitution IV).
 
+## Hiccups this session (avoid re-tripping)
+- **Cross-module re-export needs an explicit import.** `OnboardingViewModel.albums` is `[Album]` where
+  `Album` lives in `ImmichClient`. A SwiftUI view that only `import OnboardingKit` and touches
+  `album.id` / `album.name` fails to compile ("property not available due to missing import of defining
+  module 'ImmichClient'"). Fix: `import ImmichClient` in any view that uses `Album` members
+  (`AlbumStepView.swift` does). Swift does **not** auto-re-export the transitive module's members.
+- **`cd` in a Bash call drifts the cwd for later calls.** A `cd Packages/OnboardingKit && swift test`
+  left the shell there; the next `git add <repo-relative path>` failed with "pathspec did not match".
+  Use `(cd … && …)` subshells, or absolute paths, or `cd /Users/jan/dev/repos/Immich-Slideshow &&` up
+  front. The Bash tool persists working dir between calls.
+- **Pre-link SourceKit noise.** "No such module 'OnboardingKit'/'ImmichClient'" diagnostics fire on the
+  new view/test files until the pbxproj linkage (T021) lands and a sim build runs. They're transient —
+  the `test_sim`/`build_sim` build is the real signal, not the editor diagnostics.
+- **`test_sim` is slow (~2–7 min).** It drags in the UITest launch suite (perf + multiple launches).
+  Expect minutes; the structured result lists every case. For pure logic, the host `swift test` (sub-second)
+  is the faster inner loop; reserve `test_sim` for the keychain/UI/linking gate.
+
 ## Environment / gotchas (hard-won this session — keep honoring)
 - **XcodeBuildMCP**: `.mcp.json` must invoke `npx -y xcodebuildmcp@latest **mcp**` (the `mcp`
   subcommand). Without it the server prints usage and the client gets `-32000`. Enabled in
