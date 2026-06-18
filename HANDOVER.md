@@ -1,114 +1,76 @@
-# Handover — ImmichSlideshow
+# Handover — ImmichClient (Feature 001)
 
-**Date**: 2026-06-17
-**Branch**: `001-immich-client` (feature branch, off `main`)
-**Phase**: Spec Kit document loop **complete**; ready to start TDD implementation at task **T001**.
+_Last updated: 2026-06-18. Branch: `001-immich-client`. Pushed to `origin/001-immich-client`._
 
----
+## TL;DR
+The `ImmichClient` module is **functionally complete and verified** (host unit tests
+14/14 green; app target links the package and builds for an iPad simulator).
+**One task remains: T024** — re-run the full verification through **XcodeBuildMCP**
+and confirm SC-001…SC-006. That's why you're restarting: to load the MCP server.
 
-## TL;DR — what to do next
+## Why the restart
+`XcodeBuildMCP` is declared in `.mcp.json` and enabled in `.claude/settings.local.json`,
+but the server was **not connected** in the previous session (it loads at startup; that
+session predated `.mcp.json`). `ToolSearch` found none of its tools. After restart it
+should connect — confirm before relying on it.
 
-1. **Restart Claude Code** so the new MCP server + `/speckit-*` skills register
-   (they were installed mid-session and aren't active in the current process).
-2. Confirm **XcodeBuildMCP** connects, then build the package skeleton.
-3. Start the TDD loop at **`specs/001-immich-client/tasks.md` → T001** (red → green → refactor).
-   MVP = User Story 1 (`albums()`), tasks T001–T013.
+If it still doesn't load: the fallback used so far was raw `xcodebuild` (see commands
+below). CLAUDE.md prefers MCP over raw `xcodebuild`, so only fall back if MCP is truly
+unavailable, and say so.
 
----
+## What's done (all committed + pushed)
+- **Setup T001–T003** — `Packages/ImmichClient/` SPM package (Swift 6 tools, iOS 18 + macOS host).
+- **Foundational T004–T008** — `ServerConfig`, `ImmichError`, `HTTPTransport`+`URLSessionTransport`,
+  `MockTransport` (actor), `ImmichAPI` protocol, `ImmichClient` skeleton.
+- **US1 T009–T013** — `albums()` → `GET /api/albums`, `Album` (Codable, `albumName`→`name`),
+  shared `makeRequest(path:queryItems:)` helper.
+- **US2 T014–T017** — `assets(albumID:)` → `GET /api/albums/{id}`, `Asset` (Codable),
+  `AlbumDetail` wrapper, empty album → `[]`.
+- **US3 T018–T019** — `preview(assetID:)` → `GET /api/assets/{id}/thumbnail?size=preview` → raw `Data`.
+- **Polish T020–T023** — centralized error mapping in `responseData(for:)`/`decode(_:from:)`:
+  401→`.unauthorized`, caught `URLError`→`.unreachable`, non-2xx/non-decodable→`.invalidResponse`.
+  API key never logged.
+- **T025** — app target "Immich Slideshow" links the local package
+  (`XCLocalSwiftPackageReference` + `ImmichClient` product dependency in `project.pbxproj`,
+  objectVersion 77). Link only, no UI. `xcodebuild` → **BUILD SUCCEEDED** with the package compiled.
 
-## Environment state
+## The one remaining task
+**T024** (`specs/001-immich-client/tasks.md:115`): whole suite green via XcodeBuildMCP +
+`quickstart.md` validation, SC-001…SC-006 covered. Steps:
+1. Confirm XcodeBuildMCP is connected (its tools appear via ToolSearch).
+2. Run the `ImmichClient` package tests through MCP (or the app scheme on an iPad sim).
+3. Cross-check `specs/001-immich-client/quickstart.md` and the success criteria SC-001…SC-006.
+4. Mark T024 `[X]`, commit, push. Feature is then ready for a PR to `main`.
 
-| Item | State |
-|------|-------|
-| Xcode | **26.5** active (`xcode-select -p` → `/Applications/Xcode.app/Contents/Developer`) ✅ |
-| xcodebuild | works (Build 17F42) ✅ |
-| Node / npx | v26 / 11.12 ✅ |
-| uv / specify CLI | installed ✅ |
-| Spec Kit | initialized (`.specify/`, skills in `.claude/skills/speckit-*`) ✅ |
-| XcodeBuildMCP | configured in `.mcp.json`; **failed to connect in this session** because the toolchain pointed at Command Line Tools. That's now fixed → should connect after a **Claude Code restart**. ⚠️ verify |
-| Google Drive MCP | "needs authentication" — unrelated, ignore. |
+## Verification commands (fallback, host + sim)
+```bash
+# Host unit tests (Foundation-only module) — currently 14/14 green:
+cd "Packages/ImmichClient" && swift build && swift test
 
-**Important**: The `/speckit-*` commands are installed as **skills**, but skills added mid-session
-don't register until restart. They were executed this session by **reading the SKILL.md and running
-the workflow directly** — that's a valid fallback if they still don't appear after restart.
-
----
-
-## What's done (Spec Kit loop)
-
-All on branch `001-immich-client`:
-
-- **Constitution** → `.specify/memory/constitution.md` (v1.0.0, German, 7 principles incl. two
-  NON-NEGOTIABLE: Test-First, No-Plaintext-Secrets).
-- **Feature 1 spec** → `specs/001-immich-client/`:
-  - `spec.md` — 3 user stories (Albums P1, Assets P1, Preview P2), 10 FRs, SC-001…SC-006, out-of-scope.
-  - `plan.md` — Swift 6 SPM module; **Constitution Check = PASS**.
-  - `research.md` — Immich API path decisions (**see verification note below**).
-  - `data-model.md` — `ServerConfig`, `Album`, `Asset`, `ImmichError`.
-  - `contracts/ImmichAPI.md` — `ImmichAPI` + `HTTPTransport` protocols, invariants INV-1…INV-6.
-  - `quickstart.md` — SC → test mapping.
-  - `tasks.md` — **25 tasks, TDD-ordered** (the implementation backlog).
-  - `checklists/requirements.md` — all items pass.
-- `CLAUDE.md` SPECKIT marker updated to point at `specs/001-immich-client/plan.md`.
-
-Optional steps skipped: `/speckit-clarify` (spec was clean, no open clarifications),
-`/speckit-checklist`, `/speckit-analyze` (can run before implement if extra rigor wanted).
-Optional `after_specify`/`after_plan` agent-context hooks: plan reference was updated manually.
-
----
-
-## Architecture decision (baked into the plan)
-
-Foundation-only **local SPM package** `Packages/ImmichClient/` (does not yet exist — created by T001).
-Logic sits behind an `ImmichAPI` protocol with an **injectable `HTTPTransport`**, so the entire module
-is tested against a `MockTransport` with **no real server** (satisfies Test-First + Modular Isolation).
-App target wires the package in at the very end (T025), no UI in this feature.
-
-Planned layout (created during implementation):
+# App build with package linked (raw xcodebuild fallback; prefer MCP):
+xcodebuild build -project "Immich Slideshow.xcodeproj" -scheme "Immich Slideshow" \
+  -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M5)' \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO
 ```
-Packages/ImmichClient/
-├── Package.swift
-├── Sources/ImmichClient/{ServerConfig,Models,ImmichError,HTTPTransport,ImmichAPI,ImmichClient}.swift
-└── Tests/ImmichClientTests/{MockTransport,AlbumTests,AssetTests,PreviewTests,ErrorTests}.swift
-```
+Available iPad sims include: iPad Pro 13"/11" (M5), iPad Air 13"/11" (M4), iPad mini (A17 Pro), iPad (A16).
 
----
+## Workflow notes (Claude orchestrates, Codex implements)
+This worked well — reuse it for future features:
+- Brief via `.claude/scripts/codex-brief.sh "<task>" <files...>`, then
+  `codex-agent start "$(...)" -s workspace-write -r medium`. Omit `--map` (no
+  `docs/CODEBASE_MAP.md` yet).
+- **First launch in the repo stalls on a "Do you trust this directory?" prompt** —
+  answer with `codex-agent send <job> "1"`. Already trusted now, but watch for it.
+- **Codex needs `--disable-sandbox` (+ `CLANG_MODULE_CACHE_PATH=.build/module-cache`)**
+  for SwiftPM inside its sandbox (non-writable Home caches). That's an env artifact, not a
+  code issue — Claude re-verifies unsandboxed and it's clean.
+- **Codex does not auto-commit.** Claude commits after the verification gate (the pattern
+  used for every slice here). The brief intentionally doesn't tell Codex to commit.
+- For TDD slices with intertwined shared types (e.g. a protocol referencing a not-yet-built
+  model), spell out the **micro-order** in the brief (red→green steps) so Codex doesn't
+  collapse them. This produced genuine red-first transitions.
 
-## Task backlog (`specs/001-immich-client/tasks.md`)
-
-- **Phase 1 Setup** T001–T003 — SPM package skeleton, empty build green.
-- **Phase 2 Foundational** T004–T008 — `ServerConfig`, `ImmichError`, `HTTPTransport`+`URLSessionTransport`, `MockTransport`, client/protocol skeleton.
-- **Phase 3 US1 (P1, MVP)** T009–T013 — red tests → `albums()`, verify `x-api-key` header.
-- **Phase 4 US2 (P1)** T014–T017 — `assets(albumID:)`, empty album → `[]`.
-- **Phase 5 US3 (P2)** T018–T019 — `preview(assetID:)` via `thumbnail?size=preview`.
-- **Phase 6 Polish** T020–T025 — error-mapping tests (401/timeout/invalid) + impl, quickstart validation, wire package into app target.
-
-Per task: write the test, **run it red via XcodeBuildMCP**, minimal impl to green, refactor. Commit per task/group.
-
----
-
-## ⚠️ Open items / cautions for the implementer
-
-1. **Verify Immich API paths against the live server before T012/T017/T019.** research.md uses the
-   current plural routes (`/api/albums`, `/api/albums/{id}`, `/api/assets/{id}/thumbnail?size=preview`,
-   auth header `x-api-key`) but the constitution (Principle IV) **requires** checking
-   `GET /api/server/version` + `/api/openapi.json` on the running instance. Do not guess; correct
-   research.md if they differ.
-2. **Never log the API key** (Constitution III, NON-NEGOTIABLE).
-3. **No TLS exceptions** — standard URLSession only; server has a valid cert (Constitution IV).
-4. **Nothing is committed yet.** All files (incl. `CLAUDE.md`, `.specify/`, `specs/`, the bundle docs)
-   are untracked on `001-immich-client`. Decide whether to commit the spec artifacts before coding.
-   Note: Spec Kit suggested adding `.claude/` to `.gitignore` (it can hold credentials).
-
----
-
-## Open task list (tracker)
-
-- [x] Fix xcode-select → Xcode.app
-- [x] Initialize Spec Kit
-- [x] Constitution
-- [x] ImmichClient spec
-- [x] Plan
-- [x] Tasks
-- [ ] **Verify XcodeBuildMCP build/test works** (after restart) — task #3
-- [ ] **Implement ImmichClient via TDD** (T001…T025) — task #8
+## Constraints honored (keep honoring)
+- No secrets in code/UserDefaults/logs; API key only sent as `x-api-key`, never logged.
+- No TLS validation disabled; standard `URLSession` over HTTPS.
+- `.gitignore` was amended to track `Packages/ImmichClient/` (otherwise `Packages/` is ignored).
