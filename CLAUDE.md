@@ -54,8 +54,17 @@ als Positionsargument (nicht via stdin), also per Command-Substitution übergebe
 
     codex-agent start "$(.claude/scripts/codex-brief.sh "..." Packages/ImmichClient/Sources/ImmichClient/ImmichClient.swift)" --map -s workspace-write
 
-`--map` injiziert `docs/CODEBASE_MAP.md` — mit `/cartographer` nach Strukturänderungen frisch halten.
+`--map` injiziert `docs/CODEBASE_MAP.md`. Diese Datei wird **bei jedem Session-Start automatisch lean
+neu generiert** (`.claude/scripts/build-map.sh`, deterministisch, kein LLM — per `SessionStart`-Hook in
+`.claude/settings.json`; die Datei ist git-ignored). Für die reichere, narrierte Variante bei Bedarf
+manuell `/cartographer` laufen lassen (token-intensiv — Claude startet das nie selbst).
 `--dry-run` zeigt den Prompt vorab, ohne einen Agenten zu starten.
+
+### Codex-Coding-Session (Sollablauf)
+1. **Map** — automatisch beim Session-Start (`build-map.sh`); sonst manuell `/cartographer`.
+2. **Briefing** — `codex-brief.sh` rendern, `codex-agent start ... --map` (Map wird injiziert).
+3. **Implementieren** — Codex gegen das Briefing (Hausregeln unten, 2-Runden-Grenze).
+4. **Review** — am Ende `/codex:review` (Cross-Model). Optional als Stop-Gate via `/codex:setup`.
 
 ### Hausregeln (nicht verhandelbar)
 - **TDD zuerst:** roter Test vor Implementierung (Konstitution, NON-NEGOTIABLE).
