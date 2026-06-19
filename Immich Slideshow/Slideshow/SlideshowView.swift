@@ -9,6 +9,7 @@
 //  the quiet default (Konstitution VII).
 //
 
+import HAControlKit
 import PowerKit
 import SlideshowKit
 import SwiftUI
@@ -16,10 +17,13 @@ import SwiftUI
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
     let powerManager: PowerManager
+    let coordinator: HAControlCoordinator?
     var onReset: () -> Void = {}
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
+    @State private var showBrokerSetup = false
+    @State private var isCoordinatorRunning = false
 
     var body: some View {
         ZStack {
@@ -50,11 +54,13 @@ struct SlideshowView: View {
             // foreground (FR-001). Idle timer is normalized again on disappear.
             powerManager.activate()
             await viewModel.start()
+            await startCoordinator()
         }
         .onDisappear {
             // Leaving the slideshow: restore the idle timer and any app-changed
             // brightness to its baseline (FR-002/FR-011).
             powerManager.deactivate()
+            Task { await stopCoordinator() }
         }
         .onChange(of: scenePhase) { _, newPhase in
             // Foreground-only effects (Konstitution V, FR-003/FR-004/FR-012): iOS hands
@@ -64,9 +70,11 @@ struct SlideshowView: View {
             case .active:
                 viewModel.resume()
                 powerManager.willEnterForeground()
+                Task { await startCoordinator() }
             default:
                 viewModel.pause()
                 powerManager.didEnterBackground()
+                Task { await stopCoordinator() }
             }
         }
         .onLongPressGesture { showResetDialog = true }
@@ -75,11 +83,29 @@ struct SlideshowView: View {
             isPresented: $showResetDialog,
             titleVisibility: .visible
         ) {
+            Button("Broker einrichten") { showBrokerSetup = true }
             Button("Reset", role: .destructive, action: onReset)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This clears the server, API key, and album, and returns to setup.")
         }
+        .sheet(isPresented: $showBrokerSetup) {
+            BrokerSetupView()
+        }
+    }
+
+    private func startCoordinator() async {
+        guard let coordinator else { return }
+        guard !isCoordinatorRunning else { return }
+        isCoordinatorRunning = true
+        await coordinator.start()
+    }
+
+    private func stopCoordinator() async {
+        guard let coordinator else { return }
+        guard isCoordinatorRunning else { return }
+        await coordinator.stop()
+        isCoordinatorRunning = false
     }
 
     @ViewBuilder
