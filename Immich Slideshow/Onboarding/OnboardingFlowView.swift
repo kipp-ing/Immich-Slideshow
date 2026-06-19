@@ -3,7 +3,7 @@
 //  Immich Slideshow
 //
 //  Three-step first-run setup: server URL -> API key -> album. Drives the
-//  OnboardingViewModel; the app shows ContentView once step == .done.
+//  OnboardingViewModel; the app shows the slideshow once step == .done.
 //
 
 import OnboardingKit
