@@ -55,3 +55,6 @@ fastlane/test_output
 
 # macOS
 .DS_Store
+
+# Auto-generated lean codebase map (regenerated each session by build-map.sh)
+docs/CODEBASE_MAP.md
