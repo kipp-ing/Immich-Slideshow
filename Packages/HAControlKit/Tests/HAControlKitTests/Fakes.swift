@@ -1,0 +1,93 @@
+import Foundation
+@testable import HAControlKit
+
+final class FakeMQTTTransport: MQTTTransport, @unchecked Sendable {
+    private(set) var published: [MQTTMessage] = []
+    private(set) var subscriptions: [String] = []
+    private(set) var will: MQTTMessage?
+    private(set) var connectCount = 0
+    private(set) var disconnectCount = 0
+    var connectShouldThrow = false
+
+    private var incomingContinuation: AsyncStream<MQTTMessage>.Continuation?
+    private var connectionContinuation: AsyncStream<Bool>.Continuation?
+
+    lazy var incoming: AsyncStream<MQTTMessage> = AsyncStream { continuation in
+        self.incomingContinuation = continuation
+    }
+
+    lazy var connectionEvents: AsyncStream<Bool> = AsyncStream { continuation in
+        self.connectionContinuation = continuation
+    }
+
+    func connect(will: MQTTMessage) async throws {
+        connectCount += 1
+        if connectShouldThrow {
+            throw FakeError.connectFailed
+        }
+        self.will = will
+    }
+
+    func disconnect() async {
+        disconnectCount += 1
+    }
+
+    func publish(_ message: MQTTMessage) async throws {
+        published.append(message)
+    }
+
+    func subscribe(_ topicFilter: String) async throws {
+        subscriptions.append(topicFilter)
+    }
+
+    func inject(_ message: MQTTMessage) {
+        incomingContinuation?.yield(message)
+    }
+
+    func emitConnection(_ up: Bool) {
+        connectionContinuation?.yield(up)
+    }
+
+    enum FakeError: Error {
+        case connectFailed
+    }
+}
+
+@MainActor
+final class FakeRemoteControl: RemoteControlling {
+    var playbackState: PlaybackState = .playing
+    var brightness: Double = 0.5
+    var albumOptions: [String] = []
+    var currentAlbum: String?
+    private(set) var pauseCount = 0
+    private(set) var resumeCount = 0
+    var onLocalChange: (@MainActor () -> Void)?
+
+    func pause() {
+        playbackState = .paused
+        pauseCount += 1
+    }
+
+    func resume() {
+        playbackState = .playing
+        resumeCount += 1
+    }
+
+    func setBrightness(_ value: Double) async {
+        brightness = min(max(value, 0), 1)
+    }
+
+    func selectAlbum(_ name: String) {
+        if albumOptions.contains(name) {
+            currentAlbum = name
+        }
+    }
+}
+
+struct FakeBrokerConfigStore: BrokerConfigStore {
+    var config: BrokerConfig?
+
+    func load() -> BrokerConfig? {
+        config
+    }
+}
