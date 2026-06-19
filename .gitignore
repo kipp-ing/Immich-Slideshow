@@ -33,6 +33,7 @@ Packages/*
 !Packages/ImmichClient/
 !Packages/OnboardingKit/
 !Packages/SlideshowKit/
+!Packages/PowerKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*
