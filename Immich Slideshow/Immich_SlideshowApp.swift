@@ -6,6 +6,9 @@
 //
 
 import Foundation
+import BrokerSetupKit
+import HAControlKit
+import HAControlMQTT
 import ImmichClient
 import OnboardingKit
 import PowerKit
@@ -23,6 +26,7 @@ struct Immich_SlideshowApp: App {
     // Backed by the live screen in production, a fake under `--uitest` so the
     // hermetic test never touches real device brightness.
     private let makePowerManager: () -> PowerManager
+    private let makeCoordinator: @MainActor (SlideshowViewModel) -> HAControlCoordinator?
 
     init() {
         #if DEBUG
@@ -34,12 +38,16 @@ struct Immich_SlideshowApp: App {
             _viewModel = State(initialValue: UITestSupport.makeViewModel())
             makeSlideshow = { UITestSupport.makeSlideshowViewModel() }
             makePowerManager = { UITestSupport.makePowerManager() }
+            makeCoordinator = { _ in nil }
             return
         }
         #endif
 
         let config = UserDefaultsConfigStore()
         let keychain = KeychainAPIKeyStore()
+        let brokerStore = KeychainBrokerSettingsStore()
+        let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "immich-slideshow-device"
+        let brokerProvider = BrokerConfigProvider(settingsStore: brokerStore, deviceID: deviceID)
         let viewModel = OnboardingViewModel(
             api: { serverConfig in ImmichClient(config: serverConfig) },
             config: config,
@@ -69,6 +77,18 @@ struct Immich_SlideshowApp: App {
         // Production: drive the real device screen. The PowerManager gates all
         // effects to the foreground itself (Konstitution V).
         makePowerManager = { PowerManager(screen: UIScreenController()) }
+        makeCoordinator = { slideshow in
+            guard let brokerConfig = brokerProvider.load() else { return nil }
+            let adapter = SlideshowRemoteControlAdapter(slideshow: slideshow)
+            let transport = NIOMQTTTransport(config: brokerConfig)
+            return HAControlCoordinator(
+                transport: transport,
+                control: adapter,
+                configStore: brokerProvider,
+                deviceName: "Immich Slideshow",
+                enabledEntities: [.playback]
+            )
+        }
     }
 
     var body: some Scene {
@@ -76,7 +96,8 @@ struct Immich_SlideshowApp: App {
             RootView(
                 onboarding: viewModel,
                 makeSlideshow: makeSlideshow,
-                makePowerManager: makePowerManager
+                makePowerManager: makePowerManager,
+                makeCoordinator: makeCoordinator
             )
         }
     }
@@ -89,23 +110,32 @@ private struct RootView: View {
     let onboarding: OnboardingViewModel
     let makeSlideshow: () -> SlideshowViewModel?
     let makePowerManager: () -> PowerManager
+    let makeCoordinator: @MainActor (SlideshowViewModel) -> HAControlCoordinator?
 
     @State private var slideshow: SlideshowViewModel?
     @State private var powerManager: PowerManager?
+    @State private var coordinator: HAControlCoordinator?
 
     var body: some View {
         if onboarding.step == .done {
             if let slideshow, let powerManager {
-                SlideshowView(viewModel: slideshow, powerManager: powerManager, onReset: {
+                SlideshowView(viewModel: slideshow, powerManager: powerManager, coordinator: coordinator, onReset: {
                     self.slideshow = nil
                     self.powerManager = nil
+                    self.coordinator = nil
                     onboarding.reset()
                 })
             } else {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        slideshow = makeSlideshow()
+                        let newSlideshow = makeSlideshow()
+                        slideshow = newSlideshow
+                        if let newSlideshow {
+                            coordinator = makeCoordinator(newSlideshow)
+                        } else {
+                            coordinator = nil
+                        }
                         powerManager = makePowerManager()
                     }
             }
