@@ -8,6 +8,7 @@
 import Foundation
 import ImmichClient
 import OnboardingKit
+import PowerKit
 import SlideshowKit
 import SwiftUI
 
@@ -18,6 +19,10 @@ struct Immich_SlideshowApp: App {
     // constructs an authenticated slideshow. Returns nil only if state is somehow
     // incomplete (the StartupGate normally prevents reaching `.done` without it).
     private let makeSlideshow: () -> SlideshowViewModel?
+    // Keeps the display awake during the slideshow and can control brightness.
+    // Backed by the live screen in production, a fake under `--uitest` so the
+    // hermetic test never touches real device brightness.
+    private let makePowerManager: () -> PowerManager
 
     init() {
         #if DEBUG
@@ -28,6 +33,7 @@ struct Immich_SlideshowApp: App {
         if UITestSupport.isActive {
             _viewModel = State(initialValue: UITestSupport.makeViewModel())
             makeSlideshow = { UITestSupport.makeSlideshowViewModel() }
+            makePowerManager = { UITestSupport.makePowerManager() }
             return
         }
         #endif
@@ -59,11 +65,19 @@ struct Immich_SlideshowApp: App {
                 ticker: RealTicker(interval: SlideshowConfig.default.interval)
             )
         }
+
+        // Production: drive the real device screen. The PowerManager gates all
+        // effects to the foreground itself (Konstitution V).
+        makePowerManager = { PowerManager(screen: UIScreenController()) }
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView(onboarding: viewModel, makeSlideshow: makeSlideshow)
+            RootView(
+                onboarding: viewModel,
+                makeSlideshow: makeSlideshow,
+                makePowerManager: makePowerManager
+            )
         }
     }
 }
@@ -74,20 +88,26 @@ struct Immich_SlideshowApp: App {
 private struct RootView: View {
     let onboarding: OnboardingViewModel
     let makeSlideshow: () -> SlideshowViewModel?
+    let makePowerManager: () -> PowerManager
 
     @State private var slideshow: SlideshowViewModel?
+    @State private var powerManager: PowerManager?
 
     var body: some View {
         if onboarding.step == .done {
-            if let slideshow {
-                SlideshowView(viewModel: slideshow, onReset: {
+            if let slideshow, let powerManager {
+                SlideshowView(viewModel: slideshow, powerManager: powerManager, onReset: {
                     self.slideshow = nil
+                    self.powerManager = nil
                     onboarding.reset()
                 })
             } else {
                 Color.black
                     .ignoresSafeArea()
-                    .task { slideshow = makeSlideshow() }
+                    .task {
+                        slideshow = makeSlideshow()
+                        powerManager = makePowerManager()
+                    }
             }
         } else {
             OnboardingFlowView(viewModel: onboarding)
@@ -123,6 +143,18 @@ enum UITestSupport {
             ticker: RealTicker(interval: .seconds(2))
         )
     }
+
+    @MainActor
+    static func makePowerManager() -> PowerManager {
+        // In-memory screen so the hermetic UI test never dims/locks the real device.
+        PowerManager(screen: StubScreenController())
+    }
+}
+
+@MainActor
+private final class StubScreenController: ScreenControlling {
+    var brightness: Double = 0.5
+    var isIdleTimerDisabled = false
 }
 
 private struct StubImmichAPI: ImmichAPI {
