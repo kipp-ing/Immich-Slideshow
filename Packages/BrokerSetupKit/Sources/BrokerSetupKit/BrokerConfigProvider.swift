@@ -14,6 +14,9 @@ public struct BrokerConfigProvider: BrokerConfigStore {
         guard let settings = settingsStore.load() else {
             return nil
         }
+        guard settings.validate() == nil else {
+            return nil
+        }
 
         return BrokerConfig(
             host: settings.host,

@@ -17,13 +17,13 @@ import SwiftUI
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
     let powerManager: PowerManager
-    let coordinator: HAControlCoordinator?
+    var makeCoordinator: () -> HAControlCoordinator? = { nil }
     var onReset: () -> Void = {}
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
     @State private var showBrokerSetup = false
-    @State private var isCoordinatorRunning = false
+    @State private var coordinator: HAControlCoordinator?
 
     var body: some View {
         ZStack {
@@ -95,17 +95,24 @@ struct SlideshowView: View {
     }
 
     private func startCoordinator() async {
-        guard let coordinator else { return }
-        guard !isCoordinatorRunning else { return }
-        isCoordinatorRunning = true
+        // One coordinator/transport per run: build fresh on start, fully tear down on stop.
+        // That keeps the MQTT client re-connectable across background/foreground (the old
+        // reused-client path stayed offline after the first background cycle).
+        guard coordinator == nil, let coordinator = makeCoordinator() else { return }
+        self.coordinator = coordinator
         await coordinator.start()
+        // Connect failed: release it so a later appear/foreground retries instead of being
+        // stuck. stop() fully tears the transport down (disconnect + shutdown).
+        if coordinator.connection == .disconnected {
+            self.coordinator = nil
+            await coordinator.stop()
+        }
     }
 
     private func stopCoordinator() async {
         guard let coordinator else { return }
-        guard isCoordinatorRunning else { return }
+        self.coordinator = nil
         await coordinator.stop()
-        isCoordinatorRunning = false
     }
 
     @ViewBuilder
