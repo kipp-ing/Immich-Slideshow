@@ -35,6 +35,7 @@ Packages/*
 !Packages/SlideshowKit/
 !Packages/PowerKit/
 !Packages/HAControlKit/
+!Packages/BrokerSetupKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*
