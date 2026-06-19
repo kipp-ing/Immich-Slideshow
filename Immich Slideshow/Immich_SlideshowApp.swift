@@ -114,28 +114,22 @@ private struct RootView: View {
 
     @State private var slideshow: SlideshowViewModel?
     @State private var powerManager: PowerManager?
-    @State private var coordinator: HAControlCoordinator?
 
     var body: some View {
         if onboarding.step == .done {
             if let slideshow, let powerManager {
-                SlideshowView(viewModel: slideshow, powerManager: powerManager, coordinator: coordinator, onReset: {
+                SlideshowView(viewModel: slideshow, powerManager: powerManager,
+                              makeCoordinator: { makeCoordinator(slideshow) },
+                              onReset: {
                     self.slideshow = nil
                     self.powerManager = nil
-                    self.coordinator = nil
                     onboarding.reset()
                 })
             } else {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        let newSlideshow = makeSlideshow()
-                        slideshow = newSlideshow
-                        if let newSlideshow {
-                            coordinator = makeCoordinator(newSlideshow)
-                        } else {
-                            coordinator = nil
-                        }
+                        slideshow = makeSlideshow()
                         powerManager = makePowerManager()
                     }
             }
