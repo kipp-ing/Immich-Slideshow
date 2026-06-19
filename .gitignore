@@ -34,6 +34,7 @@ Packages/*
 !Packages/OnboardingKit/
 !Packages/SlideshowKit/
 !Packages/PowerKit/
+!Packages/HAControlKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*
