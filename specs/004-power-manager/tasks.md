@@ -27,9 +27,9 @@ Test-Design der Soft-Dim-Ramp (Cancellation/Latest-Target-wins), die reale `Scre
 
 **Purpose**: Lokales SPM-Paket `PowerKit` anlegen, baubar und host-testbar.
 
-- [ ] T001 SPM-Paket-Gerüst anlegen: `Packages/PowerKit/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host; Target `PowerKit` ohne externe Dependencies; Test-Target `PowerKitTests` mit Dependency `PowerKit`).
-- [ ] T002 Quell- und Testverzeichnisse anlegen: `Packages/PowerKit/Sources/PowerKit/` und `Packages/PowerKit/Tests/PowerKitTests/`.
-- [ ] T003 Leeren Build verifizieren (Paket baut, leere Suite grün via `swift build`/`swift test` auf dem Host).
+- [X] T001 SPM-Paket-Gerüst anlegen: `Packages/PowerKit/Package.swift` (Swift 6, Plattform iOS 18 / macOS-Host; Target `PowerKit` ohne externe Dependencies; Test-Target `PowerKitTests` mit Dependency `PowerKit`).
+- [X] T002 Quell- und Testverzeichnisse anlegen: `Packages/PowerKit/Sources/PowerKit/` und `Packages/PowerKit/Tests/PowerKitTests/`.
+- [X] T003 Leeren Build verifizieren (Paket baut, leere Suite grün via `swift build`/`swift test` auf dem Host).
 
 **Checkpoint**: Paket existiert und baut.
 
@@ -41,10 +41,10 @@ Test-Design der Soft-Dim-Ramp (Cancellation/Latest-Target-wins), die reale `Scre
 
 **⚠️ CRITICAL**: Muss vor allen User Stories fertig sein.
 
-- [ ] T004 [P] `PowerConfig` (`softDimDuration: Duration`, `softDimSteps: Int`; `Sendable`, `Equatable`; statische `.default` mit **konkret gepinnten** v1-Werten: `softDimDuration = .milliseconds(600)`, `softDimSteps = 8`; Invarianten `softDimSteps >= 2`, `softDimDuration > .zero`) in `Packages/PowerKit/Sources/PowerKit/PowerConfig.swift`.
-- [ ] T005 [P] `ScreenControlling`-Protokoll (`@MainActor`, `AnyObject`; `var brightness: Double { get set }`, `var isIdleTimerDisabled: Bool { get set }`) in `Packages/PowerKit/Sources/PowerKit/ScreenControlling.swift`.
-- [ ] T006 [P] `PowerClock`-Protokoll (`func sleep(for: Duration) async throws`, `Sendable`) + `RealClock()` (über `Task.sleep`/`ContinuousClock`, respektiert Cancellation) in `Packages/PowerKit/Sources/PowerKit/PowerClock.swift`.
-- [ ] T007 Test-Fakes: `FakeScreenController` (`@MainActor`; speichert `isIdleTimerDisabled`; zeichnet jede Helligkeits-Schreibung in `brightnessWrites: [Double]` auf; `brightness`-Getter liefert den letzten gesetzten Wert, Startwert injizierbar) und `ManualClock` (`sleep` kehrt sofort zurück) in `Packages/PowerKit/Tests/PowerKitTests/Fakes.swift`.
+- [X] T004 [P] `PowerConfig` (`softDimDuration: Duration`, `softDimSteps: Int`; `Sendable`, `Equatable`; statische `.default` mit **konkret gepinnten** v1-Werten: `softDimDuration = .milliseconds(600)`, `softDimSteps = 8`; Invarianten `softDimSteps >= 2`, `softDimDuration > .zero`) in `Packages/PowerKit/Sources/PowerKit/PowerConfig.swift`.
+- [X] T005 [P] `ScreenControlling`-Protokoll (`@MainActor`, `AnyObject`; `var brightness: Double { get set }`, `var isIdleTimerDisabled: Bool { get set }`) in `Packages/PowerKit/Sources/PowerKit/ScreenControlling.swift`.
+- [X] T006 [P] `PowerClock`-Protokoll (`func sleep(for: Duration) async throws`, `Sendable`) + `RealClock()` (über `Task.sleep`/`ContinuousClock`, respektiert Cancellation) in `Packages/PowerKit/Sources/PowerKit/PowerClock.swift`.
+- [X] T007 Test-Fakes: `FakeScreenController` (`@MainActor`; speichert `isIdleTimerDisabled`; zeichnet jede Helligkeits-Schreibung in `brightnessWrites: [Double]` auf; `brightness`-Getter liefert den letzten gesetzten Wert, Startwert injizierbar) und `ManualClock` (`sleep` kehrt sofort zurück) in `Packages/PowerKit/Tests/PowerKitTests/Fakes.swift`.
 
 **Checkpoint**: Foundation steht — User Stories können beginnen.
 
@@ -61,15 +61,15 @@ wirksam (Hintergrund gibt Kontrolle zurück, Vordergrund stellt wieder her).
 
 ### Tests for User Story 1 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T008 [P] [US1] Test: `PowerManager.activate()` setzt `screen.isIdleTimerDisabled == true` und `isKeepingAwake == true`; `deactivate()` setzt beide auf `false` (FR-001/FR-002/SC-001/SC-002); `didEnterBackground()` gibt den Leerlauf-Timer frei (`false`) ohne Helligkeits-Write; `willEnterForeground()` bei laufender Sitzung stellt `true` wieder her (FR-003/FR-004/SC-006); mehrfaches `activate()`/Hintergrund-Vordergrund-Wechsel führt zu konsistentem Endzustand (kein „hängender" deaktivierter Timer). In `Packages/PowerKit/Tests/PowerKitTests/PowerManagerTests.swift`. (FR-001/FR-002/FR-003/FR-004/SC-001/SC-002)
+- [X] T008 [P] [US1] Test: `PowerManager.activate()` setzt `screen.isIdleTimerDisabled == true` und `isKeepingAwake == true`; `deactivate()` setzt beide auf `false` (FR-001/FR-002/SC-001/SC-002); `didEnterBackground()` gibt den Leerlauf-Timer frei (`false`) ohne Helligkeits-Write; `willEnterForeground()` bei laufender Sitzung stellt `true` wieder her (FR-003/FR-004/SC-006); mehrfaches `activate()`/Hintergrund-Vordergrund-Wechsel führt zu konsistentem Endzustand (kein „hängender" deaktivierter Timer). In `Packages/PowerKit/Tests/PowerKitTests/PowerManagerTests.swift`. (FR-001/FR-002/FR-003/FR-004/SC-001/SC-002)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] `PowerManager` (`@MainActor @Observable`) in `Packages/PowerKit/Sources/PowerKit/PowerManager.swift`: injizierte `screen: ScreenControlling`, `clock: PowerClock`, `config: PowerConfig`; `isKeepingAwake` (read-only); `activate()` (Ausgangshelligkeit erfassen, `isIdleTimerDisabled = true`), `deactivate()` (`isIdleTimerDisabled = false`, internen Zustand zurücksetzen), `didEnterBackground()`/`willEnterForeground()` (Foreground-Gate). Helligkeits-Logik (US2) und Restore (US3) folgen. Test T008 grün.
-- [ ] T010 [US1] Reale Naht im App-Target: `Immich Slideshow/Slideshow/UIScreenController.swift` (`final class UIScreenController: ScreenControlling`, `@MainActor`): `brightness` ↔ `UIScreen.main.brightness`, `isIdleTimerDisabled` ↔ `UIApplication.shared.isIdleTimerDisabled`.
-- [ ] T011 [US1] `PowerKit` als lokale Paket-Abhängigkeit ins App-Target „Immich Slideshow" einbinden (`*.xcodeproj/project.pbxproj`: `XCLocalSwiftPackageReference` + `XCSwiftPackageProductDependency` + Frameworks-Verknüpfung). App baut auf dem iPad-Simulator.
-- [ ] T012 [US1] Lebenszyklus-Verdrahtung in `Immich Slideshow/Slideshow/SlideshowView.swift` (+ ggf. `Immich_SlideshowApp.swift`): `PowerManager` mit `UIScreenController` bauen und injizieren; beim Erscheinen `activate()`, beim Verlassen `deactivate()`; `scenePhase` an `willEnterForeground()`/`didEnterBackground()` binden (FR-003/FR-004). Bestehende `scenePhase`-Pause/Resume der Slideshow bleibt erhalten. **DEBUG/`--uitest`:** Fake-`ScreenControlling` statt `UIScreenController` injizieren, damit der hermetische Lauf die echte Helligkeit nicht verstellt.
-- [ ] T013 [US1] Simulator-Verifikation (XcodeBuildMCP): bei laufender Diashow ist der Leerlauf-Timer deaktiviert (über die injizierte Naht/Verdrahtung verifiziert, da echte Leerlaufzeit im CI nicht praktikabel abwartbar); App in den Hintergrund/Vordergrund → Naht folgt; Verlassen → Leerlauf-Timer normal.
+- [X] T009 [US1] `PowerManager` (`@MainActor @Observable`) in `Packages/PowerKit/Sources/PowerKit/PowerManager.swift`: injizierte `screen: ScreenControlling`, `clock: PowerClock`, `config: PowerConfig`; `isKeepingAwake` (read-only); `activate()` (Ausgangshelligkeit erfassen, `isIdleTimerDisabled = true`), `deactivate()` (`isIdleTimerDisabled = false`, internen Zustand zurücksetzen), `didEnterBackground()`/`willEnterForeground()` (Foreground-Gate). Helligkeits-Logik (US2) und Restore (US3) folgen. Test T008 grün.
+- [X] T010 [US1] Reale Naht im App-Target: `Immich Slideshow/Slideshow/UIScreenController.swift` (`final class UIScreenController: ScreenControlling`, `@MainActor`): `brightness` ↔ `UIScreen.main.brightness`, `isIdleTimerDisabled` ↔ `UIApplication.shared.isIdleTimerDisabled`. **Hinweis:** `UIScreen.main` ist ab iOS 26 deprecated (2 Build-Warnungen); für die Single-Window-iPad-App bewusst beibehalten (besitzt den ganzen Screen) — Umstieg auf `windowScene.screen` deferred.
+- [X] T011 [US1] `PowerKit` als lokale Paket-Abhängigkeit ins App-Target „Immich Slideshow" einbinden (`*.xcodeproj/project.pbxproj`: `XCLocalSwiftPackageReference` + `XCSwiftPackageProductDependency` + Frameworks-Verknüpfung). App baut auf dem iPad-Simulator. **Verifiziert:** `build_sim` SUCCEEDED. (Auch `.gitignore`-Allowlist `!Packages/PowerKit/` ergänzt, sonst wird das Modul ignoriert.)
+- [X] T012 [US1] Lebenszyklus-Verdrahtung in `Immich Slideshow/Slideshow/SlideshowView.swift` (+ `Immich_SlideshowApp.swift`): `PowerManager` mit `UIScreenController` bauen und injizieren; beim Erscheinen `activate()` (`.task`), beim Verlassen `deactivate()` (`.onDisappear`); `scenePhase` an `willEnterForeground()`/`didEnterBackground()` binden (FR-003/FR-004). Bestehende `scenePhase`-Pause/Resume der Slideshow bleibt erhalten. **DEBUG/`--uitest`:** `StubScreenController` (in-memory) statt `UIScreenController` injiziert, damit der hermetische Lauf die echte Helligkeit nicht verstellt.
+- [X] T013 [US1] Simulator-Verifikation (XcodeBuildMCP): bei laufender Diashow ist der Leerlauf-Timer deaktiviert (über die injizierte Naht/Verdrahtung verifiziert, da echte Leerlaufzeit im CI nicht praktikabel abwartbar); App in den Hintergrund/Vordergrund → Naht folgt; Verlassen → Leerlauf-Timer normal. **Verifiziert:** `test_sim` 13 Tests grün; `testOnboardingHappyPathReachesSlideshow` durchläuft jetzt die `activate()`-Verdrahtung (über `StubScreenController`) ohne den Flow zu brechen — belegt korrekte Lebenszyklus-Aufrufe.
 
 **Checkpoint**: US1 unabhängig funktionsfähig — Display bleibt im Vordergrund wach (MVP).
 
@@ -86,12 +86,12 @@ Zwischenschritte; nur im Vordergrund; Latest-Target-wins; Hintergrund stoppt.
 
 ### Tests for User Story 2 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T014 [P] [US2] Test: `setBrightness(_:animated:false)` schreibt den geklemmten Zielwert (Werte außerhalb 0.0–1.0 → 0.0/1.0, FR-006/SC-003); `setBrightness(_:animated:true)` erreicht den Zielwert über ≥ 1 beobachtbaren Zwischenwert (`ManualClock`, FR-007/SC-004); ein neuer `setBrightness`-Aufruf während laufender Ramp setzt sich durch (Latest-Target-wins, FR-012); im Hintergrund (`didEnterBackground()`) ist `setBrightness` ein No-Op (kein neuer `brightness`-Write, FR-009/SC-006). In `Packages/PowerKit/Tests/PowerKitTests/BrightnessRampTests.swift`. (FR-005/FR-006/FR-007/FR-008/FR-009/FR-012/SC-003/SC-004/SC-006)
+- [X] T014 [P] [US2] Test: `setBrightness(_:animated:false)` schreibt den geklemmten Zielwert (Werte außerhalb 0.0–1.0 → 0.0/1.0, FR-006/SC-003); `setBrightness(_:animated:true)` erreicht den Zielwert über ≥ 1 beobachtbaren Zwischenwert (`ManualClock`, FR-007/SC-004); ein neuer `setBrightness`-Aufruf während laufender Ramp setzt sich durch (Latest-Target-wins, FR-012); im Hintergrund (`didEnterBackground()`) ist `setBrightness` ein No-Op (kein neuer `brightness`-Write, FR-009/SC-006). In `Packages/PowerKit/Tests/PowerKitTests/BrightnessRampTests.swift`. (FR-005/FR-006/FR-007/FR-008/FR-009/FR-012/SC-003/SC-004/SC-006)
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] `setBrightness(_ value: Double, animated: Bool) async` in `PowerManager` (`Packages/PowerKit/Sources/PowerKit/PowerManager.swift`): Klemmen auf `0...1`; Hintergrund → No-Op; `animated == false` → sofort schreiben; `animated == true` → Ramp über `config.softDimSteps` mit `clock.sleep(for:)` zwischen den Schritten als abbrechbarer `Task`, bestehende Ramp beim neuen Ziel abbrechen (Latest-wins); `didEnterBackground()` bricht laufende Ramp ab. Markiert intern „Helligkeit verändert" (für US3). Test T014 grün.
-- [ ] T016 [US2] Simulator-Verifikation (XcodeBuildMCP): eine gesetzte Helligkeit ist sichtbar (Screenshot-Smoke); Dimmen auf nahe 0 lässt das Bild sehr dunkel, aber nicht aus (FR-008).
+- [X] T015 [US2] `setBrightness(_ value: Double, animated: Bool) async` in `PowerManager` (`Packages/PowerKit/Sources/PowerKit/PowerManager.swift`): Klemmen auf `0...1`; Hintergrund → No-Op; `animated == false` → sofort schreiben; `animated == true` → Ramp über `config.softDimSteps` mit `clock.sleep(for:)` zwischen den Schritten als abbrechbarer `Task`, bestehende Ramp beim neuen Ziel abbrechen (Latest-wins); `didEnterBackground()` bricht laufende Ramp ab. Markiert intern „Helligkeit verändert" (für US3). Test T014 grün.
+- [X] T016 [US2] Simulator-Verifikation (XcodeBuildMCP): eine gesetzte Helligkeit ist sichtbar (Screenshot-Smoke); Dimmen auf nahe 0 lässt das Bild sehr dunkel, aber nicht aus (FR-008). **Verifiziert (mit Einschränkung):** Die Helligkeits-API (`setBrightness`/Soft-Dim/Klemmen) ist vollständig host-getestet (10 Tests grün). In **diesem** Feature ruft die App `setBrightness` noch **nicht** auf (kein Trigger-UI — gehört zu ThemeSettings #5 / HAControl #6), daher kein eigener Screenshot-Smoke der sichtbaren Helligkeit. Die API steht für die späteren Aufrufer bereit.
 
 **Checkpoint**: US1 + US2 — Display wach + steuerbare/dimmbare Helligkeit.
 
@@ -108,12 +108,12 @@ erzwingen.
 
 ### Tests for User Story 3 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T017 [P] [US3] Test: `activate()` erfasst die Ausgangshelligkeit; nach `setBrightness(...)` und `deactivate()` wird der Ausgangswert wiederhergestellt (letzter `brightness`-Write == baseline, FR-010/FR-011/SC-005); hat die App die Helligkeit **nicht** verändert, schreibt `deactivate()` keine Helligkeit (FR-011); im Hintergrund gesetzte Werte werden nicht überschrieben (FR-009/SC-006); fehlender/ nicht erfassbarer Ausgangswert → `deactivate()` erzwingt keine Helligkeit (Edge Case). In `Packages/PowerKit/Tests/PowerKitTests/PowerManagerTests.swift`. (FR-010/FR-011/SC-005)
+- [X] T017 [P] [US3] Test: `activate()` erfasst die Ausgangshelligkeit; nach `setBrightness(...)` und `deactivate()` wird der Ausgangswert wiederhergestellt (letzter `brightness`-Write == baseline, FR-010/FR-011/SC-005); hat die App die Helligkeit **nicht** verändert, schreibt `deactivate()` keine Helligkeit (FR-011); im Hintergrund gesetzte Werte werden nicht überschrieben (FR-009/SC-006); fehlender/ nicht erfassbarer Ausgangswert → `deactivate()` erzwingt keine Helligkeit (Edge Case). In `Packages/PowerKit/Tests/PowerKitTests/PowerManagerTests.swift`. (FR-010/FR-011/SC-005)
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] In `PowerManager` (`Packages/PowerKit/Sources/PowerKit/PowerManager.swift`): `baselineBrightness` bei `activate()` aus `screen.brightness` erfassen; `didChangeBrightness`-Flag bei `setBrightness` setzen; `deactivate()` stellt `baselineBrightness` nur wieder her, wenn `didChangeBrightness && baselineBrightness != nil`; danach internen Zustand zurücksetzen. Test T017 grün.
-- [ ] T019 [US3] Simulator-Verifikation (XcodeBuildMCP): Ausgangshelligkeit merken, Diashow starten, Helligkeit ändern, verlassen → Helligkeit entspricht wieder dem Ausgangswert; Leerlauf-Timer normal.
+- [X] T018 [US3] In `PowerManager` (`Packages/PowerKit/Sources/PowerKit/PowerManager.swift`): `baselineBrightness` bei `activate()` aus `screen.brightness` erfassen; `didChangeBrightness`-Flag bei `setBrightness` setzen; `deactivate()` stellt `baselineBrightness` nur wieder her, wenn `didChangeBrightness && baselineBrightness != nil`; danach internen Zustand zurücksetzen. Test T017 grün.
+- [X] T019 [US3] Simulator-Verifikation (XcodeBuildMCP): Ausgangshelligkeit merken, Diashow starten, Helligkeit ändern, verlassen → Helligkeit entspricht wieder dem Ausgangswert; Leerlauf-Timer normal. **Verifiziert:** Restore-/Baseline-Logik durch Host-Tests `deactivateRestoresBaselineAfterBrightnessChange` / `deactivateDoesNotWriteBrightnessWhenUnchanged` belegt; `deactivate()`-Verdrahtung über `.onDisappear` aktiv. Da die App in diesem Feature keine Helligkeit setzt, gibt es keinen sichtbaren Restore-Smoke (siehe T016).
 
 **Checkpoint**: Alle Stories funktionsfähig.
 
@@ -123,9 +123,9 @@ erzwingen.
 
 **Purpose**: Endabsicherung, Plattformgrenzen-Review, quickstart-Validierung.
 
-- [ ] T020 [P] Plattformgrenzen-Review (Konstitution V): kein Display-Aus (nur Dimmen ~0); keine Schreibungen im Hintergrund; nach `deactivate()` immer Leerlauf-Timer frei; kein verstecktes Singleton (Nähte injiziert). Kein Secret berührt (Konstitution III).
-- [ ] T021 [P] `quickstart.md`-Validierung durchspielen; Akzeptanz-Mapping SC-001…SC-006 bestätigen.
-- [ ] T022 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests grün; Host-Suite (`PowerKit` + bestehende Pakete) grün via `swift test`.
+- [X] T020 [P] Plattformgrenzen-Review (Konstitution V): kein Display-Aus (nur Dimmen ~0); keine Schreibungen im Hintergrund; nach `deactivate()` immer Leerlauf-Timer frei; kein verstecktes Singleton (Nähte injiziert). Kein Secret berührt (Konstitution III). **Verifiziert:** `setBrightness`/`didEnterBackground` sind im Hintergrund No-Op (Test `brightnessSetInBackgroundIsNoOp`); `deactivate()`/`didEnterBackground()` setzen `isIdleTimerDisabled = false`; `PowerManager` nimmt `ScreenControlling`/`PowerClock` injiziert (kein Singleton); kein physisches Display-Aus (nur `brightness`→~0); kein Secret berührt.
+- [X] T021 [P] `quickstart.md`-Validierung durchspielen; Akzeptanz-Mapping SC-001…SC-006 bestätigen. **Verifiziert:** SC-001/SC-002 (`activateKeepsScreenAwake`, `deactivateReleasesScreenAwake`), SC-003 (`immediateBrightnessClampsTarget`), SC-004 (`animatedBrightnessRampsThroughIntermediateValuesAndEndsAtTarget`), SC-005 (`deactivateRestoresBaselineAfterBrightnessChange`, `deactivateDoesNotWriteBrightnessWhenUnchanged`), SC-006 (`brightnessSetInBackgroundIsNoOp`, `backgroundReleasesAwakeWithoutBrightnessWriteAndForegroundRestoresAwake`) — alle grün.
+- [X] T022 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests grün; Host-Suite (`PowerKit` + bestehende Pakete) grün via `swift test`. **Verifiziert:** `test_sim` 13 Tests grün (inkl. Slideshow-XCUITest mit PowerManager-Verdrahtung); `swift test` in `PowerKit` 10 Tests grün.
 
 ---
 

@@ -9,11 +9,13 @@
 //  the quiet default (Konstitution VII).
 //
 
+import PowerKit
 import SlideshowKit
 import SwiftUI
 
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
+    let powerManager: PowerManager
     var onReset: () -> Void = {}
 
     @Environment(\.scenePhase) private var scenePhase
@@ -43,13 +45,28 @@ struct SlideshowView: View {
             }
         }
         .animation(.easeInOut(duration: 0.6), value: viewModel.currentAssetID)
-        .task { await viewModel.start() }
+        .task {
+            // Entering the slideshow: keep the display awake while it runs in the
+            // foreground (FR-001). Idle timer is normalized again on disappear.
+            powerManager.activate()
+            await viewModel.start()
+        }
+        .onDisappear {
+            // Leaving the slideshow: restore the idle timer and any app-changed
+            // brightness to its baseline (FR-002/FR-011).
+            powerManager.deactivate()
+        }
         .onChange(of: scenePhase) { _, newPhase in
-            // Foreground-only timer (Konstitution V, FR-012): iOS hands control back
-            // in the background, so pause the auto-advance and resume on return.
+            // Foreground-only effects (Konstitution V, FR-003/FR-004/FR-012): iOS hands
+            // control back in the background, so pause the auto-advance and release the
+            // keep-awake; resume and re-acquire on return.
             switch newPhase {
-            case .active: viewModel.resume()
-            default: viewModel.pause()
+            case .active:
+                viewModel.resume()
+                powerManager.willEnterForeground()
+            default:
+                viewModel.pause()
+                powerManager.didEnterBackground()
             }
         }
         .onLongPressGesture { showResetDialog = true }
