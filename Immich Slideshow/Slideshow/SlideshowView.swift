@@ -28,7 +28,7 @@ struct SlideshowView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.black
 
             switch viewModel.phase {
             case .loading:
@@ -49,6 +49,11 @@ struct SlideshowView: View {
                 SlideshowErrorView(onRetry: { Task { await viewModel.retry() } })
             }
         }
+        .ignoresSafeArea()
+        // Photo-frame calm default: hide the iPad status bar (clock/battery) and the
+        // home indicator so nothing competes with the image (Konstitution VII).
+        .statusBarHidden(true)
+        .persistentSystemOverlays(.hidden)
         .animation(.easeInOut(duration: 0.6), value: viewModel.currentAssetID)
         .task {
             // Entering the slideshow: keep the display awake while it runs in the
@@ -126,14 +131,19 @@ struct SlideshowView: View {
     @ViewBuilder
     private var currentImage: some View {
         if let data = viewModel.currentImageData, let image = UIImage(data: data) {
+            // Fit (letterbox) the image into the full screen and center it. Applying
+            // `.ignoresSafeArea()` directly to a `scaledToFit` image expands its frame
+            // asymmetrically by the safe-area insets, which pushed the picture off-center
+            // in landscape; instead the whole ZStack ignores the safe area and the image
+            // fills + centers within it.
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
-                .ignoresSafeArea()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .id(viewModel.currentAssetID)
                 .transition(.opacity)
         } else {
-            Color.black.ignoresSafeArea()
+            Color.black
         }
     }
 }
