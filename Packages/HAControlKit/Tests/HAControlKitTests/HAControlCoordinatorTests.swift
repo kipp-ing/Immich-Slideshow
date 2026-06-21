@@ -106,6 +106,88 @@ struct HAControlCoordinatorTests {
     }
 
     @Test
+    func brightnessCommandSetsClampedBrightnessAndEchoesAppliedValue() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        let coordinator = makeCoordinator(transport: transport, control: control, entities: [.brightness])
+
+        await coordinator.handleIncoming(message("128", entity: .brightness))
+        #expect(abs(control.brightness - 128.0 / 255.0) < 0.001)
+        #expect(transport.published.last?.topic == HATopics.stateTopic(deviceID: "dev1", entity: .brightness))
+        #expect(transport.published.last?.payload.string == "128")
+
+        await coordinator.handleIncoming(message("300", entity: .brightness))
+        #expect(control.brightness == 1.0)
+        #expect(transport.published.last?.payload.string == "255")
+
+        await coordinator.handleIncoming(message("-10", entity: .brightness))
+        #expect(control.brightness == 0.0)
+        #expect(transport.published.last?.payload.string == "0")
+    }
+
+    @Test
+    func brightnessInvalidPayloadKeepsStateAndEchoesCurrent() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        control.brightness = 0.4
+        let coordinator = makeCoordinator(transport: transport, control: control, entities: [.brightness])
+
+        await coordinator.handleIncoming(message("not-a-number", entity: .brightness))
+
+        #expect(control.brightness == 0.4)
+        #expect(transport.published.last?.topic == HATopics.stateTopic(deviceID: "dev1", entity: .brightness))
+        #expect(transport.published.last?.payload.string == "102") // round(0.4 * 255)
+    }
+
+    @Test
+    func albumCommandSelectsValidAlbumAndEchoesSelection() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        control.albumOptions = ["Wohnzimmer", "Urlaub"]
+        let coordinator = makeCoordinator(transport: transport, control: control, entities: [.album])
+
+        await coordinator.handleIncoming(message("Urlaub", entity: .album))
+
+        #expect(control.currentAlbum == "Urlaub")
+        #expect(transport.published.last?.topic == HATopics.stateTopic(deviceID: "dev1", entity: .album))
+        #expect(transport.published.last?.payload.string == "Urlaub")
+    }
+
+    @Test
+    func albumCommandIgnoresUnknownAlbumAndEchoesCurrent() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        control.albumOptions = ["Wohnzimmer", "Urlaub"]
+        control.currentAlbum = "Wohnzimmer"
+        let coordinator = makeCoordinator(transport: transport, control: control, entities: [.album])
+
+        await coordinator.handleIncoming(message("Nonexistent", entity: .album))
+
+        #expect(control.currentAlbum == "Wohnzimmer")
+        #expect(transport.published.last?.topic == HATopics.stateTopic(deviceID: "dev1", entity: .album))
+        #expect(transport.published.last?.payload.string == "Wohnzimmer")
+    }
+
+    @Test
+    func startEchoesAllEnabledEntityStates() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        control.brightness = 1.0
+        control.albumOptions = ["Wohnzimmer"]
+        control.currentAlbum = "Wohnzimmer"
+        let coordinator = makeCoordinator(transport: transport, control: control, entities: [.playback, .brightness, .album])
+
+        await coordinator.start()
+
+        #expect(transport.subscriptions.contains(HATopics.commandTopic(deviceID: "dev1", entity: .brightness)))
+        #expect(transport.subscriptions.contains(HATopics.commandTopic(deviceID: "dev1", entity: .album)))
+        #expect(transport.published.containsMessage(topic: HATopics.stateTopic(deviceID: "dev1", entity: .brightness), payload: "255", retain: true))
+        #expect(transport.published.containsMessage(topic: HATopics.stateTopic(deviceID: "dev1", entity: .album), payload: "Wohnzimmer", retain: true))
+
+        await coordinator.stop()
+    }
+
+    @Test
     func startWithoutConfigDoesNotConnectOrPublish() async throws {
         let transport = FakeMQTTTransport()
         let control = FakeRemoteControl()
@@ -150,7 +232,11 @@ struct HAControlCoordinatorTests {
         #expect(coordinator.connection == .disconnected)
     }
 
-    private func makeCoordinator(transport: FakeMQTTTransport, control: FakeRemoteControl) -> HAControlCoordinator {
+    private func makeCoordinator(
+        transport: FakeMQTTTransport,
+        control: FakeRemoteControl,
+        entities: Set<HAEntity> = [.playback]
+    ) -> HAControlCoordinator {
         HAControlCoordinator(
             transport: transport,
             control: control,
@@ -161,7 +247,8 @@ struct HAControlCoordinatorTests {
                 password: "secret-pass",
                 deviceID: "dev1"
             )),
-            deviceName: "Slideshow"
+            deviceName: "Slideshow",
+            enabledEntities: entities
         )
     }
 

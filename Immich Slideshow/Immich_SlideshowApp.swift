@@ -21,12 +21,23 @@ struct Immich_SlideshowApp: App {
     // Built lazily at the `.done` route: reads the saved config + Keychain key and
     // constructs an authenticated slideshow. Returns nil only if state is somehow
     // incomplete (the StartupGate normally prevents reaching `.done` without it).
-    private let makeSlideshow: () -> SlideshowViewModel?
-    // Keeps the display awake during the slideshow and can control brightness.
-    // Backed by the live screen in production, a fake under `--uitest` so the
-    // hermetic test never touches real device brightness.
-    private let makePowerManager: () -> PowerManager
-    private let makeCoordinator: @MainActor (SlideshowViewModel) -> HAControlCoordinator?
+    // Bundled into one `Sendable` value so SwiftUI's `@Sendable` WindowGroup content
+    // closure captures a single Sendable struct rather than individual closure
+    // properties (which trip a per-function-value data-race warning when read off
+    // the App). `@MainActor` keeps the factories' captured stores main-actor-isolated.
+    private let factories: Factories
+
+    struct Factories: Sendable {
+        // Built lazily at the `.done` route: reads the saved config + Keychain key and
+        // constructs an authenticated slideshow. Returns nil only if state is somehow
+        // incomplete (the StartupGate normally prevents reaching `.done` without it).
+        let makeSlideshow: @MainActor @Sendable () -> SlideshowViewModel?
+        // Keeps the display awake during the slideshow and can control brightness.
+        // Backed by the live screen in production, a fake under `--uitest` so the
+        // hermetic test never touches real device brightness.
+        let makePowerManager: @MainActor @Sendable () -> PowerManager
+        let makeCoordinator: @MainActor @Sendable (SlideshowViewModel, PowerManager) async -> HAControlCoordinator?
+    }
 
     init() {
         #if DEBUG
@@ -36,9 +47,11 @@ struct Immich_SlideshowApp: App {
         // production path below is untouched.
         if UITestSupport.isActive {
             _viewModel = State(initialValue: UITestSupport.makeViewModel())
-            makeSlideshow = { UITestSupport.makeSlideshowViewModel() }
-            makePowerManager = { UITestSupport.makePowerManager() }
-            makeCoordinator = { _ in nil }
+            factories = Factories(
+                makeSlideshow: { @MainActor @Sendable in UITestSupport.makeSlideshowViewModel() },
+                makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
+                makeCoordinator: { @MainActor @Sendable _, _ in nil }
+            )
             return
         }
         #endif
@@ -62,7 +75,7 @@ struct Immich_SlideshowApp: App {
 
         // The API key stays in the Keychain and is only handed to the client here;
         // it is never logged or persisted elsewhere (Konstitution III).
-        makeSlideshow = {
+        let makeSlideshow: @MainActor @Sendable () -> SlideshowViewModel? = {
             guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
             let client = ImmichClient(
                 config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey)
@@ -76,29 +89,50 @@ struct Immich_SlideshowApp: App {
 
         // Production: drive the real device screen. The PowerManager gates all
         // effects to the foreground itself (Konstitution V).
-        makePowerManager = { PowerManager(screen: UIScreenController()) }
-        makeCoordinator = { slideshow in
+        let makePowerManager: @MainActor @Sendable () -> PowerManager = {
+            PowerManager(screen: UIScreenController())
+        }
+        let makeCoordinator: @MainActor @Sendable (SlideshowViewModel, PowerManager) async -> HAControlCoordinator? = { slideshow, powerManager in
             guard let brokerConfig = brokerProvider.load() else { return nil }
-            let adapter = SlideshowRemoteControlAdapter(slideshow: slideshow)
+
+            // Best-effort album list for the HA select entity; empty on failure so
+            // pause/play and brightness still work (FR-003 — broker is never blocking).
+            var albums: [Album] = []
+            if let appConfig = config.load(), let apiKey = keychain.read() {
+                let client = ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+                albums = (try? await client.albums()) ?? []
+            }
+
+            let adapter = SlideshowRemoteControlAdapter(
+                slideshow: slideshow,
+                powerManager: powerManager,
+                albums: albums,
+                currentAlbumID: config.load()?.selectedAlbumID
+            )
             let transport = NIOMQTTTransport(config: brokerConfig)
             return HAControlCoordinator(
                 transport: transport,
                 control: adapter,
                 configStore: brokerProvider,
                 deviceName: "Immich Slideshow",
-                enabledEntities: [.playback]
+                enabledEntities: [.playback, .brightness, .album]
             )
         }
+
+        factories = Factories(
+            makeSlideshow: makeSlideshow,
+            makePowerManager: makePowerManager,
+            makeCoordinator: makeCoordinator
+        )
     }
 
     var body: some Scene {
-        WindowGroup {
-            RootView(
-                onboarding: viewModel,
-                makeSlideshow: makeSlideshow,
-                makePowerManager: makePowerManager,
-                makeCoordinator: makeCoordinator
-            )
+        // Capture as locals so the (Sendable) WindowGroup content closure captures
+        // these values directly instead of `self`.
+        let onboarding = viewModel
+        let factories = factories
+        return WindowGroup {
+            RootView(onboarding: onboarding, factories: factories)
         }
     }
 }
@@ -108,9 +142,7 @@ struct Immich_SlideshowApp: App {
 /// re-renders; reset tears it down and returns to onboarding (002/US3).
 private struct RootView: View {
     let onboarding: OnboardingViewModel
-    let makeSlideshow: () -> SlideshowViewModel?
-    let makePowerManager: () -> PowerManager
-    let makeCoordinator: @MainActor (SlideshowViewModel) -> HAControlCoordinator?
+    let factories: Immich_SlideshowApp.Factories
 
     @State private var slideshow: SlideshowViewModel?
     @State private var powerManager: PowerManager?
@@ -119,7 +151,7 @@ private struct RootView: View {
         if onboarding.step == .done {
             if let slideshow, let powerManager {
                 SlideshowView(viewModel: slideshow, powerManager: powerManager,
-                              makeCoordinator: { makeCoordinator(slideshow) },
+                              makeCoordinator: { await factories.makeCoordinator(slideshow, powerManager) },
                               onReset: {
                     self.slideshow = nil
                     self.powerManager = nil
@@ -129,8 +161,8 @@ private struct RootView: View {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        slideshow = makeSlideshow()
-                        powerManager = makePowerManager()
+                        slideshow = factories.makeSlideshow()
+                        powerManager = factories.makePowerManager()
                     }
             }
         } else {

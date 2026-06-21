@@ -24,6 +24,39 @@ das Sicherheits-/Secret-Review und die manuelle Broker-Verifikation.
 
 ---
 
+## Status (2026-06-21)
+
+**Implemented & verified — US1, US2, US3 all done.**
+
+- **Setup + Foundational (T001–T009)**: ✅ `Packages/HAControlKit` (core + `HAControlMQTT` target), value
+  models, seams, topics, fakes.
+- **US1 Pause/Play + availability (T010–T018)**: ✅ Coordinator, discovery (`switch`), real
+  `NIOMQTTTransport` (mqtt-nio + TLS + LWT), Keychain store (BrokerSetupKit), adapter, app wiring.
+  - **Reconnect finalized**: `NIOMQTTTransport` now self-heals with exponential backoff (1s→30s);
+    `connectionEvents` carries only the reconnect edges (no double-announce on initial connect).
+- **US2 Brightness (T020–T022)**: ✅ `light` discovery (dimmable, 0–255↔0.0–1.0), command→`setBrightness`
+  (clamped) + applied-value echo, adapter → `PowerManager` (foreground-gated).
+- **US3 Album (T024–T026)**: ✅ `select` discovery (options = album list), command→`selectAlbum`
+  (unknown = no-op) + echo, `SlideshowViewModel.switchAlbum(_:)`, adapter wiring (name↔id, album fetch).
+- **Polish (T028–T030)**: ✅ Secret review (no credentials in payloads/topics/logs; TLS verification never
+  disabled), full simulator run green (13 app-hosted tests), host suites green
+  (HAControlKit 18, SlideshowKit 18, BrokerSetupKit 9).
+
+**Real-broker verification**:
+- ✅ **Automated** TLS integration test (`Tests/HAControlMQTTTests`, gated by `MQTT_INTEGRATION=1`, never in
+  CI) drives the real transport against a live mosquitto broker over TLS: connect+LWT, retained publish,
+  subscribe round-trip, and observed reconnect after a broker drop/restart. Reproducible via
+  `Packages/HAControlKit/Scripts/mqtt-integration.sh`. Trust is anchored to a local test CA with full
+  verification still on.
+- ⏳ **Manual against real Home Assistant (T019/T023/T027)**: pending — entity rendering, availability
+  online/offline in HA, and LWT firing on ungraceful drop are verified on a real HA instance.
+
+Diagnostic logging (credential-safe: topics/payloads/connection state only, never host/user/pass) added
+to the coordinator + transport under the `ing.kipp.Immich-Slideshow` subsystem to make the live test
+observable.
+
+---
+
 ## Phase 1: Setup (Shared Infrastructure)
 
 **Purpose**: Lokales SPM-Paket `HAControlKit` (Kern dependency-frei) + Target `HAControlMQTT` (mqtt-nio) anlegen.

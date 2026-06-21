@@ -25,6 +25,35 @@ struct HADiscoveryTests {
     }
 
     @Test
+    func brightnessDiscoveryIsDimmableLightWithBrightnessTopics() throws {
+        let data = HADiscovery.config(for: .brightness, deviceID: "dev1", deviceName: "Slideshow", albumOptions: [])
+        let json = try Self.object(from: data)
+
+        #expect(json["unique_id"] as? String == "dev1_brightness")
+        #expect(json["availability_topic"] as? String == HATopics.availability(deviceID: "dev1"))
+        #expect(json["command_topic"] as? String == HATopics.commandTopic(deviceID: "dev1", entity: .brightness))
+        #expect(json["state_topic"] as? String == HATopics.stateTopic(deviceID: "dev1", entity: .brightness))
+        #expect(json["brightness_command_topic"] as? String == HATopics.commandTopic(deviceID: "dev1", entity: .brightness))
+        #expect(json["brightness_state_topic"] as? String == HATopics.stateTopic(deviceID: "dev1", entity: .brightness))
+        #expect(json["brightness_scale"] as? Int == 255)
+
+        let device = try #require(json["device"] as? [String: Any])
+        #expect(device["identifiers"] as? [String] == ["dev1"])
+    }
+
+    @Test
+    func albumDiscoveryIsSelectWithOptions() throws {
+        let options = ["Wohnzimmer", "Urlaub 2026"]
+        let data = HADiscovery.config(for: .album, deviceID: "dev1", deviceName: "Slideshow", albumOptions: options)
+        let json = try Self.object(from: data)
+
+        #expect(json["unique_id"] as? String == "dev1_album")
+        #expect(json["command_topic"] as? String == HATopics.commandTopic(deviceID: "dev1", entity: .album))
+        #expect(json["state_topic"] as? String == HATopics.stateTopic(deviceID: "dev1", entity: .album))
+        #expect(json["options"] as? [String] == options)
+    }
+
+    @Test
     func discoveryPayloadContainsNoCredentialFields() throws {
         let data = HADiscovery.config(for: .playback, deviceID: "dev1", deviceName: "Slideshow", albumOptions: [])
         let json = try Self.object(from: data)
