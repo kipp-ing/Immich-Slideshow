@@ -35,7 +35,7 @@ struct SlideshowView: View {
     // (auto-hide only arms on reveal/interaction, so it stays up).
     @State private var chromeVisible = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
     @State private var autoHideTask: Task<Void, Never>?
-    @State private var showSettings = false
+    @State private var showSettings = ProcessInfo.processInfo.arguments.contains("--uitest-settings")
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
     @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
 
@@ -122,8 +122,7 @@ struct SlideshowView: View {
             )
         }
         .sheet(isPresented: $showSettings) {
-            // TODO(Slice D): real settings shell.
-            chromePlaceholderSheet(title: "Einstellungen")
+            SlideshowSettingsView(powerManager: powerManager)
         }
     }
 
@@ -215,16 +214,6 @@ struct SlideshowView: View {
         .opacity(chromeVisible ? 1 : 0)
         .animation(.easeInOut(duration: 0.3), value: chromeVisible)
         .allowsHitTesting(chromeVisible)
-    }
-
-    // TODO(Slice D): replaced by the settings shell.
-    private func chromePlaceholderSheet(title: String) -> some View {
-        NavigationStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-        }
     }
 
     private func startCoordinator() async {
