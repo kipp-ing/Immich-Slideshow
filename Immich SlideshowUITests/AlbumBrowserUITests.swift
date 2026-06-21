@@ -19,15 +19,15 @@ final class AlbumBrowserUITests: XCTestCase {
     @MainActor
     func testAlbumBrowserOpensDrillsInAndSelectionReturnsToSlideshow() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitest", "--uitest-slideshow"]
+        // Pin the chrome so opening the browser isn't racing the idle auto-hide.
+        app.launchArguments = ["--uitest", "--uitest-slideshow", "--uitest-chrome"]
         app.launch()
 
         let image = app.descendants(matching: .any)
             .matching(identifier: "slideshow.image").firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 5))
 
-        // Reveal chrome and open the album browser.
-        image.tap()
+        // Open the album browser from the chrome.
         let albumsButton = app.buttons["slideshow.chrome.albums"]
         XCTAssertTrue(albumsButton.waitForExistence(timeout: 2))
         albumsButton.tap()

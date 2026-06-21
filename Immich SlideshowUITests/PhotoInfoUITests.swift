@@ -18,15 +18,15 @@ final class PhotoInfoUITests: XCTestCase {
     @MainActor
     func testInfoButtonTogglesDateAndLocationOverlay() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitest", "--uitest-slideshow"]
+        // Pin the chrome so the info-toggle focus isn't racing the idle auto-hide.
+        app.launchArguments = ["--uitest", "--uitest-slideshow", "--uitest-chrome"]
         app.launch()
 
         let image = app.descendants(matching: .any)
             .matching(identifier: "slideshow.image").firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 5))
 
-        // Reveal chrome, then toggle the info overlay on.
-        image.tap()
+        // Toggle the info overlay on.
         let infoButton = app.buttons["slideshow.chrome.info"]
         XCTAssertTrue(infoButton.waitForExistence(timeout: 2))
         infoButton.tap()
