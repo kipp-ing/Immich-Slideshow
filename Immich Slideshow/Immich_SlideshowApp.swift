@@ -32,6 +32,9 @@ struct Immich_SlideshowApp: App {
         // constructs an authenticated slideshow. Returns nil only if state is somehow
         // incomplete (the StartupGate normally prevents reaching `.done` without it).
         let makeSlideshow: @MainActor @Sendable () -> SlideshowViewModel?
+        // The authenticated Immich client for UI that browses beyond the active
+        // album (the album-browser sheet). Same config/key as the slideshow.
+        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)?
         // Keeps the display awake during the slideshow and can control brightness.
         // Backed by the live screen in production, a fake under `--uitest` so the
         // hermetic test never touches real device brightness.
@@ -57,6 +60,7 @@ struct Immich_SlideshowApp: App {
             _viewModel = State(initialValue: uitestViewModel)
             factories = Factories(
                 makeSlideshow: { @MainActor @Sendable in UITestSupport.makeSlideshowViewModel() },
+                makeAPI: { @MainActor @Sendable in StubImmichAPI() },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
                 makeCoordinator: { @MainActor @Sendable _, _ in nil }
             )
@@ -95,6 +99,13 @@ struct Immich_SlideshowApp: App {
             )
         }
 
+        // Authenticated client for the album browser; nil only if state is somehow
+        // incomplete (same guard as the slideshow factory).
+        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)? = {
+            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
+            return ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+        }
+
         // Production: drive the real device screen. The PowerManager gates all
         // effects to the foreground itself (Konstitution V).
         let makePowerManager: @MainActor @Sendable () -> PowerManager = {
@@ -129,6 +140,7 @@ struct Immich_SlideshowApp: App {
 
         factories = Factories(
             makeSlideshow: makeSlideshow,
+            makeAPI: makeAPI,
             makePowerManager: makePowerManager,
             makeCoordinator: makeCoordinator
         )
@@ -154,15 +166,17 @@ private struct RootView: View {
 
     @State private var slideshow: SlideshowViewModel?
     @State private var powerManager: PowerManager?
+    @State private var api: (any ImmichAPI)?
 
     var body: some View {
         if onboarding.step == .done {
-            if let slideshow, let powerManager {
-                SlideshowView(viewModel: slideshow, powerManager: powerManager,
+            if let slideshow, let powerManager, let api {
+                SlideshowView(viewModel: slideshow, powerManager: powerManager, api: api,
                               makeCoordinator: { await factories.makeCoordinator(slideshow, powerManager) },
                               onReset: {
                     self.slideshow = nil
                     self.powerManager = nil
+                    self.api = nil
                     onboarding.reset()
                 })
             } else {
@@ -171,6 +185,7 @@ private struct RootView: View {
                     .task {
                         slideshow = factories.makeSlideshow()
                         powerManager = factories.makePowerManager()
+                        api = factories.makeAPI()
                     }
             }
         } else {

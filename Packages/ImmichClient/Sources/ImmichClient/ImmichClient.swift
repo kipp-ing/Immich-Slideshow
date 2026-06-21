@@ -36,6 +36,14 @@ public struct ImmichClient: ImmichAPI {
         return try await responseData(for: request)
     }
 
+    public func thumbnail(assetID: String) async throws -> Data {
+        let request = makeRequest(
+            path: "api/assets/\(assetID)/thumbnail",
+            queryItems: [URLQueryItem(name: "size", value: "thumbnail")]
+        )
+        return try await responseData(for: request)
+    }
+
     private func makeRequest(path: String, queryItems: [URLQueryItem] = []) -> URLRequest {
         let url = config.baseURL.appending(path: path)
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
