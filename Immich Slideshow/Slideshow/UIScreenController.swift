@@ -14,9 +14,27 @@ import UIKit
 
 @MainActor
 final class UIScreenController: ScreenControlling {
+    // iOS 26 deprecated `UIScreen.main`; resolve the screen from the app's active
+    // window scene instead (Apple's recommended `windowScene.screen` path). This is
+    // also correct under Stage Manager / external displays, where the window may not
+    // be on the built-in screen. `UIScreen.brightness` only affects the built-in
+    // screen, so brightness writes no-op elsewhere — by design.
+    private var activeScreen: UIScreen? {
+        let windowScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+        return (windowScenes.first { $0.activationState == .foregroundActive } ?? windowScenes.first)?.screen
+    }
+
     var brightness: Double {
-        get { Double(UIScreen.main.brightness) }
-        set { UIScreen.main.brightness = CGFloat(newValue) }
+        get { Double(activeScreen?.brightness ?? 0) }
+        set {
+            guard let screen = activeScreen else { return }
+            // Allow dimming below the hardware minimum (software-emulated) so the
+            // slideshow can reach a near-black "night" level — we can dim the panel
+            // but never power it off (Konstitution V / project constraints).
+            screen.wantsSoftwareDimming = true
+            screen.brightness = CGFloat(newValue)
+        }
     }
 
     var isIdleTimerDisabled: Bool {
