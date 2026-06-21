@@ -314,6 +314,126 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
 }
 
 @MainActor
+@Test func showPreviousStepsBackwardAndWraps() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+    #expect(model.currentAssetID == "image-1")
+
+    // From the first image, previous wraps to the last.
+    await model.showPrevious()
+    #expect(model.currentAssetID == "image-3")
+
+    await model.showPrevious()
+    #expect(model.currentAssetID == "image-2")
+}
+
+@MainActor
+@Test func showNextStepsForwardAndResetsTicker() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+
+    await model.showNext()
+    #expect(model.currentAssetID == "image-2")
+
+    // The auto-advance timer is still armed after a manual step.
+    await ticker.waitUntilWaiting()
+    ticker.tick()
+    await ticker.waitUntilConsumedTickCount(1)
+    await waitUntil(model.currentAssetID == "image-3")
+    #expect(model.currentAssetID == "image-3")
+}
+
+@MainActor
+@Test func togglePauseStopsTickerAndSurvivesForegroundResume() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+    await ticker.waitUntilWaiting()
+
+    // User pauses via chrome.
+    model.togglePause()
+    #expect(model.isPaused)
+    ticker.tick()
+    await settleMainActor()
+    #expect(model.currentAssetID == "image-1")
+
+    // A background→foreground cycle must NOT silently resume a user-paused show.
+    model.pause()
+    model.resume()
+    ticker.tick()
+    await settleMainActor()
+    #expect(model.currentAssetID == "image-1")
+
+    // While paused, manual navigation still works.
+    await model.showNext()
+    #expect(model.currentAssetID == "image-2")
+    #expect(model.isPaused)
+
+    // Resuming re-arms the auto-advance.
+    model.togglePause()
+    #expect(!model.isPaused)
+    await ticker.waitUntilWaiting()
+    ticker.tick()
+    await ticker.waitUntilConsumedTickCount(1)
+    await waitUntil(model.currentAssetID == "image-1")
+    #expect(model.currentAssetID == "image-1")
+}
+
+@MainActor
+@Test func jumpGoesToRequestedAssetAndIgnoresUnknown() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "image-1", type: "IMAGE"),
+        Asset(id: "image-2", type: "IMAGE"),
+        Asset(id: "image-3", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "image-1")
+    api.setPreviewData(Data([2]), for: "image-2")
+    api.setPreviewData(Data([3]), for: "image-3")
+
+    let model = SlideshowViewModel(api: api, albumID: "album", ticker: ticker)
+    await model.start()
+
+    await model.jump(to: "image-3")
+    #expect(model.currentAssetID == "image-3")
+    #expect(model.currentImageData == Data([3]))
+
+    await model.jump(to: "does-not-exist")
+    #expect(model.currentAssetID == "image-3")
+}
+
+@MainActor
 @Test func advanceFailsWhenEveryImageInRingNowFails() async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
