@@ -46,7 +46,15 @@ struct Immich_SlideshowApp: App {
         // real keychain — so the UI walkthrough is deterministic and CI-safe. The
         // production path below is untouched.
         if UITestSupport.isActive {
-            _viewModel = State(initialValue: UITestSupport.makeViewModel())
+            let uitestViewModel = UITestSupport.makeViewModel()
+            // Optional fast path for manual/visual verification: skip onboarding and
+            // launch straight into the stubbed slideshow (used to screenshot the
+            // running show, incl. landscape centering). Additive — the default
+            // `--uitest` path still starts at onboarding step 1.
+            if ProcessInfo.processInfo.arguments.contains("--uitest-slideshow") {
+                uitestViewModel.step = .done
+            }
+            _viewModel = State(initialValue: uitestViewModel)
             factories = Factories(
                 makeSlideshow: { @MainActor @Sendable in UITestSupport.makeSlideshowViewModel() },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
@@ -214,11 +222,6 @@ private final class StubScreenController: ScreenControlling {
 }
 
 private struct StubImmichAPI: ImmichAPI {
-    // A valid 1x1 PNG so the slideshow actually decodes and renders an image.
-    private static let pngData = Data(
-        base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-    ) ?? Data()
-
     func serverVersion() async throws -> String { "1.0.0" }
 
     func albums() async throws -> [Album] {
@@ -233,7 +236,32 @@ private struct StubImmichAPI: ImmichAPI {
         ]
     }
 
-    func preview(assetID: String) async throws -> Data { Self.pngData }
+    func preview(assetID: String) async throws -> Data { Self.renderPortrait(for: assetID) }
+
+    // Renders a portrait (3:4) test image per asset: a landscape screen letterboxes
+    // it left/right, which makes the centering fix visually verifiable. The white
+    // inset border marks the image bounds and the centered dot marks its midpoint.
+    private static func renderPortrait(for assetID: String) -> Data {
+        let size = CGSize(width: 810, height: 1080)
+        let colors: [String: UIColor] = [
+            "asset-1": .systemRed,
+            "asset-2": .systemGreen,
+            "asset-3": .systemBlue,
+        ]
+        let color = colors[assetID] ?? .systemPurple
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            color.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            UIColor.white.setStroke()
+            let border = UIBezierPath(rect: CGRect(x: 20, y: 20, width: size.width - 40, height: size.height - 40))
+            border.lineWidth = 16
+            border.stroke()
+            UIColor.white.setFill()
+            UIBezierPath(ovalIn: CGRect(x: size.width / 2 - 60, y: size.height / 2 - 60, width: 120, height: 120)).fill()
+        }
+        return image.pngData() ?? Data()
+    }
 }
 
 private final class InMemoryConfigStore: ConfigStore, @unchecked Sendable {
