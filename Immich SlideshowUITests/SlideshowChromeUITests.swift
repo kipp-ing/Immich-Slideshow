@@ -17,9 +17,9 @@ final class SlideshowChromeUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchIntoSlideshow() -> XCUIApplication {
+    private func launchIntoSlideshow(extraArgs: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitest", "--uitest-slideshow"]
+        app.launchArguments = ["--uitest", "--uitest-slideshow"] + extraArgs
         app.launch()
 
         let image = app.descendants(matching: .any)
@@ -49,21 +49,29 @@ final class SlideshowChromeUITests: XCTestCase {
 
     @MainActor
     func testTransportAndPlayPauseToggle() throws {
-        let app = launchIntoSlideshow()
-        app.descendants(matching: .any).matching(identifier: "slideshow.image").firstMatch.tap()
-
+        // Pin the chrome (--uitest-chrome) so the transport focus isn't racing the
+        // idle auto-hide; reveal/auto-hide are covered by their own tests.
+        let app = launchIntoSlideshow(extraArgs: ["--uitest-chrome"])
         let playPause = app.buttons["slideshow.chrome.playPause"]
         XCTAssertTrue(playPause.waitForExistence(timeout: 2))
         // Running show starts playing -> button offers "Pause".
         XCTAssertEqual(playPause.label, "Pause")
         playPause.tap()
-        XCTAssertEqual(playPause.label, "Play", "tapping play/pause should pause the show")
+        XCTAssertTrue(waitForLabel(playPause, equals: "Play", timeout: 3),
+                      "tapping play/pause should pause the show")
 
         // Transport remains usable while paused.
         app.buttons["slideshow.chrome.next"].tap()
         app.buttons["slideshow.chrome.previous"].tap()
         // Still paused after manual navigation.
-        XCTAssertEqual(playPause.label, "Play")
+        XCTAssertTrue(waitForLabel(playPause, equals: "Play", timeout: 2))
+    }
+
+    @MainActor
+    private func waitForLabel(_ element: XCUIElement, equals value: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, element.label != value { usleep(100_000) }
+        return element.label == value
     }
 
     @MainActor

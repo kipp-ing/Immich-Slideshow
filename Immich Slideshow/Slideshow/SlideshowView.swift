@@ -31,10 +31,12 @@ struct SlideshowView: View {
     // Reveal-on-tap chrome (Slice A). Hidden by default; a tap reveals it and an
     // idle timer hides it again. The status bar follows it so the calm default
     // stays overlay-free.
-    // Default hidden; `--uitest-chrome` starts revealed for screenshot verification
-    // (auto-hide only arms on reveal/interaction, so it stays up).
+    // Default hidden; `--uitest-chrome` starts revealed AND pins the chrome (no
+    // auto-hide) so screenshot/feature UI tests have stable controls. Reveal +
+    // auto-hide behaviour stays covered by their own tests.
     @State private var chromeVisible = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
     @State private var autoHideTask: Task<Void, Never>?
+    private let pinChrome = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("--uitest-settings")
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
     @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
@@ -49,9 +51,10 @@ struct SlideshowView: View {
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 // Tap toggles the chrome; a horizontal swipe advances without revealing it.
+                // (Reset lives on the chrome's exit button — no long-press recognizer here,
+                // which kept the tap-to-reveal unambiguous.)
                 .onTapGesture { toggleChrome() }
                 .gesture(swipeGesture)
-                .onLongPressGesture { showResetDialog = true }
 
             // Chrome sits inside the safe area (sibling, not safe-area-ignoring) so the
             // bars don't collide with the screen edges / home indicator.
@@ -173,6 +176,7 @@ struct SlideshowView: View {
     /// (Re)arm the idle countdown that hides the chrome again. Called on reveal
     /// and on every control interaction so the chrome stays up while in use.
     private func scheduleAutoHide() {
+        guard !pinChrome else { return }
         autoHideTask?.cancel()
         autoHideTask = Task { @MainActor in
             try? await Task.sleep(for: Self.chromeAutoHide)

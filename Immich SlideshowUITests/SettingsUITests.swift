@@ -18,14 +18,14 @@ final class SettingsUITests: XCTestCase {
     @MainActor
     func testSettingsShowsBrightnessAndPlannedOptionsAndDismisses() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitest", "--uitest-slideshow"]
+        // Pin the chrome so opening settings isn't racing the idle auto-hide.
+        app.launchArguments = ["--uitest", "--uitest-slideshow", "--uitest-chrome"]
         app.launch()
 
         let image = app.descendants(matching: .any)
             .matching(identifier: "slideshow.image").firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 5))
 
-        image.tap()
         let settingsButton = app.buttons["slideshow.chrome.settings"]
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 2))
         settingsButton.tap()
