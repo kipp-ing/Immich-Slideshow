@@ -17,13 +17,14 @@ import SwiftUI
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
     let powerManager: PowerManager
-    var makeCoordinator: () -> HAControlCoordinator? = { nil }
+    var makeCoordinator: () async -> HAControlCoordinator? = { nil }
     var onReset: () -> Void = {}
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
     @State private var showBrokerSetup = false
     @State private var coordinator: HAControlCoordinator?
+    @State private var isStartingCoordinator = false
 
     var body: some View {
         ZStack {
@@ -98,7 +99,14 @@ struct SlideshowView: View {
         // One coordinator/transport per run: build fresh on start, fully tear down on stop.
         // That keeps the MQTT client re-connectable across background/foreground (the old
         // reused-client path stayed offline after the first background cycle).
-        guard coordinator == nil, let coordinator = makeCoordinator() else { return }
+        // `isStartingCoordinator` guards the await gap (building now fetches the album
+        // list) against a second appear/scenePhase call building a duplicate. All on the
+        // main actor, so the flag check/set is race-free.
+        guard coordinator == nil, !isStartingCoordinator else { return }
+        isStartingCoordinator = true
+        defer { isStartingCoordinator = false }
+
+        guard let coordinator = await makeCoordinator() else { return }
         self.coordinator = coordinator
         await coordinator.start()
         // Connect failed: release it so a later appear/foreground retries instead of being

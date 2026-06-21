@@ -24,7 +24,14 @@ public enum HADiscovery {
             json["payload_on"] = "ON"
             json["payload_off"] = "OFF"
         case .brightness:
-            break
+            // Dimmable light on the basic schema: brightness is the control. HA
+            // publishes 0–brightness_scale to the (shared) command topic and reads
+            // the applied level back from the (shared) state topic.
+            json["brightness_command_topic"] = HATopics.commandTopic(deviceID: deviceID, entity: entity)
+            json["brightness_state_topic"] = HATopics.stateTopic(deviceID: deviceID, entity: entity)
+            json["brightness_scale"] = 255
+            json["on_command_type"] = "brightness"
+            json["payload_off"] = "OFF"
         case .album:
             json["options"] = albumOptions
         }

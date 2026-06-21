@@ -9,8 +9,10 @@ public final class SlideshowViewModel {
     public private(set) var currentAssetID: String?
     public private(set) var currentImageData: Data?
 
+    /// The album currently being shown. Mutable so Home-Assistant/remote control
+    /// can switch albums at runtime (see `switchAlbum(_:)`).
+    public private(set) var albumID: String
     private let api: any ImmichAPI
-    private let albumID: String
     private let ticker: any SlideshowTicker
     private let cache: ImageCache
     private let config: SlideshowConfig
@@ -98,6 +100,13 @@ public final class SlideshowViewModel {
         }
 
         startTickerLoop()
+    }
+
+    /// Switch to a different album and reload from its first image. Used by remote
+    /// control (HA select); a no-op restart if the album is unchanged.
+    public func switchAlbum(_ albumID: String) async {
+        self.albumID = albumID
+        await start()
     }
 
     private func startTickerLoop() {

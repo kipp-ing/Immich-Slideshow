@@ -24,6 +24,27 @@ import Testing
 }
 
 @MainActor
+@Test func switchAlbumLoadsNewAlbumAndExposesCurrentAlbumID() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([Asset(id: "a1-image", type: "IMAGE")], for: "a1")
+    api.setAssets([Asset(id: "a2-image", type: "IMAGE")], for: "a2")
+    api.setPreviewData(Data([1]), for: "a1-image")
+    api.setPreviewData(Data([2]), for: "a2-image")
+
+    let model = SlideshowViewModel(api: api, albumID: "a1", ticker: ticker)
+    await model.start()
+    #expect(model.albumID == "a1")
+    #expect(model.currentAssetID == "a1-image")
+
+    await model.switchAlbum("a2")
+
+    #expect(model.albumID == "a2")
+    #expect(model.currentAssetID == "a2-image")
+    #expect(model.currentImageData == Data([2]))
+}
+
+@MainActor
 @Test func manualTickAdvancesExactlyOneImageAndWraps() async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
