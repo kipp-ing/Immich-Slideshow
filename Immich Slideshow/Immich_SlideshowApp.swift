@@ -253,6 +253,17 @@ private struct StubImmichAPI: ImmichAPI {
 
     func preview(assetID: String) async throws -> Data { Self.renderPortrait(for: assetID) }
 
+    func assetInfo(assetID: String) async throws -> AssetInfo {
+        // Deterministic EXIF for the photo-info overlay (15 June 2024, 14:30 UTC).
+        AssetInfo(
+            id: assetID,
+            takenAt: Date(timeIntervalSince1970: 1_718_462_400),
+            city: "Berlin",
+            state: "Berlin",
+            country: "Germany"
+        )
+    }
+
     // Renders a portrait (3:4) test image per asset: a landscape screen letterboxes
     // it left/right, which makes the centering fix visually verifiable. The white
     // inset border marks the image bounds and the centered dot marks its midpoint.
