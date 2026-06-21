@@ -10,6 +10,7 @@
 //
 
 import HAControlKit
+import ImmichClient
 import PowerKit
 import SlideshowKit
 import SwiftUI
@@ -17,6 +18,7 @@ import SwiftUI
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
     let powerManager: PowerManager
+    let api: any ImmichAPI
     var makeCoordinator: () async -> HAControlCoordinator? = { nil }
     var onReset: () -> Void = {}
 
@@ -34,7 +36,7 @@ struct SlideshowView: View {
     @State private var chromeVisible = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
     @State private var autoHideTask: Task<Void, Never>?
     @State private var showSettings = false
-    @State private var showAlbumBrowser = false
+    @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
     @State private var showInfo = false
 
     private static let chromeAutoHide: Duration = .seconds(4.5)
@@ -104,8 +106,20 @@ struct SlideshowView: View {
             BrokerSetupView()
         }
         .sheet(isPresented: $showAlbumBrowser) {
-            // TODO(Slice B): real album-browser sheet (album grid -> thumbnails).
-            chromePlaceholderSheet(title: "Alben")
+            AlbumBrowserView(
+                api: api,
+                currentAlbumID: viewModel.albumID,
+                onSelect: { albumID, assetID in
+                    Task {
+                        // Switch source album only when it actually changes, then jump
+                        // to the tapped photo. One album is active at a time.
+                        if albumID != viewModel.albumID {
+                            await viewModel.switchAlbum(albumID)
+                        }
+                        await viewModel.jump(to: assetID)
+                    }
+                }
+            )
         }
         .sheet(isPresented: $showSettings) {
             // TODO(Slice D): real settings shell.
