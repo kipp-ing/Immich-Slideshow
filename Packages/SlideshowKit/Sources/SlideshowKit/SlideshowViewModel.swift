@@ -9,6 +9,12 @@ public final class SlideshowViewModel {
     public private(set) var currentAssetID: String?
     public private(set) var currentImageData: Data?
 
+    /// User-intent pause (the chrome play/pause button), distinct from the
+    /// foreground/background gating done via `pause()`/`resume()`. While `true`
+    /// the auto-advance ticker stays stopped even across background→foreground,
+    /// but manual `showNext()`/`showPrevious()` still work.
+    public private(set) var isPaused = false
+
     /// The album currently being shown. Mutable so Home-Assistant/remote control
     /// can switch albums at runtime (see `switchAlbum(_:)`).
     public private(set) var albumID: String
@@ -36,6 +42,7 @@ public final class SlideshowViewModel {
 
     public func start() async {
         pause()
+        isPaused = false
         phase = .loading
 
         do {
@@ -65,20 +72,81 @@ public final class SlideshowViewModel {
     }
 
     public func advance() async {
+        await step(by: 1)
+    }
+
+    /// Manual forward step from the chrome/swipe. Unlike the ticker-driven
+    /// `advance()`, it resets the auto-advance timer so the next automatic step
+    /// is a full interval away; works while paused (without resuming the timer).
+    public func showNext() async {
+        pause()
+        await step(by: 1)
+        restartTickerIfPlaying()
+    }
+
+    /// Manual backward step from the chrome/swipe (the only place the show moves
+    /// backwards). Resets the auto-advance timer like `showNext()`.
+    public func showPrevious() async {
+        pause()
+        await step(by: -1)
+        restartTickerIfPlaying()
+    }
+
+    /// Toggle the user-intent pause (chrome play/pause button). Pausing stops the
+    /// auto-advance; resuming restarts it only while a real image is on screen.
+    public func togglePause() {
+        if isPaused {
+            isPaused = false
+            restartTickerIfPlaying()
+        } else {
+            isPaused = true
+            pause()
+        }
+    }
+
+    /// Jump straight to a specific asset in the current album (album-browser tap).
+    /// No-op if the album doesn't contain it. Resets the auto-advance timer.
+    public func jump(to assetID: String) async {
+        guard let index = imageAssets.firstIndex(where: { $0.id == assetID }) else {
+            return
+        }
+
+        pause()
+        if let loaded = await loadFirstAvailableImage(startingAt: index) {
+            showLoadedImage(loaded)
+            phase = .playing
+            prefetchImages(after: loaded.index)
+            restartTickerIfPlaying()
+        } else {
+            phase = .failed
+        }
+    }
+
+    /// Shared forward/backward step: loads the first available image starting at
+    /// `currentIndex + delta` (wrapping), or fails the show if none load.
+    private func step(by delta: Int) async {
         guard phase == .playing, !imageAssets.isEmpty else {
             return
         }
 
+        let count = imageAssets.count
         let baseIndex = currentIndex ?? -1
-        let nextIndex = (baseIndex + 1) % imageAssets.count
+        let targetIndex = ((baseIndex + delta) % count + count) % count
 
-        if let loaded = await loadFirstAvailableImage(startingAt: nextIndex) {
+        if let loaded = await loadFirstAvailableImage(startingAt: targetIndex) {
             showLoadedImage(loaded)
             prefetchImages(after: loaded.index)
         } else {
             phase = .failed
             pause()
         }
+    }
+
+    private func restartTickerIfPlaying() {
+        guard phase == .playing, !isPaused else {
+            return
+        }
+        startTickerLoop()
     }
 
     public func retry() async {
@@ -95,7 +163,9 @@ public final class SlideshowViewModel {
     }
 
     public func resume() {
-        guard phase == .playing else {
+        // Foreground gating only re-arms the timer; if the user paused via the
+        // chrome, stay paused across background→foreground.
+        guard phase == .playing, !isPaused else {
             return
         }
 
