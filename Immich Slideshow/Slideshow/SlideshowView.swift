@@ -37,7 +37,7 @@ struct SlideshowView: View {
     @State private var autoHideTask: Task<Void, Never>?
     @State private var showSettings = false
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
-    @State private var showInfo = false
+    @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
 
     private static let chromeAutoHide: Duration = .seconds(4.5)
 
@@ -206,8 +206,8 @@ struct SlideshowView: View {
             onInteraction: { scheduleAutoHide() }
         )
         .overlay(alignment: .top) {
-            if showInfo {
-                photoInfoCard
+            if showInfo, let assetID = viewModel.currentAssetID {
+                PhotoInfoView(api: api, assetID: assetID)
                     .padding(.top, 100)
                     .transition(.opacity)
             }
@@ -217,18 +217,7 @@ struct SlideshowView: View {
         .allowsHitTesting(chromeVisible)
     }
 
-    // TODO(Slice C): replace with real EXIF date/time + location.
-    private var photoInfoCard: some View {
-        Text(viewModel.currentAssetID ?? "—")
-            .font(.callout)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            .glassEffect(in: .capsule)
-            .accessibilityIdentifier("slideshow.info.card")
-    }
-
-    // TODO(Slices B/D): replaced by the album browser and settings shell.
+    // TODO(Slice D): replaced by the settings shell.
     private func chromePlaceholderSheet(title: String) -> some View {
         NavigationStack {
             Color(.systemBackground)

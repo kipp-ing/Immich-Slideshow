@@ -28,6 +28,25 @@ public struct ImmichClient: ImmichAPI {
         return try decode(AlbumDetail.self, from: data).assets
     }
 
+    public func assetInfo(assetID: String) async throws -> AssetInfo {
+        let request = makeRequest(path: "api/assets/\(assetID)")
+        let data = try await responseData(for: request)
+        let detail = try decode(AssetDetail.self, from: data)
+        let takenAt = firstParsedDate([
+            detail.exifInfo?.dateTimeOriginal,
+            detail.localDateTime,
+            detail.fileCreatedAt
+        ])
+
+        return AssetInfo(
+            id: detail.id,
+            takenAt: takenAt,
+            city: detail.exifInfo?.city,
+            state: detail.exifInfo?.state,
+            country: detail.exifInfo?.country
+        )
+    }
+
     public func preview(assetID: String) async throws -> Data {
         let request = makeRequest(
             path: "api/assets/\(assetID)/thumbnail",
@@ -87,6 +106,28 @@ public struct ImmichClient: ImmichAPI {
         } catch {
             throw ImmichError.invalidResponse
         }
+    }
+
+    private func firstParsedDate(_ candidates: [String?]) -> Date? {
+        for candidate in candidates {
+            guard let candidate, let date = parseISO8601Date(candidate) else {
+                continue
+            }
+            return date
+        }
+        return nil
+    }
+
+    private func parseISO8601Date(_ string: String) -> Date? {
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractionalFormatter.date(from: string) {
+            return date
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
     }
 }
 
