@@ -8,6 +8,7 @@
 //  up" as those modules arrive, per the handover.
 //
 
+import OnboardingKit
 import PowerKit
 import SwiftUI
 import ThemeKit
@@ -18,13 +19,26 @@ struct SlideshowSettingsView: View {
     // The shared display-preferences store. Bound live by the display-option rows as
     // they come online (008); held here from T011 so the seam exists end to end.
     @Bindable var themeStore: UserDefaultsThemeStore
+    // Connection editor seams (009): build a fresh editor view model on demand, and
+    // report a successful change so the app can reconnect the running slideshow.
+    var makeConnectionViewModel: () -> ConnectionSettingsViewModel? = { nil }
+    var onConnectionChanged: (ConnectionValidationOutcome) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var brightness: Double
+    @State private var connectionViewModel: ConnectionSettingsViewModel?
+    @State private var showConnection = false
 
-    init(powerManager: PowerManager, themeStore: UserDefaultsThemeStore) {
+    init(
+        powerManager: PowerManager,
+        themeStore: UserDefaultsThemeStore,
+        makeConnectionViewModel: @escaping () -> ConnectionSettingsViewModel? = { nil },
+        onConnectionChanged: @escaping (ConnectionValidationOutcome) -> Void = { _ in }
+    ) {
         self.powerManager = powerManager
         self.themeStore = themeStore
+        self.makeConnectionViewModel = makeConnectionViewModel
+        self.onConnectionChanged = onConnectionChanged
         _brightness = State(initialValue: Self.currentScreenBrightness())
     }
 
@@ -99,6 +113,26 @@ struct SlideshowSettingsView: View {
                 } footer: {
                     Text("Reihenfolge und Anzeigedauer wirken sofort. Weitere Optionen folgen.")
                 }
+
+                Section {
+                    Button {
+                        connectionViewModel = makeConnectionViewModel()
+                        showConnection = connectionViewModel != nil
+                    } label: {
+                        HStack {
+                            Label("Verbindung", systemImage: "server.rack")
+                            Spacer()
+                            Image(systemName: "chevron.forward")
+                                .font(.footnote)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .accessibilityIdentifier("settings.connection")
+                } header: {
+                    Text("Server")
+                } footer: {
+                    Text("Server-Adresse und API-Schlüssel ändern.")
+                }
             }
             .navigationTitle("Einstellungen")
             .navigationBarTitleDisplayMode(.inline)
@@ -110,6 +144,14 @@ struct SlideshowSettingsView: View {
         }
         .onChange(of: brightness) { _, newValue in
             Task { await powerManager.setBrightness(newValue, animated: false) }
+        }
+        .sheet(isPresented: $showConnection) {
+            if let connectionViewModel {
+                ConnectionSettingsView(viewModel: connectionViewModel) { outcome in
+                    showConnection = false
+                    onConnectionChanged(outcome)
+                }
+            }
         }
     }
 
