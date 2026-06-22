@@ -14,6 +14,7 @@ import OnboardingKit
 import PowerKit
 import SlideshowKit
 import SwiftUI
+import ThemeKit
 
 @main
 struct Immich_SlideshowApp: App {
@@ -31,7 +32,9 @@ struct Immich_SlideshowApp: App {
         // Built lazily at the `.done` route: reads the saved config + Keychain key and
         // constructs an authenticated slideshow. Returns nil only if state is somehow
         // incomplete (the StartupGate normally prevents reaching `.done` without it).
-        let makeSlideshow: @MainActor @Sendable () -> SlideshowViewModel?
+        // The shared ThemeSettingsStore is injected so the engine reads live display
+        // preferences (008); the same instance backs the settings UI.
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel?
         // The authenticated Immich client for UI that browses beyond the active
         // album (the album-browser sheet). Same config/key as the slideshow.
         let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)?
@@ -59,7 +62,7 @@ struct Immich_SlideshowApp: App {
             }
             _viewModel = State(initialValue: uitestViewModel)
             factories = Factories(
-                makeSlideshow: { @MainActor @Sendable in UITestSupport.makeSlideshowViewModel() },
+                makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store) },
                 makeAPI: { @MainActor @Sendable in StubImmichAPI() },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
                 makeCoordinator: { @MainActor @Sendable _, _ in nil }
@@ -87,7 +90,7 @@ struct Immich_SlideshowApp: App {
 
         // The API key stays in the Keychain and is only handed to the client here;
         // it is never logged or persisted elsewhere (Konstitution III).
-        let makeSlideshow: @MainActor @Sendable () -> SlideshowViewModel? = {
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel? = { settingsStore in
             guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
             let client = ImmichClient(
                 config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey)
@@ -95,7 +98,8 @@ struct Immich_SlideshowApp: App {
             return SlideshowViewModel(
                 api: client,
                 albumID: appConfig.selectedAlbumID,
-                ticker: RealTicker(interval: SlideshowConfig.default.interval)
+                ticker: RealTicker(interval: SlideshowConfig.default.interval),
+                settingsStore: settingsStore
             )
         }
 
@@ -167,11 +171,17 @@ private struct RootView: View {
     @State private var slideshow: SlideshowViewModel?
     @State private var powerManager: PowerManager?
     @State private var api: (any ImmichAPI)?
+    // One shared settings store for the lifetime of the slideshow: the engine reads
+    // live preferences from it and the settings UI binds the same concrete instance
+    // (008). UI tests run against an isolated, cleared suite so a fresh launch starts
+    // from the calm defaults regardless of prior runs.
+    @State private var themeStore = RootView.makeThemeStore()
 
     var body: some View {
         if onboarding.step == .done {
             if let slideshow, let powerManager, let api {
                 SlideshowView(viewModel: slideshow, powerManager: powerManager, api: api,
+                              themeStore: themeStore,
                               makeCoordinator: { await factories.makeCoordinator(slideshow, powerManager) },
                               onReset: {
                     self.slideshow = nil
@@ -183,7 +193,7 @@ private struct RootView: View {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        slideshow = factories.makeSlideshow()
+                        slideshow = factories.makeSlideshow(themeStore)
                         powerManager = factories.makePowerManager()
                         api = factories.makeAPI()
                     }
@@ -191,6 +201,20 @@ private struct RootView: View {
         } else {
             OnboardingFlowView(viewModel: onboarding)
         }
+    }
+
+    private static func makeThemeStore() -> UserDefaultsThemeStore {
+        #if DEBUG
+        if UITestSupport.isActive {
+            // Hermetic UI-test store: a dedicated suite, cleared on launch, so the
+            // "calm defaults" checks never inherit a previous run's choices.
+            let suite = "uitest.theme"
+            let defaults = UserDefaults(suiteName: suite) ?? .standard
+            defaults.removePersistentDomain(forName: suite)
+            return UserDefaultsThemeStore(defaults: defaults)
+        }
+        #endif
+        return UserDefaultsThemeStore()
     }
 }
 
@@ -215,11 +239,12 @@ enum UITestSupport {
         )
     }
 
-    static func makeSlideshowViewModel() -> SlideshowViewModel {
+    static func makeSlideshowViewModel(settingsStore: any ThemeSettingsStore) -> SlideshowViewModel {
         SlideshowViewModel(
             api: StubImmichAPI(),
             albumID: "a1",
-            ticker: RealTicker(interval: .seconds(2))
+            ticker: RealTicker(interval: .seconds(2)),
+            settingsStore: settingsStore
         )
     }
 
