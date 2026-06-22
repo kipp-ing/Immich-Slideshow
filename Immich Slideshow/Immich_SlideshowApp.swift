@@ -43,6 +43,12 @@ struct Immich_SlideshowApp: App {
         // hermetic test never touches real device brightness.
         let makePowerManager: @MainActor @Sendable () -> PowerManager
         let makeCoordinator: @MainActor @Sendable (SlideshowViewModel, PowerManager) async -> HAControlCoordinator?
+        // Builds the in-app connection editor view model (009): same config/Keychain
+        // seams as the slideshow, validating against a freshly built ImmichClient.
+        let makeConnectionSettingsViewModel: @MainActor @Sendable () -> ConnectionSettingsViewModel?
+        // Persists a newly chosen album to the config after a connection change left the
+        // previously selected album absent (009, FR-013), without re-onboarding.
+        let saveSelectedAlbum: @MainActor @Sendable (String) -> Void
     }
 
     init() {
@@ -65,7 +71,9 @@ struct Immich_SlideshowApp: App {
                 makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store) },
                 makeAPI: { @MainActor @Sendable in StubImmichAPI() },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
-                makeCoordinator: { @MainActor @Sendable _, _ in nil }
+                makeCoordinator: { @MainActor @Sendable _, _ in nil },
+                makeConnectionSettingsViewModel: { @MainActor @Sendable in UITestSupport.makeConnectionSettingsViewModel() },
+                saveSelectedAlbum: { @MainActor @Sendable _ in }
             )
             return
         }
@@ -142,11 +150,27 @@ struct Immich_SlideshowApp: App {
             )
         }
 
+        // The connection editor reuses the same config + Keychain stores and builds a
+        // standard, TLS-validated ImmichClient for its validation call (009).
+        let makeConnectionSettingsViewModel: @MainActor @Sendable () -> ConnectionSettingsViewModel? = {
+            ConnectionSettingsViewModel(
+                api: { ImmichClient(config: $0) },
+                config: config,
+                keychain: keychain
+            )
+        }
+        let saveSelectedAlbum: @MainActor @Sendable (String) -> Void = { albumID in
+            guard let appConfig = config.load() else { return }
+            config.save(AppConfiguration(baseURL: appConfig.baseURL, selectedAlbumID: albumID))
+        }
+
         factories = Factories(
             makeSlideshow: makeSlideshow,
             makeAPI: makeAPI,
             makePowerManager: makePowerManager,
-            makeCoordinator: makeCoordinator
+            makeCoordinator: makeCoordinator,
+            makeConnectionSettingsViewModel: makeConnectionSettingsViewModel,
+            saveSelectedAlbum: saveSelectedAlbum
         )
     }
 
@@ -176,6 +200,11 @@ private struct RootView: View {
     // (008). UI tests run against an isolated, cleared suite so a fresh launch starts
     // from the calm defaults regardless of prior runs.
     @State private var themeStore = RootView.makeThemeStore()
+    // Bumped on a successful connection change so the SlideshowView is rebuilt and
+    // its `.task` re-runs `start()` against the new client — a live reconnect without
+    // re-onboarding (009). The album re-selection sheet handles the album-missing case.
+    @State private var connectionGeneration = 0
+    @State private var showAlbumReselect = false
 
     var body: some View {
         if onboarding.step == .done {
@@ -188,7 +217,17 @@ private struct RootView: View {
                     self.powerManager = nil
                     self.api = nil
                     onboarding.reset()
-                })
+                },
+                              makeConnectionViewModel: { factories.makeConnectionSettingsViewModel() },
+                              onConnectionChanged: handleConnectionChange)
+                .id(connectionGeneration)
+                .sheet(isPresented: $showAlbumReselect) {
+                    AlbumBrowserView(api: api, currentAlbumID: nil) { albumID, _ in
+                        factories.saveSelectedAlbum(albumID)
+                        showAlbumReselect = false
+                        rebuildSlideshow()
+                    }
+                }
             } else {
                 Color.black
                     .ignoresSafeArea()
@@ -201,6 +240,27 @@ private struct RootView: View {
         } else {
             OnboardingFlowView(viewModel: onboarding)
         }
+    }
+
+    /// React to a successful connection change (009). The editor has already persisted
+    /// the validated connection; here we adopt it in the running app. `.albumMissing`
+    /// first prompts for a new album (the old selection no longer exists), then rebuilds;
+    /// `.success` rebuilds straight away. Failure outcomes never reach here.
+    private func handleConnectionChange(_ outcome: ConnectionValidationOutcome) {
+        api = factories.makeAPI()
+        if case .albumMissing = outcome {
+            showAlbumReselect = true
+        } else {
+            rebuildSlideshow()
+        }
+    }
+
+    /// Rebuild the slideshow view model from the updated stores and bump the generation
+    /// so SlideshowView is recreated and its `.task` re-runs `start()` against the new
+    /// connection — no return to onboarding.
+    private func rebuildSlideshow() {
+        slideshow = factories.makeSlideshow(themeStore)
+        connectionGeneration += 1
     }
 
     private static func makeThemeStore() -> UserDefaultsThemeStore {
@@ -248,6 +308,22 @@ enum UITestSupport {
             albumID: "a1",
             ticker: RealTicker(),
             settingsStore: settingsStore
+        )
+    }
+
+    @MainActor
+    static func makeConnectionSettingsViewModel() -> ConnectionSettingsViewModel {
+        let config = InMemoryConfigStore()
+        config.save(AppConfiguration(
+            baseURL: URL(string: "https://photos.example.test")!,
+            selectedAlbumID: "a1"
+        ))
+        let keychain = InMemoryKeychainStore()
+        try? keychain.save("uitest-key")
+        return ConnectionSettingsViewModel(
+            api: { _ in StubImmichAPI() },
+            config: config,
+            keychain: keychain
         )
     }
 
