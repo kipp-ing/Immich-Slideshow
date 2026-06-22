@@ -168,7 +168,7 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
     let cache = ImageCache(limit: 3)
-    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 3)
+    let config = SlideshowConfig(prefetchDepth: 1, cacheLimit: 3)
     api.setAssets([
         Asset(id: "image-1", type: "IMAGE"),
         Asset(id: "image-2", type: "IMAGE")
@@ -190,7 +190,7 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
     let cache = ImageCache(limit: 3)
-    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 3)
+    let config = SlideshowConfig(prefetchDepth: 1, cacheLimit: 3)
     api.setAssets([
         Asset(id: "image-1", type: "IMAGE"),
         Asset(id: "image-2", type: "IMAGE"),
@@ -216,7 +216,7 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
     let cache = ImageCache(limit: 3)
-    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 2, cacheLimit: 3)
+    let config = SlideshowConfig(prefetchDepth: 2, cacheLimit: 3)
     let assets = (1...6).map { Asset(id: "image-\($0)", type: "IMAGE") }
     api.setAssets(assets, for: "album")
     for value in 1...6 {
@@ -438,7 +438,7 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     let api = StubImmichAPI()
     let ticker = ManualTicker()
     let cache = ImageCache(limit: 2)
-    let config = SlideshowConfig(interval: .seconds(8), prefetchDepth: 1, cacheLimit: 2)
+    let config = SlideshowConfig(prefetchDepth: 1, cacheLimit: 2)
     api.setAssets([
         Asset(id: "image-1", type: "IMAGE"),
         Asset(id: "image-2", type: "IMAGE"),

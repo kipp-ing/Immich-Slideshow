@@ -45,16 +45,31 @@ struct SlideshowSettingsView: View {
                 }
 
                 Section {
-                    placeholderRow("Anzeigedauer", value: "8 s", systemImage: "timer")
+                    Picker(selection: $themeStore.settings.order) {
+                        Text("Zufällig").tag(PlayOrder.shuffle)
+                        Text("Der Reihe nach").tag(PlayOrder.sequential)
+                    } label: {
+                        Label("Reihenfolge", systemImage: "shuffle")
+                    }
+                    .accessibilityIdentifier("settings.order")
+
+                    Picker(selection: $themeStore.settings.duration) {
+                        ForEach(Self.durationPresets, id: \.self) { duration in
+                            Text(Self.durationLabel(duration)).tag(duration)
+                        }
+                    } label: {
+                        Label("Anzeigedauer", systemImage: "timer")
+                    }
+                    .accessibilityIdentifier("settings.duration")
+
                     placeholderRow("Übergang", value: "Überblenden", systemImage: "wand.and.stars")
                     placeholderRow("Ken Burns", value: "Aus", systemImage: "camera.viewfinder")
-                    placeholderRow("Reihenfolge", value: "Album", systemImage: "list.number")
                     placeholderRow("Bildanpassung", value: "Einpassen", systemImage: "aspectratio")
                     placeholderRow("Uhr-Overlay", value: "Aus", systemImage: "clock")
                 } header: {
                     Text("Anzeige")
                 } footer: {
-                    Text("Diese Optionen werden mit dem ThemeSettings-Modul aktiv.")
+                    Text("Reihenfolge und Anzeigedauer wirken sofort. Weitere Optionen folgen.")
                 }
             }
             .navigationTitle("Einstellungen")
@@ -68,6 +83,20 @@ struct SlideshowSettingsView: View {
         .onChange(of: brightness) { _, newValue in
             Task { await powerManager.setBrightness(newValue, animated: false) }
         }
+    }
+
+    /// Duration presets surfaced in the picker (a subset of the 3 s…600 s range the
+    /// store accepts; out-of-range values are clamped by the store).
+    private static let durationPresets: [Duration] = [
+        .seconds(5), .seconds(10), .seconds(15), .seconds(30), .seconds(60), .seconds(300)
+    ]
+
+    private static func durationLabel(_ duration: Duration) -> String {
+        let seconds = Int(duration.components.seconds)
+        if seconds < 60 {
+            return "\(seconds) s"
+        }
+        return "\(seconds / 60) min"
     }
 
     /// A disabled preview of a planned setting (lights up once its module exists).

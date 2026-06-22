@@ -18,8 +18,22 @@ final class ManualTicker: SlideshowTicker, @unchecked Sendable {
     private var waiterObservers: [CheckedContinuation<Void, Never>] = []
     private var consumedObservers: [CheckedContinuation<Void, Never>] = []
     private var consumedTickCount = 0
+    private var recordedDurations: [Duration] = []
 
-    func waitForNextTick() async throws {
+    /// The duration the engine requested for the most recent wait. The live-duration
+    /// ticker records this each cycle so tests can assert the interval re-arms when
+    /// the store's duration changes mid-show (008, review R1).
+    var lastRequestedDuration: Duration? {
+        lock.withLock { recordedDurations.last }
+    }
+
+    var requestedDurations: [Duration] {
+        lock.withLock { recordedDurations }
+    }
+
+    func waitForNextTick(duration: Duration) async throws {
+        lock.withLock { recordedDurations.append(duration) }
+
         if Task.isCancelled {
             throw CancellationError()
         }
@@ -177,6 +191,24 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
 
     func previewCallCount(for assetID: String) -> Int {
         lock.withLock { state.previewCallCountByAssetID[assetID, default: 0] }
+    }
+}
+
+/// Deterministic RNG (SplitMix64) so shuffle-order tests assert an exact, repeatable
+/// permutation instead of relying on the system generator (SC-004).
+struct SeededRandomNumberGenerator: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 }
 
