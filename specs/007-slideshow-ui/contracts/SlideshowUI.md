@@ -1,109 +1,47 @@
 # Contracts: Slideshow UI
 
-Public interfaces this feature slice adds. Signatures match the shipped state (Swift 6). Extends the
-existing packages `SlideshowKit` (003) and `ImmichClient` (001); the views live in the app target.
+This feature is mostly presentation; its public surface lives in code, which is the **source of truth**.
+Rather than duplicate Swift signatures here (they would silently drift from the code), this file is a
+thin index of what 007 added — read the listed sources and their tests for exact signatures and
+behavior; the compiler and test suite keep those honest.
 
-## ImmichClient — new endpoints (US2/US3)
+## Public surface added by 007
 
-```swift
-public protocol ImmichAPI: Sendable {
-    // … existing: serverVersion, albums, assets, preview …
-    func assetInfo(assetID: String) async throws -> AssetInfo   // US3
-    func thumbnail(assetID: String) async throws -> Data        // US2
-}
+**ImmichClient** — `Packages/ImmichClient/Sources/ImmichClient/`
 
-public struct AssetInfo: Sendable, Equatable {
-    public let id: String
-    public let takenAt: Date?
-    public let city: String?
-    public let state: String?
-    public let country: String?
-    public init(id: String, takenAt: Date?, city: String?, state: String?, country: String?)
-}
-```
+- `ImmichAPI.thumbnail(assetID:) async throws -> Data` — smaller-than-`preview` image for the browser
+  grid (US2, `1af7466`). Sources: `ImmichAPI.swift`, `ImmichClient.swift`. Tests: `PreviewTests.swift`.
+- `ImmichAPI.assetInfo(assetID:) async throws -> AssetInfo` + the `AssetInfo` value type
+  (`id, takenAt, city, state, country`), decoded from Immich `exifInfo` with a `localDateTime`/
+  `fileCreatedAt` date fallback (US3, `a2c36b1`). Sources: `Models.swift`, `ImmichClient.swift`. Tests:
+  `AssetInfoTests.swift`. Field/decoding detail: [data-model.md](../data-model.md).
 
-- `assetInfo`: `GET` of the asset detail with `x-api-key`; decodes `exifInfo` → `AssetInfo`. Date from
-  `exifInfo.dateTimeOriginal`, fallback `localDateTime`/`fileCreatedAt`. Location from
-  `exifInfo.city/state/country`.
-- `thumbnail`: like `preview`, but with a smaller size query (thumbnail vs. full). `x-api-key`.
+**SlideshowKit** — `Packages/SlideshowKit/Sources/SlideshowKit/SlideshowViewModel.swift`
 
-### Behavioral contract (testable, host)
+- **Added by 007** (US1, `52e4c5e`): `showNext()`, `showPrevious()`, `jump(to:)`, `togglePause()`,
+  `isPaused`.
+- **Reused, not added by 007**: `switchAlbum(_:)` and the mutable `albumID` (feature 005, `3d973ab`,
+  for HA remote control); `advance()`, `pause()`, `resume()`, `currentAssetID` (003). The album browser
+  is the second consumer of `switchAlbum`.
+- Behavioral guarantees (forward-only auto-advance; user pause survives foreground; `jump` is a no-op
+  on an unknown asset; exactly one active album): see the **Invariants** in
+  [data-model.md](../data-model.md). Tests: `SlideshowViewModelTests.swift`.
 
-| Trigger | Guaranteed effect |
-|---------|-------------------|
-| `assetInfo` with `exifInfo` present | `AssetInfo` with `takenAt` from `dateTimeOriginal`, `city/state/country` set |
-| `assetInfo` without `exifInfo` | `takenAt` from `localDateTime`/`fileCreatedAt`, location fields `nil` |
-| `assetInfo` request | sends `GET` with `x-api-key` header |
-| `thumbnail` request | sends `GET` with `x-api-key` and thumbnail size query; returns raw data |
-| `preview` request | sends `GET` with preview size query (distinct from thumbnail) |
+**App-target views** — `Immich Slideshow/Slideshow/` (verified via XCUITest, not a package API):
+`SlideshowChrome`, `AlbumBrowserView`, `PhotoInfoView`, `SlideshowSettingsView`.
 
-## SlideshowKit — SlideshowViewModel (control extension, US1/US2)
+## Accessibility identifiers & launch args (for XCUITest)
 
-```swift
-@MainActor @Observable
-public final class SlideshowViewModel {
-    public private(set) var phase: SlideshowPhase
-    public private(set) var currentAssetID: String?
-    public private(set) var currentImageData: Data?
-    public private(set) var isPaused: Bool          // NEW — user pause
-    public private(set) var albumID: String         // NEW — mutable (was let)
+| Identifier / arg | Element / effect |
+|---|---|
+| `slideshow.image` / `slideshow.info.card` | current image / info overlay card |
+| `slideshow.chrome.exit/info/albums/settings` | top-bar buttons |
+| `slideshow.chrome.previous/playPause/next` | transport buttons |
+| `album.row.<id>` / `album.thumbnail.<id>` | album / thumbnail cell |
+| `settings.brightness` / `settings.row.<title>` | brightness slider / planned (disabled) row |
+| `--uitest` | hermetic build (stub API + in-memory stores); still starts at onboarding step 1 |
+| `--uitest-slideshow` | start with onboarding `step = .done` → straight into the slideshow |
+| `--uitest-chrome` | chrome revealed **and pinned** (no auto-hide) for stable controls |
+| `--uitest-albums` / `--uitest-info` / `--uitest-settings` | present that surface deterministically on launch |
 
-    public func start() async
-    public func advance() async                       // auto-advance (ticker), forward
-    public func showNext() async                      // NEW — manual forward; timer reset
-    public func showPrevious() async                  // NEW — manual backward; timer reset
-    public func jump(to assetID: String) async        // NEW — jump within the active album; no-op if unknown
-    public func togglePause()                         // NEW — user pause on/off
-    public func switchAlbum(_ albumID: String) async  // NEW for UI — runtime album switch (+ reload)
-    public func pause(); public func resume()         // foreground gating (separate from isPaused)
-    public func retry() async
-}
-```
-
-### Behavioral contract (testable, host)
-
-| Trigger | Guaranteed effect |
-|---------|-------------------|
-| `showNext()` | next image (mod n); auto-advance timer is reset |
-| `showPrevious()` | previous image (mod n, wrap); the only backward movement |
-| `togglePause()` (running) | `isPaused=true`, ticker stops; survives background→foreground |
-| `togglePause()` (paused) | `isPaused=false`, ticker re-armed (if an image is running) |
-| `resume()` while `isPaused==true` | does **not** re-arm (user pause holds) |
-| `jump(to: known)` | loads/shows the asset; `phase=.playing`; timer reset |
-| `jump(to: unknown)` | no-op |
-| `switchAlbum(x)` | `albumID==x`; loads the new album from the start; `currentAlbumID` reflects x |
-| `advance()` (single image) | stays stable on the same image |
-
-## App target — view interfaces (US1–US4)
-
-Pure SwiftUI presentation (verified via XCUITest, not as a package API):
-
-```swift
-struct SlideshowChrome: View {            // US1 — top/bottom Liquid Glass bars
-    let viewModel: SlideshowViewModel
-    var onExit, onInfo, onAlbums, onSettings, onInteraction: () -> Void
-}
-struct AlbumBrowserView: View {           // US2 — album/thumbnail grid as a sheet
-    let api: any ImmichAPI
-    let currentAlbumID: String?
-    var onSelect: (_ albumID: String, _ assetID: String) -> Void
-}
-struct PhotoInfoView: View {              // US3 — date/location from AssetInfo; quiet when empty
-    let api: any ImmichAPI
-    let assetID: String
-}
-struct SlideshowSettingsView: View {      // US4 — brightness live + planned options (disabled)
-    let powerManager: PowerManager
-}
-```
-
-### Accessibility identifiers (for XCUITest)
-
-| Identifier | Element |
-|-----------|---------|
-| `slideshow.chrome.exit/info/albums/settings` | top bar |
-| `slideshow.chrome.previous/playPause/next` | transport bar |
-| `slideshow.info.card` | info overlay card |
-| `album.row.<id>` / `album.thumbnail.<id>` | album/thumbnail cell |
-| `settings.brightness` / `settings.row.<title>` | brightness slider / planned option |
-| `--uitest-chrome/-albums/-info/-settings` | launch args that present the respective UI deterministically |
+> Source of truth is the Swift sources and tests above — change those first; this index follows.

@@ -27,14 +27,14 @@ New/changed public surface (details in `contracts/SlideshowUI.md`):
 
 | Element | Kind | Purpose |
 |---------|------|---------|
-| `albumID` | `private(set) var` (was `let`) | active source; switchable at runtime via `switchAlbum` (US2) |
-| `isPaused` | `private(set) var` | user pause (chrome play/pause), separate from foreground gating |
+| `albumID` | `private(set) var` | active source; switchable at runtime via `switchAlbum`. The `var` and `switchAlbum` predate 007 (added in feature 005 for HA remote); 007 makes the browser a second consumer (US2) |
+| `isPaused` | `private(set) var` | user pause (chrome play/pause), separate from foreground gating — **added by 007** (US1) |
 | `currentAssetID` | `private(set) var` | which photo is shown (album-browser marker, info overlay) |
 | `showNext()` | `func async` | manual forward step; resets the auto-advance timer (US1) |
 | `showPrevious()` | `func async` | manual backward step (the only backward movement) (US1) |
 | `jump(to:)` | `func async` | jump to an asset in the active album; no-op if unknown (US2) |
 | `togglePause()` | `func` | user pause on/off; pauses/restarts the ticker (US1) |
-| `switchAlbum(_:)` | `func async` | switch the active source and reload (US2; reused from HA remote) |
+| `switchAlbum(_:)` | `func async` | switch the active source and reload — **reused** from feature 005 (HA remote), not added by 007; the browser is its second consumer (US2) |
 
 ## Selection handoff (US2)
 

@@ -92,7 +92,7 @@ specs/007-slideshow-ui/
 ```text
 Packages/
 ├── SlideshowKit/Sources/SlideshowKit/
-│   └── SlideshowViewModel.swift          # + showNext/showPrevious/jump(to:)/togglePause; isPaused; mutable albumID/switchAlbum (US1/US2)
+│   └── SlideshowViewModel.swift          # + showNext/showPrevious/jump(to:)/togglePause/isPaused (US1); reuses switchAlbum + mutable albumID (from feature 005) for US2
 ├── SlideshowKit/Tests/SlideshowKitTests/
 │   └── SlideshowViewModelTests.swift     # + step/wrap/pause/jump/switchAlbum tests
 ├── ImmichClient/Sources/ImmichClient/

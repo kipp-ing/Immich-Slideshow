@@ -4,183 +4,117 @@
 
 **Prerequisites**: plan.md ✓, spec.md ✓, research.md ✓, data-model.md ✓, contracts/ ✓
 
-**Tests**: TDD is mandatory (Constitution I) → logic tests (host) before impl, red first; UI via XCUITest.
+**Status**: As-built changelog (retroactive). The implementation shipped before this spec, so this is
+**not** a forward TDD task plan — it records what each slice delivered, grouped by user story, with the
+shipping commit and an explicit **added vs. reused** split. TDD (red → green) was followed within each
+slice at build time; it is not re-asserted here as if the work were still ahead.
 
-**Organization**: Grouped by user story (= shipped slices A–D); each story independently shippable.
+## Format
 
-**Status**: Documented retroactively — all tasks are **done** [X]. The parentheses reference the
-shipping commit. This file backfills the SDD trail for already-shipped code.
+- Grouped by user story (= shipped slice). `[X]` = shipped. Each slice lists what it **added** and what
+  it **reused** (so the commit attribution is honest). Paths relative to the repo root.
 
-## Format: `[ID] [P?] [Story] Description` — commit
-
-- **[P]**: parallelizable (different file). **[Story]**: US1…US4. Paths relative to the repo root.
-
-**Orchestration** (CLAUDE.md): host-testable logic (VM additions in `SlideshowKit`, client endpoints
-in `ImmichClient`) suits delegation (`swift test`). **Kept inline by Claude:** the timing/shared state
-of the ticker task (pause/resume/jump races), the SwiftUI views + gestures, status-bar wiring, and all
-simulator/XCUITest verification.
+**Orchestration** (CLAUDE.md): the host-testable logic (VM additions in `SlideshowKit`, client
+endpoints in `ImmichClient`) is the delegable part (`swift test`); the SwiftUI views + gestures, the
+ticker timing/shared state, status-bar wiring, and all simulator/XCUITest verification stayed inline.
 
 ---
 
-## Phase 1: Setup
+## US1 — Control chrome + gestures (P1, MVP) — `52e4c5e` (stabilized in `df23680`)
 
-- [X] T001 No new packages/schemes — built on 003 (`SlideshowKit`), 001 (`ImmichClient`), 004
-  (`PowerKit`). Confirmed the app scheme builds on an iOS 26.x simulator. — `52e4c5e`
+Reveal-on-tap top/bottom Liquid Glass bars with ~4.5 s auto-hide, swipe-to-advance, transport.
 
-**Checkpoint**: Foundation stands; existing packages present.
+**Added (VM, `SlideshowKit/…/SlideshowViewModel.swift`):** `showNext()`, `showPrevious()`,
+`jump(to:)`, `togglePause()`, `isPaused`, shared `step(by:)` + auto-advance timer reset.
 
----
+- [X] VM tests (`SlideshowViewModelTests.swift`): `showNextStepsForwardAndResetsTicker`,
+  `showPreviousStepsBackwardAndWraps`, `togglePauseStopsTickerAndSurvivesForegroundResume`,
+  `jumpGoesToRequestedAssetAndIgnoresUnknown`, `singleImageAlbumRemainsStableOnTick`. — `52e4c5e`
+- [X] `SlideshowChrome.swift` (app target) — top + transport bars, `glassEffect`/`.buttonStyle(.glass)`,
+  a11y IDs. — `52e4c5e`
+- [X] `SlideshowView.swift` — tap-toggle + horizontal `DragGesture`, chrome visibility + auto-hide
+  `Task`, status bar / home indicator follow the chrome. — `52e4c5e`
+- [X] XCUITests (`SlideshowChromeUITests.swift`): `testChromeHiddenByDefaultAndRevealsOnTap`,
+  `testChromeAutoHidesWhenIdle`, `testSwipeAdvancesWithoutRevealingChrome`,
+  `testTransportAndPlayPauseToggle`. — `52e4c5e`
+- [X] Reset moved to the chrome exit button; redundant long-press removed; UI tests stabilized.
+  — `df23680`
 
-## Phase 2: User Story 1 - Control chrome + gestures (Priority: P1) 🎯 MVP — `52e4c5e`, `df23680`
-
-**Goal**: Reveal-on-tap Liquid Glass chrome (top/bottom) with auto-hide + swipe-to-advance.
-
-**Independent Test**: `--uitest`: no chrome in the default; tap → chrome; idle → gone; swipe → image
-changes without chrome; play/pause stops/starts auto-advance.
-
-### Tests for User Story 1 (write first, MUST be red) ⚠️
-
-- [X] T002 [P] [US1] VM tests in `Packages/SlideshowKit/Tests/SlideshowKitTests/SlideshowViewModelTests.swift`:
-  `showNextStepsForwardAndResetsTicker`, `showPreviousStepsBackwardAndWraps`,
-  `togglePauseStopsTickerAndSurvivesForegroundResume`, `singleImageAlbumRemainsStableOnTick`.
-  (FR-004/FR-005/FR-006) — `52e4c5e`
-- [X] T003 [P] [US1] XCUITests in `Immich SlideshowUITests/SlideshowChromeUITests.swift`:
-  `testChromeHiddenByDefaultAndRevealsOnTap`, `testChromeAutoHidesWhenIdle`,
-  `testSwipeAdvancesWithoutRevealingChrome`, `testTransportAndPlayPauseToggle`. — `52e4c5e`
-
-### Implementation for User Story 1
-
-- [X] T004 [US1] VM extension in `…/SlideshowViewModel.swift`: `showNext`/`showPrevious`/`togglePause`,
-  `isPaused`, shared `step(by:)`, timer reset (`restartTickerIfPlaying`). — `52e4c5e`
-- [X] T005 [US1] `SlideshowChrome.swift` (app target): top bar (exit/info/albums/settings) + transport
-  bar (previous/play-pause/next), `glassEffect`/`.buttonStyle(.glass)`, a11y IDs. — `52e4c5e`
-- [X] T006 [US1] `SlideshowView.swift`: tap toggle + horizontal `DragGesture`, chrome visibility +
-  auto-hide `Task` (~4.5 s), status bar / home indicator follow the chrome. — `52e4c5e`
-- [X] T007 [US1] Reset moved to the chrome exit button; redundant long-press removed; UI tests
-  stabilized. — `df23680`
-
-**Checkpoint**: US1 — slideshow operable (paging/pause), calm default holds (MVP).
+**Reused:** none — this slice introduced the control surface (`jump` lands here even though its first
+consumer beyond swipe/transport is US2's browser).
 
 ---
 
-## Phase 3: User Story 2 - Album browser sheet (Priority: P2) — `1af7466`
+## US2 — Album browser sheet (P2) — `1af7466`
 
-**Goal**: Liquid Glass album browser over the running slideshow; tapping a thumbnail switches source +
-jumps to the photo.
+Liquid Glass album browser over the running slideshow; tap a thumbnail to switch source + jump.
 
-**Independent Test**: Chrome → albums → album → thumbnail → fullscreen shows the photo; new album
-active if applicable.
+**Added:** `ImmichAPI.thumbnail(assetID:)` + impl (smaller-than-preview size query, `x-api-key`);
+`AlbumBrowserView.swift` (album grid → `AlbumThumbnailGrid` → `ThumbnailCell`; loading/empty/error);
+`SlideshowView` albums-sheet wiring (on album mismatch `switchAlbum`, then always `jump`).
 
-### Tests for User Story 2 (write first, MUST be red) ⚠️
+- [X] Client test `thumbnailSendsGetRequestWithThumbnailSizeQueryAndReturnsRawData`
+  (`ImmichClientTests/PreviewTests.swift`). — `1af7466`
+- [X] XCUITest `testAlbumBrowserOpensDrillsInAndSelectionReturnsToSlideshow`
+  (`AlbumBrowserUITests.swift`). — `1af7466`
 
-- [X] T008 [P] [US2] VM tests in `SlideshowViewModelTests.swift`:
-  `jumpGoesToRequestedAssetAndIgnoresUnknown`, `switchAlbumLoadsNewAlbumAndExposesCurrentAlbumID`.
-  (FR-008) — `1af7466`
-- [X] T009 [P] [US2] Client test in `Packages/ImmichClient/Tests/ImmichClientTests/PreviewTests.swift`:
-  `thumbnailSendsGetRequestWithThumbnailSizeQueryAndReturnsRawData`. (FR-009) — `1af7466`
-- [X] T010 [P] [US2] XCUITest `Immich SlideshowUITests/AlbumBrowserUITests.swift`:
-  `testAlbumBrowserOpensDrillsInAndSelectionReturnsToSlideshow`. — `1af7466`
-
-### Implementation for User Story 2
-
-- [X] T011 [US2] VM: `albumID` mutable, `jump(to:)`, `switchAlbum(_:)` usable from the UI. — `1af7466`
-- [X] T012 [US2] `ImmichAPI.thumbnail(assetID:)` + impl in `ImmichClient.swift` (thumbnail size query,
-  `x-api-key`). — `1af7466`
-- [X] T013 [US2] `AlbumBrowserView.swift` (app target): album grid → `AlbumThumbnailGrid` →
-  `ThumbnailCell`; `onSelect(albumID, assetID)`; Liquid Glass cards; loading/empty/error states.
-  — `1af7466`
-- [X] T014 [US2] `SlideshowView.swift`: wire the albums sheet — on mismatch `switchAlbum`, then
-  `jump`. — `1af7466`
-
-**Checkpoint**: US1 + US2 — control and album switching.
+**Reused (NOT added here):** `jump(to:)` — from US1 (`52e4c5e`); `switchAlbum(_:)` and the mutable
+`albumID` — from **feature 005** (`3d973ab`), where they were added for HA remote control. The browser
+is simply the second consumer of `switchAlbum`. Their VM tests
+(`jumpGoesToRequestedAssetAndIgnoresUnknown` in `52e4c5e`, `switchAlbumLoadsNewAlbumAndExposesCurrentAlbumID`
+in `3d973ab`) predate this slice.
 
 ---
 
-## Phase 4: User Story 3 - Photo-info overlay (Priority: P3) — `a2c36b1`
+## US3 — Photo-info overlay (P3) — `a2c36b1`
 
-**Goal**: Date/location of the current photo from EXIF; quiet when nothing is present.
+Date/location of the current photo from EXIF; renders nothing when absent.
 
-**Independent Test**: Chrome → info → overlay shows date + location (where EXIF exists); nothing for a
-photo without EXIF.
+**Added:** `AssetInfo` + `AssetDetail`/`ExifInfo` decoding (`Models.swift`);
+`ImmichAPI.assetInfo(assetID:)` + impl (date fallback `localDateTime`/`fileCreatedAt`);
+`PhotoInfoView.swift` (lazy `.task(id: assetID)`, date/location lines, quiet when empty), wired as a
+`SlideshowView` overlay.
 
-### Tests for User Story 3 (write first, MUST be red) ⚠️
+- [X] Client tests `assetInfoSendsGetRequestWithAPIKeyHeaderAndReturnsDecodedInfo`,
+  `assetInfoWithoutExifFallsBackToLocalDateTimeAndNilLocation` (`AssetInfoTests.swift`). — `a2c36b1`
+- [X] XCUITest `testInfoButtonTogglesDateAndLocationOverlay` (`PhotoInfoUITests.swift`). — `a2c36b1`
 
-- [X] T015 [P] [US3] Client tests in `Packages/ImmichClient/Tests/ImmichClientTests/AssetInfoTests.swift`:
-  `assetInfoSendsGetRequestWithAPIKeyHeaderAndReturnsDecodedInfo`,
-  `assetInfoWithoutExifFallsBackToLocalDateTimeAndNilLocation`. (FR-010/FR-011) — `a2c36b1`
-- [X] T016 [P] [US3] XCUITest `Immich SlideshowUITests/PhotoInfoUITests.swift`:
-  `testInfoButtonTogglesDateAndLocationOverlay`. — `a2c36b1`
-
-### Implementation for User Story 3
-
-- [X] T017 [US3] `AssetInfo` + `AssetDetail`/`ExifInfo` decoding in `ImmichClient/…/Models.swift`.
-  — `a2c36b1`
-- [X] T018 [US3] `ImmichAPI.assetInfo(assetID:)` + impl (date fallback `localDateTime`/
-  `fileCreatedAt`). — `a2c36b1`
-- [X] T019 [US3] `PhotoInfoView.swift` (app target): lazy `.task(id: assetID)`, date/location lines,
-  renders nothing when empty; Liquid Glass card; wired as an overlay in `SlideshowView`. — `a2c36b1`
-
-**Checkpoint**: US1–US3 — control, albums, photo info.
+**Reused:** `currentAssetID` (existing VM state, 003/005) drives the overlay reload on advance.
 
 ---
 
-## Phase 5: User Story 4 - Settings shell (Priority: P4) — `b41ed4d`
+## US4 — Settings shell (P4) — `b41ed4d`
 
-**Goal**: Settings sheet with live brightness (004); planned options as a disabled preview.
+Settings sheet with live brightness (PowerManager/004); planned options as a disabled preview.
 
-**Independent Test**: Chrome → settings → brightness slider works live; planned options visible but
-disabled.
+**Added:** `SlideshowSettingsView.swift` — brightness `Slider` → `PowerManager.setBrightness` (live),
+initial value from the active window scene; disabled placeholder rows (duration/transition/Ken Burns/
+order/image fit/clock) with a hint pointing to ThemeSettings; `SlideshowView` settings-sheet wiring.
 
-### Tests for User Story 4 (write first, MUST be red) ⚠️
+- [X] XCUITest `testSettingsShowsBrightnessAndPlannedOptionsAndDismisses` (`SettingsUITests.swift`) —
+  asserts the slider is **present and adjustable** and a planned row is previewed. It cannot read
+  `UIScreen.brightness`, so the **live brightness change is not asserted** — it rests on the
+  `PowerManager.setBrightness` wiring (see SC-006 in quickstart.md). — `b41ed4d`
 
-- [X] T020 [P] [US4] XCUITest `Immich SlideshowUITests/SettingsUITests.swift`:
-  `testSettingsShowsBrightnessAndPlannedOptionsAndDismisses`. — `b41ed4d`
-
-### Implementation for User Story 4
-
-- [X] T021 [US4] `SlideshowSettingsView.swift` (app target): brightness `Slider` → `PowerManager.
-  setBrightness` (live), initial value from the active window scene; disabled placeholder rows
-  (duration/transition/Ken Burns/order/image fit/clock) with a hint pointing to ThemeSettings.
-  — `b41ed4d`
-- [X] T022 [US4] `SlideshowView.swift`: wire the settings sheet from the chrome. — `b41ed4d`
-
-**Checkpoint**: US1–US4 — complete chrome, ThemeSettings-ready.
+**Reused:** `PowerManager` (feature 004) for the live brightness.
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns — `df23680`
+## Polish — `df23680`
 
-- [X] T023 [P] UI test stabilization (timing/shared state): removed redundant long-press, pinned the
-  chrome `--uitest` seams (no auto-hide in tests). — `df23680`
-- [X] T024 Full simulator run (`test_sim`, scheme "Immich Slideshow") green; host suites
-  (`SlideshowKit`, `ImmichClient`) green via `swift test`.
-- [X] T025 Default review (Constitution VII): overlay-free default confirmed — no chrome/clock/status
-  bar without a user action (SC-001/SC-007).
+- [X] UI-test stabilization (ticker timing / shared state): removed the redundant long-press, pinned
+  the chrome `--uitest` seams (no auto-hide in tests).
+- [X] Full simulator run (`test_sim`, scheme "Immich Slideshow") green; host suites (`SlideshowKit`,
+  `ImmichClient`) green via `swift test`.
+- [X] Default review (Constitution VII): overlay-free default confirmed (SC-001/SC-007).
 
 ---
 
-## Dependencies & Execution Order
+## Build order (as shipped)
 
-- Setup → US1 (P1, MVP) → US2 (P2) → US3 (P3) → US4 (P4) → Polish.
-- US1: T002/T003 (red) → T004 (VM) → T005 (chrome) → T006 (gestures/auto-hide) → T007 (reset/stabilize).
-- US2: T008–T010 (red) → T011 (VM) → T012 (thumbnail) → T013 (browser) → T014 (wiring). Builds on US1.
-- US3: T015/T016 (red) → T017 (model) → T018 (endpoint) → T019 (overlay). The only data/backend slice.
-- US4: T020 (red) → T021 (settings) → T022 (wiring). Depends on PowerKit (004); the rest waits on #5.
+US1 (`52e4c5e`, control surface incl. `jump`) → US2 (`1af7466`, browser + `thumbnail`; reuses `jump`
+from A and `switchAlbum`/mutable `albumID` from 005) → US3 (`a2c36b1`, EXIF + overlay) → US4
+(`b41ed4d`, settings) → Polish (`df23680`).
 
-### Parallel Opportunities
-
-- Per-story test tasks are [P] (different files). The four slices are independently shippable; in
-  practice shipped sequentially in priority order.
-
-## Implementation Strategy
-
-Incremental, each slice independently shippable, none breaks the calm default: US1 (MVP: operable) →
-US2 (albums) → US3 (info) → US4 (settings shell). Next: specify the ThemeSettings module (#5) that
-activates the disabled options from US4.
-
-## Notes
-
-- VM/client logic is host-fast (`swift test`); views via XCUITest on the simulator (no MCP tap tools —
-  cf. `docs/testing.md`).
-- Album choice is runtime-only (not persisted) — deliberately out of scope (see `data-model.md`).
-- No secrets in UI/logs (Constitution III); brightness/idle foreground only (Constitution V).
+Next: specify the ThemeSettings module (#5) that activates the disabled options from US4; optionally
+persist the runtime-chosen album (the open item in data-model.md).
