@@ -4,16 +4,19 @@ A full-screen photo **slideshow app for iPad**, powered by your own
 [Immich](https://immich.app) server. It is a standalone app — **not** a fork of the
 official Immich client — and uses Immich purely as a photo source over its REST API.
 
-> ⚠️ **Early development.** The onboarding flow works; the slideshow itself and the
-> remaining features are still being built. This README will grow more user-facing as
-> the app matures.
+> ⚠️ **Active development.** Onboarding, the full-screen slideshow, display/power control,
+> and Home Assistant remote control are built; theme/display options (transitions, Ken Burns,
+> clock overlay) are the next milestone. Home Assistant control is verified against an
+> automated TLS broker test — live Home-Assistant confirmation is still pending.
 
 ## What it does (and will do)
 
 - **Onboarding** — connect to your server in three steps: server URL → API key → album. ✅ done
-- **Slideshow** — full-screen, one photo at a time, with fades and Ken Burns. 🚧 planned
-- **Display & power** — keep the screen awake and dim brightness for ambient display. 🚧 planned
-- **Home Assistant control** — adjust brightness, album, and play/pause over MQTT. 🚧 planned
+- **Slideshow** — full-screen, one photo at a time, with gentle cross-fades, reveal-on-tap
+  controls, an album browser, and a photo-info overlay. ✅ done
+- **Display & power** — keep the screen awake and dim brightness for ambient display. ✅ done
+- **Home Assistant control** — adjust brightness, album, and play/pause over MQTT (TLS). ✅ done
+- **Theme & display options** — transitions, Ken Burns, clock overlay, image fit. 🚧 planned
 
 ## Requirements
 
