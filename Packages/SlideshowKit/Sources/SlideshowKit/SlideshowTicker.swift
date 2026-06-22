@@ -1,22 +1,22 @@
 import Foundation
 
-/// Zeit-Naht für den automatischen Bildwechsel. Trennt „wann" (Intervall) von „was" (Vorrücken),
-/// damit Wechsel deterministisch ohne echte Wartezeit testbar sind (Konstitution II).
+/// Timing seam for the automatic photo advance. Separates "when" (the interval) from
+/// "what" (advancing) so advances are deterministically testable without real waiting
+/// (Constitution II). The interval is passed in per cycle so the engine can supply the
+/// live `ThemeSettings.duration` and have a duration change re-arm the timer without a
+/// restart (008, review R1).
 public protocol SlideshowTicker: Sendable {
-    /// Kehrt beim nächsten fälligen Tick zurück. Wirft `CancellationError`, wenn der laufende Tick
-    /// abgebrochen wird (für `pause()`/Teardown).
-    func waitForNextTick() async throws
+    /// Returns at the next due tick after waiting `duration`. Throws `CancellationError`
+    /// when the in-flight tick is cancelled (for `pause()`/teardown).
+    func waitForNextTick(duration: Duration) async throws
 }
 
-/// Produktive Uhr: wartet `interval` über die Swift-Concurrency-Uhr; respektiert Cancellation.
+/// Production clock: sleeps for the requested `duration` via Swift Concurrency; respects
+/// cancellation.
 public struct RealTicker: SlideshowTicker {
-    private let interval: Duration
+    public init() {}
 
-    public init(interval: Duration) {
-        self.interval = interval
-    }
-
-    public func waitForNextTick() async throws {
-        try await Task.sleep(for: interval)
+    public func waitForNextTick(duration: Duration) async throws {
+        try await Task.sleep(for: duration)
     }
 }

@@ -98,7 +98,7 @@ struct Immich_SlideshowApp: App {
             return SlideshowViewModel(
                 api: client,
                 albumID: appConfig.selectedAlbumID,
-                ticker: RealTicker(interval: SlideshowConfig.default.interval),
+                ticker: RealTicker(),
                 settingsStore: settingsStore
             )
         }
@@ -206,11 +206,14 @@ private struct RootView: View {
     private static func makeThemeStore() -> UserDefaultsThemeStore {
         #if DEBUG
         if UITestSupport.isActive {
-            // Hermetic UI-test store: a dedicated suite, cleared on launch, so the
-            // "calm defaults" checks never inherit a previous run's choices.
+            // Hermetic UI-test store in a dedicated suite. It persists across launches
+            // (so persistence checks work); pass `--uitest-reset-theme` to start from
+            // the calm defaults for a defaults check.
             let suite = "uitest.theme"
             let defaults = UserDefaults(suiteName: suite) ?? .standard
-            defaults.removePersistentDomain(forName: suite)
+            if ProcessInfo.processInfo.arguments.contains("--uitest-reset-theme") {
+                defaults.removePersistentDomain(forName: suite)
+            }
             return UserDefaultsThemeStore(defaults: defaults)
         }
         #endif
@@ -243,7 +246,7 @@ enum UITestSupport {
         SlideshowViewModel(
             api: StubImmichAPI(),
             albumID: "a1",
-            ticker: RealTicker(interval: .seconds(2)),
+            ticker: RealTicker(),
             settingsStore: settingsStore
         )
     }
