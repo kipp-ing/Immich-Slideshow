@@ -1,6 +1,16 @@
 import Foundation
 import ImmichClient
 import SlideshowKit
+import ThemeKit
+import ThemeKitTestSupport
+
+/// A deterministic settings store for the engine tests that assert album-order
+/// behavior. Sequential order keeps `start()`/`advance()` walking the album in a
+/// predictable sequence; tests that exercise shuffle inject their own store.
+@MainActor
+func sequentialThemeStore(duration: Duration = .seconds(15)) -> InMemoryThemeStore {
+    InMemoryThemeStore(settings: ThemeSettings(order: .sequential, duration: duration))
+}
 
 final class ManualTicker: SlideshowTicker, @unchecked Sendable {
     private let lock = NSLock()

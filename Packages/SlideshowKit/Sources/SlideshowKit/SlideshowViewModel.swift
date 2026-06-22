@@ -1,6 +1,7 @@
 import Foundation
 import ImmichClient
 import Observation
+import ThemeKit
 
 @MainActor
 @Observable
@@ -22,6 +23,9 @@ public final class SlideshowViewModel {
     private let ticker: any SlideshowTicker
     private let cache: ImageCache
     private let config: SlideshowConfig
+    /// Live display/playback preferences (order, duration, quality). Read at the
+    /// point of use so changes apply to the running show without a restart (008).
+    private let settingsStore: any ThemeSettingsStore
     private var imageAssets: [Asset] = []
     private var currentIndex: Int?
     private var runTask: Task<Void, Never>?
@@ -31,13 +35,15 @@ public final class SlideshowViewModel {
         albumID: String,
         ticker: any SlideshowTicker,
         cache: ImageCache = ImageCache(limit: SlideshowConfig.default.cacheLimit),
-        config: SlideshowConfig = .default
+        config: SlideshowConfig = .default,
+        settingsStore: any ThemeSettingsStore
     ) {
         self.api = api
         self.albumID = albumID
         self.ticker = ticker
         self.cache = cache
         self.config = config
+        self.settingsStore = settingsStore
     }
 
     public func start() async {

@@ -14,11 +14,15 @@ import ImmichClient
 import PowerKit
 import SlideshowKit
 import SwiftUI
+import ThemeKit
 
 struct SlideshowView: View {
     let viewModel: SlideshowViewModel
     let powerManager: PowerManager
     let api: any ImmichAPI
+    // The shared, concrete settings store. Render-time preferences (transition, fit,
+    // Ken Burns, clock) are read from it directly; the settings sheet binds it (008).
+    let themeStore: UserDefaultsThemeStore
     var makeCoordinator: () async -> HAControlCoordinator? = { nil }
     var onReset: () -> Void = {}
 
@@ -125,7 +129,7 @@ struct SlideshowView: View {
             )
         }
         .sheet(isPresented: $showSettings) {
-            SlideshowSettingsView(powerManager: powerManager)
+            SlideshowSettingsView(powerManager: powerManager, themeStore: themeStore)
         }
     }
 

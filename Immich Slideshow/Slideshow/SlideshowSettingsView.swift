@@ -10,16 +10,21 @@
 
 import PowerKit
 import SwiftUI
+import ThemeKit
 import UIKit
 
 struct SlideshowSettingsView: View {
     let powerManager: PowerManager
+    // The shared display-preferences store. Bound live by the display-option rows as
+    // they come online (008); held here from T011 so the seam exists end to end.
+    @Bindable var themeStore: UserDefaultsThemeStore
 
     @Environment(\.dismiss) private var dismiss
     @State private var brightness: Double
 
-    init(powerManager: PowerManager) {
+    init(powerManager: PowerManager, themeStore: UserDefaultsThemeStore) {
         self.powerManager = powerManager
+        self.themeStore = themeStore
         _brightness = State(initialValue: Self.currentScreenBrightness())
     }
 
