@@ -24,7 +24,7 @@ struct SlideshowView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
-    @State private var showBrokerSetup = false
+    @State private var showBrokerSetup = ProcessInfo.processInfo.arguments.contains("--uitest-broker")
     @State private var coordinator: HAControlCoordinator?
     @State private var isStartingCoordinator = false
 
