@@ -76,6 +76,33 @@ Vorschaudaten dieses Assets zurück.
 
 ---
 
+### User Story 4 - Pluggable auth and new sources (Priority: P2, seams now)
+
+> Added 2026-06-22 from the feature interview. Auth abstraction + shared-link are designed-for now,
+> built later; multi-album and Memories sources are added.
+
+The client abstracts over **auth** (the `x-api-key` header now; a shared-album link token + password
+later) behind the transport, without leaking secrets. It can also pool **assets from multiple albums**
+into one list and fetch **Memories** as an asset source.
+
+**Why this priority**: These are the data capabilities the new sources (spec 007) and the super-simple
+shared-link mode (spec 002) depend on; the shared-link fetch itself is deferred. Builds on US1–US3.
+
+**Independent Test**: Against the mock transport: the auth header is injected via the abstraction (and
+a shared-link credential could be swapped in without changing call sites); requesting two album IDs
+returns their pooled assets; a Memories request returns a valid asset list.
+
+**Acceptance Scenarios**:
+
+1. **Given** the auth abstraction, **When** a request is made, **Then** the `x-api-key` credential is
+   applied, and a shared-link credential could replace it without changing the call sites.
+2. **Given** multiple album IDs, **When** their assets are requested, **Then** a single pooled asset
+   list is returned.
+3. **Given** a Memories request, **When** it is made, **Then** a valid list of memory assets is
+   returned (empty list if none).
+
+---
+
 ### Edge Cases
 
 - **Falscher/abgelaufener API-Key (401)**: Der Fehler ist klar als „nicht autorisiert" erkennbar
@@ -107,6 +134,14 @@ Vorschaudaten dieses Assets zurück.
 - **FR-008**: Das System MUSS ein leeres Album als leere, gültige Liste liefern (kein Fehler).
 - **FR-009**: Das System MUSS gültige Album-JSON-Antworten verlustfrei in Album-Modelle übersetzen.
 - **FR-010**: Die gesamte Logik MUSS gegen einen Mock-Transport testbar sein, ohne echten Server.
+
+#### Pluggable auth & new sources (P2, added 2026-06-22)
+
+- **FR-011**: The client MUST abstract over **auth credentials** (the `x-api-key` header now; a
+  shared-album link token + password later) behind the transport, without exposing secrets in code,
+  storage, or logs. Shared-link **fetching is deferred** (seam only).
+- **FR-012**: The client MUST be able to **pool assets from multiple albums** into one list.
+- **FR-013**: The client MUST be able to fetch **Memories** as an asset source (empty list when none).
 
 ### Key Entities *(include if feature involves data)*
 

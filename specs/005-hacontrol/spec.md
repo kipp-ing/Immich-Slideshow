@@ -98,6 +98,34 @@ Rückmeldung der neuen Auswahl.
 
 ---
 
+### User Story 4 - Display sleep/wake + presence from Home Assistant (Priority: P3)
+
+> Added 2026-06-22 from the feature interview. The wake schedule/logic lives in Home Assistant; the
+> app exposes the entities and reacts.
+
+The app publishes a **sleep/wake** control to Home Assistant and accepts an inbound **presence /
+occupancy** signal (e.g. from an HA motion sensor). On "sleep" / "no presence" the app dims to
+near-black via the PowerManager sleep/wake seam (spec 004); on "wake" / "presence" it restores. The
+schedule and the motion sensor live in Home Assistant.
+
+**Why this priority**: Extends remote control toward an ambient, presence-aware frame, reusing the
+existing MQTT/discovery and PowerManager; not required for basic remote control. Builds on P1.
+
+**Independent Test**: With the test transport: on connect, a sleep/wake control is published via
+discovery; an inbound "sleep" / no-presence message dims the display to near-black; "wake" / presence
+restores it; state is reported back.
+
+**Acceptance Scenarios**:
+
+1. **Given** the app is connected, **When** it starts, **Then** a sleep/wake control is published via
+   HA discovery alongside the existing entities.
+2. **Given** an HA motion sensor reports no presence (or "sleep" is set), **When** the message
+   arrives, **Then** the app dims the display to near-black and reports the state.
+3. **Given** presence returns (or "wake" is set), **When** the message arrives, **Then** the app
+   restores brightness and reports the state.
+
+---
+
 ### Edge Cases
 
 - **Broker nicht erreichbar / Verbindung scheitert**: Die Diashow läuft lokal normal weiter; die
@@ -170,6 +198,15 @@ Rückmeldung der neuen Auswahl.
 - **FR-015**: Ein eingehender Auswahlbefehl für ein gültiges Album MUSS die Diashow auf dieses Album
   wechseln und die neue Auswahl zurückmelden; ein Befehl für ein unbekanntes Album MUSS den aktuellen
   Zustand unverändert lassen und korrekt zurückmelden.
+
+#### Presence & Sleep/Wake (P3, added 2026-06-22)
+
+- **FR-016**: The app MUST publish a **sleep/wake** control via Home-Assistant discovery; "sleep" MUST
+  dim the display to near-black and "wake" MUST restore it, using the PowerManager sleep/wake seam
+  (spec 004 FR-014).
+- **FR-017**: The app MUST accept an inbound **presence/occupancy** signal (e.g. from an HA motion
+  sensor) that drives sleep/wake; the wake **schedule and sensor live in Home Assistant** (no in-app
+  scheduler). Invalid/unknown payloads MUST be ignored safely (per FR-011).
 
 ### Key Entities *(include if feature involves data)*
 
