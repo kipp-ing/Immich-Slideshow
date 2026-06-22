@@ -28,6 +28,10 @@ das Sicherheits-/Secret-Review und die manuelle Broker-Verifikation.
 
 **Implemented & verified — US1, US2, US3 all done.**
 
+_Checkboxes reconciled 2026-06-22: T001–T018, T020–T022, T024–T026 and polish T028–T030 are shipped +
+host-verified and now ticked. Only the manual real-Home-Assistant checks **T019 / T023 / T027** stay
+open — see [docs/manual-verification.md](../../docs/manual-verification.md)._
+
 - **Setup + Foundational (T001–T009)**: ✅ `Packages/HAControlKit` (core + `HAControlMQTT` target), value
   models, seams, topics, fakes.
 - **US1 Pause/Play + availability (T010–T018)**: ✅ Coordinator, discovery (`switch`), real
@@ -61,9 +65,9 @@ observable.
 
 **Purpose**: Lokales SPM-Paket `HAControlKit` (Kern dependency-frei) + Target `HAControlMQTT` (mqtt-nio) anlegen.
 
-- [ ] T001 SPM-Paket-Gerüst `Packages/HAControlKit/Package.swift` (Swift 6, iOS 18 / macOS-Host): Target `HAControlKit` (keine externen Deps); Target `HAControlMQTT` (Dependency `mqtt-nio` via `.package(url: "https://github.com/swift-server/mqtt-nio", from: "2.x")` + `HAControlKit`); Test-Target `HAControlKitTests` (Dependency `HAControlKit`). Zwei Library-Products (`HAControlKit`, `HAControlMQTT`).
-- [ ] T002 Quell-/Testverzeichnisse anlegen: `Sources/HAControlKit/`, `Sources/HAControlMQTT/`, `Tests/HAControlKitTests/`.
-- [ ] T003 Leeren Build verifizieren (`swift build`/`swift test` auf dem Host grün; mqtt-nio wird aufgelöst). `.gitignore`-Allowlist `!Packages/HAControlKit/` ergänzen (Claude — `Packages/*` ist ignoriert).
+- [X] T001 SPM-Paket-Gerüst `Packages/HAControlKit/Package.swift` (Swift 6, iOS 18 / macOS-Host): Target `HAControlKit` (keine externen Deps); Target `HAControlMQTT` (Dependency `mqtt-nio` via `.package(url: "https://github.com/swift-server/mqtt-nio", from: "2.x")` + `HAControlKit`); Test-Target `HAControlKitTests` (Dependency `HAControlKit`). Zwei Library-Products (`HAControlKit`, `HAControlMQTT`).
+- [X] T002 Quell-/Testverzeichnisse anlegen: `Sources/HAControlKit/`, `Sources/HAControlMQTT/`, `Tests/HAControlKitTests/`.
+- [X] T003 Leeren Build verifizieren (`swift build`/`swift test` auf dem Host grün; mqtt-nio wird aufgelöst). `.gitignore`-Allowlist `!Packages/HAControlKit/` ergänzen (Claude — `Packages/*` ist ignoriert).
 
 **Checkpoint**: Paket existiert, baut, mqtt-nio aufgelöst.
 
@@ -75,12 +79,12 @@ observable.
 
 **⚠️ CRITICAL**: Muss vor allen User Stories fertig sein.
 
-- [ ] T004 [P] Wertmodelle in `Packages/HAControlKit/Sources/HAControlKit/HAEntityState.swift`: `HAEntity` (`enum {playback,brightness,album}`, `CaseIterable`, `Sendable`), `PlaybackState` (`playing`/`paused`), `ConnectionState` (`disconnected`/`connecting`/`connected`); alle `Equatable`, `Sendable`.
-- [ ] T005 [P] `MQTTTransport`-Protokoll + `MQTTMessage` (`topic`/`payload: Data`/`retain`) in `Packages/HAControlKit/Sources/HAControlKit/MQTTTransport.swift` (`connect(will:)`/`disconnect()`/`publish(_:)`/`subscribe(_:)`/`incoming: AsyncStream`/`connectionEvents: AsyncStream<Bool>`; `Sendable`).
-- [ ] T006 [P] `RemoteControlling`-Protokoll (`@MainActor`, `AnyObject`; `playbackState`/`brightness`/`albumOptions`/`currentAlbum`; `pause()`/`resume()`/`setBrightness(_:) async`/`selectAlbum(_:)`; `onLocalChange`) in `Packages/HAControlKit/Sources/HAControlKit/RemoteControlling.swift`.
-- [ ] T007 [P] `BrokerConfigStore`-Protokoll + `BrokerConfig` (`host`/`port`/`username`/`password`/`deviceID`; `Sendable`, `Equatable`) in `Packages/HAControlKit/Sources/HAControlKit/BrokerConfigStore.swift`.
-- [ ] T008 [P] `HATopics` (reine Topic-Builder: base/availability/command/state/discoveryConfig je `HAEntity`) in `Packages/HAControlKit/Sources/HAControlKit/HATopics.swift`.
-- [ ] T009 Test-Fakes in `Packages/HAControlKit/Tests/HAControlKitTests/Fakes.swift`: `FakeMQTTTransport` (zeichnet `connect(will:)`/`published: [MQTTMessage]`/`subscriptions: [String]` auf; `inject(_:)` speist eingehende Commands über `incoming`; `emitConnection(_:)` über `connectionEvents`) und `FakeRemoteControl` (`@MainActor`; konfigurierbare Zustände/Albumliste; zeichnet Aufrufe auf).
+- [X] T004 [P] Wertmodelle in `Packages/HAControlKit/Sources/HAControlKit/HAEntityState.swift`: `HAEntity` (`enum {playback,brightness,album}`, `CaseIterable`, `Sendable`), `PlaybackState` (`playing`/`paused`), `ConnectionState` (`disconnected`/`connecting`/`connected`); alle `Equatable`, `Sendable`.
+- [X] T005 [P] `MQTTTransport`-Protokoll + `MQTTMessage` (`topic`/`payload: Data`/`retain`) in `Packages/HAControlKit/Sources/HAControlKit/MQTTTransport.swift` (`connect(will:)`/`disconnect()`/`publish(_:)`/`subscribe(_:)`/`incoming: AsyncStream`/`connectionEvents: AsyncStream<Bool>`; `Sendable`).
+- [X] T006 [P] `RemoteControlling`-Protokoll (`@MainActor`, `AnyObject`; `playbackState`/`brightness`/`albumOptions`/`currentAlbum`; `pause()`/`resume()`/`setBrightness(_:) async`/`selectAlbum(_:)`; `onLocalChange`) in `Packages/HAControlKit/Sources/HAControlKit/RemoteControlling.swift`.
+- [X] T007 [P] `BrokerConfigStore`-Protokoll + `BrokerConfig` (`host`/`port`/`username`/`password`/`deviceID`; `Sendable`, `Equatable`) in `Packages/HAControlKit/Sources/HAControlKit/BrokerConfigStore.swift`.
+- [X] T008 [P] `HATopics` (reine Topic-Builder: base/availability/command/state/discoveryConfig je `HAEntity`) in `Packages/HAControlKit/Sources/HAControlKit/HATopics.swift`.
+- [X] T009 Test-Fakes in `Packages/HAControlKit/Tests/HAControlKitTests/Fakes.swift`: `FakeMQTTTransport` (zeichnet `connect(will:)`/`published: [MQTTMessage]`/`subscriptions: [String]` auf; `inject(_:)` speist eingehende Commands über `incoming`; `emitConnection(_:)` über `connectionEvents`) und `FakeRemoteControl` (`@MainActor`; konfigurierbare Zustände/Albumliste; zeichnet Aufrufe auf).
 
 **Checkpoint**: Foundation steht — User Stories können beginnen.
 
@@ -97,18 +101,18 @@ availability online, Discovery für `switch`, `switch/set` abonniert; `switch/se
 
 ### Tests for User Story 1 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T010 [P] [US1] Discovery-/Topic-Test in `Packages/HAControlKit/Tests/HAControlKitTests/HADiscoveryTests.swift`: `HADiscovery.config(for: .playback, …)` enthält `unique_id == "<deviceID>_playback"`, korrekte `availability_topic`/`command_topic`/`state_topic` (deckungsgleich mit `HATopics`), `device.identifiers == [deviceID]`, kein Credential im Payload; Topics stabil über mehrere Aufrufe (SC-005). (FR-006/FR-007/SC-005)
-- [ ] T011 [US1] Coordinator-Test in `Packages/HAControlKit/Tests/HAControlKitTests/HAControlCoordinatorTests.swift`: `start()` mit gültiger Config → `connect(will:)` mit availability=`offline`-Will, danach availability=`online` (retained), Discovery für `switch` (retained), `switch/set` abonniert, State-Echo `playbackState` (FR-001/FR-004/FR-006/FR-007/SC-001); eingehend `switch/set OFF`→`control.pause()`+Echo `OFF`, `ON`→`resume()`+Echo `ON` (FR-008/FR-009/SC-002); `control.onLocalChange()`→Echo (SC-003); ungültige/leere Payload→kein Crash, kein Zustandswechsel, Echo=unverändert (FR-011); `connectionEvents` false→true→erneut online+Discovery+Echo (FR-005/SC-004/SC-005); `start()` ohne Config (`nil`)→kein `connect`, `connection==.disconnected`, kein Throw (FR-003/SC-006); `stop()`→`disconnect()`. **Concurrency-/AsyncStream-Testdesign bei Claude.**
+- [X] T010 [P] [US1] Discovery-/Topic-Test in `Packages/HAControlKit/Tests/HAControlKitTests/HADiscoveryTests.swift`: `HADiscovery.config(for: .playback, …)` enthält `unique_id == "<deviceID>_playback"`, korrekte `availability_topic`/`command_topic`/`state_topic` (deckungsgleich mit `HATopics`), `device.identifiers == [deviceID]`, kein Credential im Payload; Topics stabil über mehrere Aufrufe (SC-005). (FR-006/FR-007/SC-005)
+- [X] T011 [US1] Coordinator-Test in `Packages/HAControlKit/Tests/HAControlKitTests/HAControlCoordinatorTests.swift`: `start()` mit gültiger Config → `connect(will:)` mit availability=`offline`-Will, danach availability=`online` (retained), Discovery für `switch` (retained), `switch/set` abonniert, State-Echo `playbackState` (FR-001/FR-004/FR-006/FR-007/SC-001); eingehend `switch/set OFF`→`control.pause()`+Echo `OFF`, `ON`→`resume()`+Echo `ON` (FR-008/FR-009/SC-002); `control.onLocalChange()`→Echo (SC-003); ungültige/leere Payload→kein Crash, kein Zustandswechsel, Echo=unverändert (FR-011); `connectionEvents` false→true→erneut online+Discovery+Echo (FR-005/SC-004/SC-005); `start()` ohne Config (`nil`)→kein `connect`, `connection==.disconnected`, kein Throw (FR-003/SC-006); `stop()`→`disconnect()`. **Concurrency-/AsyncStream-Testdesign bei Claude.**
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] `HADiscovery` (reine Payload-Builder, JSON `Data` für `switch`/`light`/`select` + availability/device-Block) in `Packages/HAControlKit/Sources/HAControlKit/HADiscovery.swift`. Test T010 grün.
-- [ ] T013 [US1] `HAControlCoordinator` (`@MainActor @Observable`) in `Packages/HAControlKit/Sources/HAControlKit/HAControlCoordinator.swift`: `init(transport, control, configStore, deviceName, enabledEntities=[.playback])`; `start()` (Config laden; bei nil no-op; sonst connect(will), online, Discovery je Entität, subscribe, State-Echo; `incoming`/`connectionEvents` konsumieren), Command→`pause()`/`resume()`, State-Echo nach Command **und** `onLocalChange`, Reconnect-Handling, robuste Payload-Verarbeitung; `stop()` (disconnect). Test T011 grün.
-- [ ] T014 [US1] Reale `NIOMQTTTransport: MQTTTransport` in `Packages/HAControlKit/Sources/HAControlMQTT/NIOMQTTTransport.swift` über `mqtt-nio` mit **TLS** (Validierung aktiv), LWT, Keepalive, Reconnect; bildet `incoming`/`connectionEvents` auf AsyncStreams ab. (Claude — Lib/TLS/Concurrency.)
-- [ ] T015 [US1] Keychain-`BrokerConfigStore` im App-Target: `Immich Slideshow/Slideshow/KeychainBrokerConfigStore.swift` (Broker-Host/Port/User/Pass + deviceID aus dem bestehenden Keychain; nie loggen). (Claude — Keychain/Secrets.)
-- [ ] T016 [US1] `RemoteControlling`-Adapter im App-Target: `Immich Slideshow/Slideshow/SlideshowRemoteControlAdapter.swift` (leitet pause/resume auf `SlideshowViewModel`; `onLocalChange` bei lokalen Pausen/Resumes; brightness/album als no-op bis US2/US3). (Claude.)
-- [ ] T017 [US1] `HAControlKit` (+ `HAControlMQTT`) ins App-Target einbinden (`*.xcodeproj/project.pbxproj`: `XCLocalSwiftPackageReference` + zwei `XCSwiftPackageProductDependency` + Frameworks). App baut auf dem iPad-Simulator. (Claude.)
-- [ ] T018 [US1] Lebenszyklus-Verdrahtung in `Immich_SlideshowApp.swift`/`SlideshowView.swift`: `HAControlCoordinator` mit `NIOMQTTTransport` + `KeychainBrokerConfigStore` + Adapter bauen; beim Erscheinen `start()`, beim Verlassen/Hintergrund `stop()`. Diashow bleibt bei fehlendem Broker unbeeinflusst (FR-003). **`--uitest`/DEBUG:** Coordinator mit Fake-Transport/ohne Config, damit der hermetische Lauf kein Netz braucht. (Claude.)
+- [X] T012 [US1] `HADiscovery` (reine Payload-Builder, JSON `Data` für `switch`/`light`/`select` + availability/device-Block) in `Packages/HAControlKit/Sources/HAControlKit/HADiscovery.swift`. Test T010 grün.
+- [X] T013 [US1] `HAControlCoordinator` (`@MainActor @Observable`) in `Packages/HAControlKit/Sources/HAControlKit/HAControlCoordinator.swift`: `init(transport, control, configStore, deviceName, enabledEntities=[.playback])`; `start()` (Config laden; bei nil no-op; sonst connect(will), online, Discovery je Entität, subscribe, State-Echo; `incoming`/`connectionEvents` konsumieren), Command→`pause()`/`resume()`, State-Echo nach Command **und** `onLocalChange`, Reconnect-Handling, robuste Payload-Verarbeitung; `stop()` (disconnect). Test T011 grün.
+- [X] T014 [US1] Reale `NIOMQTTTransport: MQTTTransport` in `Packages/HAControlKit/Sources/HAControlMQTT/NIOMQTTTransport.swift` über `mqtt-nio` mit **TLS** (Validierung aktiv), LWT, Keepalive, Reconnect; bildet `incoming`/`connectionEvents` auf AsyncStreams ab. (Claude — Lib/TLS/Concurrency.)
+- [X] T015 [US1] Keychain-`BrokerConfigStore` im App-Target: `Immich Slideshow/Slideshow/KeychainBrokerConfigStore.swift` (Broker-Host/Port/User/Pass + deviceID aus dem bestehenden Keychain; nie loggen). (Claude — Keychain/Secrets.)
+- [X] T016 [US1] `RemoteControlling`-Adapter im App-Target: `Immich Slideshow/Slideshow/SlideshowRemoteControlAdapter.swift` (leitet pause/resume auf `SlideshowViewModel`; `onLocalChange` bei lokalen Pausen/Resumes; brightness/album als no-op bis US2/US3). (Claude.)
+- [X] T017 [US1] `HAControlKit` (+ `HAControlMQTT`) ins App-Target einbinden (`*.xcodeproj/project.pbxproj`: `XCLocalSwiftPackageReference` + zwei `XCSwiftPackageProductDependency` + Frameworks). App baut auf dem iPad-Simulator. (Claude.)
+- [X] T018 [US1] Lebenszyklus-Verdrahtung in `Immich_SlideshowApp.swift`/`SlideshowView.swift`: `HAControlCoordinator` mit `NIOMQTTTransport` + `KeychainBrokerConfigStore` + Adapter bauen; beim Erscheinen `start()`, beim Verlassen/Hintergrund `stop()`. Diashow bleibt bei fehlendem Broker unbeeinflusst (FR-003). **`--uitest`/DEBUG:** Coordinator mit Fake-Transport/ohne Config, damit der hermetische Lauf kein Netz braucht. (Claude.)
 - [ ] T019 [US1] Manuelle Broker-Verifikation (out of CI): gültige Broker-Daten im Keychain → Diashow starten → in HA erscheint Gerät mit Pause/Play-Schalter + Verfügbarkeit; Schalten pausiert/läuft; App in den Hintergrund → „offline" (LWT), zurück → „online". TLS-Port, kein Klartext. (Claude.)
 
 **Checkpoint**: US1 unabhängig funktionsfähig — Fernsteuerung Pause/Play + Verfügbarkeit (MVP).
@@ -123,12 +127,12 @@ availability online, Discovery für `switch`, `switch/set` abonniert; `switch/se
 
 ### Tests for User Story 2 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T020 [P] [US2] Test in `HAControlCoordinatorTests.swift` (+ Discovery-Test in `HADiscoveryTests.swift`): mit `.brightness` aktiviert → Discovery für `light` (unique_id `<deviceID>_brightness`); eingehend `light/set` → `control.setBrightness(clamp 0…1)`; Helligkeit 0–255↔0.0–1.0-Mapping; State-Echo = angewandter Wert; außerhalb Bereich → geklemmt (FR-012/FR-013/SC-008).
+- [X] T020 [P] [US2] Test in `HAControlCoordinatorTests.swift` (+ Discovery-Test in `HADiscoveryTests.swift`): mit `.brightness` aktiviert → Discovery für `light` (unique_id `<deviceID>_brightness`); eingehend `light/set` → `control.setBrightness(clamp 0…1)`; Helligkeit 0–255↔0.0–1.0-Mapping; State-Echo = angewandter Wert; außerhalb Bereich → geklemmt (FR-012/FR-013/SC-008).
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Coordinator + `HADiscovery` um `light` erweitern (`Packages/HAControlKit/Sources/HAControlKit/HAControlCoordinator.swift`, `HADiscovery.swift`): Command-Mapping `light/set`→`setBrightness`, 0–255↔0.0–1.0, State-Echo. Test T020 grün.
-- [ ] T022 [US2] App-Adapter `SlideshowRemoteControlAdapter` um Helligkeit erweitern (an `PowerManager.setBrightness`); `.brightness` in `enabledEntities` aufnehmen. (Claude.)
+- [X] T021 [US2] Coordinator + `HADiscovery` um `light` erweitern (`Packages/HAControlKit/Sources/HAControlKit/HAControlCoordinator.swift`, `HADiscovery.swift`): Command-Mapping `light/set`→`setBrightness`, 0–255↔0.0–1.0, State-Echo. Test T020 grün.
+- [X] T022 [US2] App-Adapter `SlideshowRemoteControlAdapter` um Helligkeit erweitern (an `PowerManager.setBrightness`); `.brightness` in `enabledEntities` aufnehmen. (Claude.)
 - [ ] T023 [US2] Manuelle Broker-Verifikation: HA zeigt dimmbares Licht; Fern-Helligkeit wirkt auf dem iPad und wird zurückgemeldet; Hintergrund erzwingt nichts.
 
 **Checkpoint**: US1 + US2 — Pause/Play + Helligkeit fern.
@@ -143,12 +147,12 @@ availability online, Discovery für `switch`, `switch/set` abonniert; `switch/se
 
 ### Tests for User Story 3 (zuerst schreiben, MUSS rot sein) ⚠️
 
-- [ ] T024 [P] [US3] Test in `HAControlCoordinatorTests.swift` (+ Discovery): mit `.album` aktiviert → Discovery für `select` mit `options == albumOptions` (unique_id `<deviceID>_album`); `select/set <gültig>`→`control.selectAlbum`+Echo; `<ungültig/unbekannt>`→no-op, Echo=aktueller Zustand (FR-014/FR-015/SC-009).
+- [X] T024 [P] [US3] Test in `HAControlCoordinatorTests.swift` (+ Discovery): mit `.album` aktiviert → Discovery für `select` mit `options == albumOptions` (unique_id `<deviceID>_album`); `select/set <gültig>`→`control.selectAlbum`+Echo; `<ungültig/unbekannt>`→no-op, Echo=aktueller Zustand (FR-014/FR-015/SC-009).
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Coordinator + `HADiscovery` um `select` erweitern (Optionen=Albumliste); Command-Mapping `select/set`→`selectAlbum` (unbekannt→no-op), State-Echo. Test T024 grün.
-- [ ] T026 [US3] App-Adapter um Albumliste/-wechsel erweitern (an `SlideshowViewModel`/Album-Quelle); `.album` in `enabledEntities`. (Claude.)
+- [X] T025 [US3] Coordinator + `HADiscovery` um `select` erweitern (Optionen=Albumliste); Command-Mapping `select/set`→`selectAlbum` (unbekannt→no-op), State-Echo. Test T024 grün.
+- [X] T026 [US3] App-Adapter um Albumliste/-wechsel erweitern (an `SlideshowViewModel`/Album-Quelle); `.album` in `enabledEntities`. (Claude.)
 - [ ] T027 [US3] Manuelle Broker-Verifikation: HA zeigt Album-Auswahl mit Optionen; Fernwahl wechselt das Album und meldet zurück; ungültige Wahl lässt den Zustand unverändert.
 
 **Checkpoint**: Alle Stories funktionsfähig.
@@ -159,9 +163,9 @@ availability online, Discovery für `switch`, `switch/set` abonniert; `switch/se
 
 **Purpose**: Sicherheits-/Secret-Review, Plattformgrenzen, quickstart-Validierung.
 
-- [ ] T028 [P] Sicherheitsreview (Konstitution III/IV): Broker-`password`/`username` erscheinen nirgends in publizierten Payloads/Topics, Logs, UserDefaults, Cache oder committeten Dateien; TLS-Validierung in `NIOMQTTTransport` nicht deaktiviert (kein `allowInsecure`/Self-signed-Bypass).
-- [ ] T029 [P] `quickstart.md`-Validierung; Akzeptanz-Mapping SC-001…SC-009 bestätigen (Host-Tests + manuelle Broker-Checks).
-- [ ] T030 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests grün (Coordinator-Verdrahtung bricht den Flow nicht; `--uitest` ohne Netz); Host-Suite (`HAControlKit` + bestehende Pakete) grün via `swift test`.
+- [X] T028 [P] Sicherheitsreview (Konstitution III/IV): Broker-`password`/`username` erscheinen nirgends in publizierten Payloads/Topics, Logs, UserDefaults, Cache oder committeten Dateien; TLS-Validierung in `NIOMQTTTransport` nicht deaktiviert (kein `allowInsecure`/Self-signed-Bypass).
+- [X] T029 [P] `quickstart.md`-Validierung; Akzeptanz-Mapping SC-001…SC-009 bestätigen (Host-Tests + manuelle Broker-Checks).
+- [X] T030 Voller Simulator-Lauf über XcodeBuildMCP (`test_sim`, Scheme „Immich Slideshow"): app-gehostete Tests grün (Coordinator-Verdrahtung bricht den Flow nicht; `--uitest` ohne Netz); Host-Suite (`HAControlKit` + bestehende Pakete) grün via `swift test`.
 
 ---
 
