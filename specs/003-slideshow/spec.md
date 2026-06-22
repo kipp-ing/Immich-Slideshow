@@ -79,6 +79,90 @@ Album prüfen, dass ein Hinweis statt eines leeren Vollbilds erscheint.
 
 ---
 
+### User Story 4 - Configurable playback (order, duration, transition, fit) (Priority: P2)
+
+> Added 2026-06-22 from the feature interview. These supersede the "fixed default" note in FR-013:
+> the parameters below become user-configurable (the settings UI lives in spec 007).
+
+The playback parameters pinned in v1 become configurable, persisted, and consumed by the engine:
+photo **order** (shuffle or sequential, default **shuffle**), per-photo **duration** (default
+**15 s**), the **transition** (crossfade, slide, dissolve, or none — default crossfade) plus an
+optional **Ken Burns** slow pan/zoom, and the **fit** (Fit/letterbox or Fill/crop — default Fit).
+
+**Why this priority**: Order and duration are the highest day-to-day-value knobs for an ambient
+frame; shuffle in particular keeps the frame from replaying the same sequence every loop. Builds on
+US1.
+
+**Independent Test**: With a mocked album, set order = shuffle → the visiting order is randomized and
+no photo repeats within a cycle, reshuffling on the next cycle; set duration = 15 s → the
+auto-advance interval matches; select each transition and the Ken Burns toggle → the engine applies
+them; set fit = Fill → the image fills the screen (cropped) instead of letterboxing.
+
+**Acceptance Scenarios**:
+
+1. **Given** order = shuffle, **When** the slideshow runs a full cycle, **Then** every photo is shown
+   once before any repeats, and the next cycle uses a fresh shuffle.
+2. **Given** order = sequential, **When** the slideshow runs, **Then** photos appear in album order
+   (current behavior).
+3. **Given** a configured duration, **When** a photo is shown, **Then** the auto-advance fires after
+   that duration.
+4. **Given** a selected transition and Ken Burns setting, **When** the slideshow advances, **Then**
+   the chosen transition and motion are applied.
+5. **Given** fit = Fill, **When** a photo's aspect differs from the screen, **Then** it is cropped to
+   fill with no letterbox bars; fit = Fit keeps the whole photo with bars.
+
+---
+
+### User Story 5 - Image quality choice (Priority: P3)
+
+The user can choose the image quality the slideshow fetches: **Preview** (~1440 px, light and fast,
+default) or **Original** (full resolution, sharpest on large displays, heavier on bandwidth/memory).
+
+**Why this priority**: Improves perceived sharpness on large iPads but is not needed for the
+slideshow to function; default stays Preview to keep the 24/7 device light.
+
+**Independent Test**: With a mocked API, quality = Original → the engine requests the original/full
+asset; quality = Preview → it requests the preview-size image (current behavior).
+
+**Acceptance Scenarios**:
+
+1. **Given** quality = Preview, **When** a photo loads, **Then** the preview-size image is fetched.
+2. **Given** quality = Original, **When** a photo loads, **Then** the full-resolution original is
+   fetched and displayed.
+
+---
+
+### User Story 6 - Resilient 24/7 unattended playback (Priority: P2)
+
+The frame keeps working unattended through server hiccups, brief network loss, and app relaunches.
+Images are cached on **disk** (not only in memory) so a relaunch or short offline period does not
+blank the frame; the cache has a **configurable size limit** with a user **"Clear cache"** action.
+On a load/connection failure the engine **auto-retries with backoff** instead of waiting for a human
+tap, and it **periodically refreshes** the source list so photos newly added in Immich appear without
+a restart.
+
+**Why this priority**: This is what makes the app a real always-on frame rather than a foreground
+viewer; builds on US1–US3.
+
+**Independent Test**: With a mocked, intermittently-failing API: prime the disk cache, then simulate
+the server going away → cached photos keep showing; restore the server → playback continues; trigger
+a load failure → the engine retries automatically with increasing backoff (no manual retry needed);
+add an asset to the mocked source → after the refresh interval it appears in rotation; set a small
+cache limit → the on-disk cache never exceeds it; invoke Clear cache → the on-disk cache is emptied.
+
+**Acceptance Scenarios**:
+
+1. **Given** images cached on disk, **When** the server is briefly unreachable, **Then** the
+   slideshow keeps showing cached photos instead of failing.
+2. **Given** a load or connection failure, **When** it occurs, **Then** the engine retries
+   automatically with backoff and recovers without user interaction.
+3. **Given** a running slideshow, **When** photos are added to the source in Immich, **Then** they
+   appear after the next periodic refresh without an app restart.
+4. **Given** a configured cache size limit, **When** caching continues, **Then** the on-disk cache
+   stays within the limit (oldest evicted); a "Clear cache" action empties it on demand.
+
+---
+
 ### Edge Cases
 
 - **Album enthält Videos oder nicht-Bild-Assets**: Solche Assets werden in v1 übersprungen; nur Standbilder werden angezeigt (siehe Assumptions).
@@ -104,6 +188,27 @@ Album prüfen, dass ein Hinweis statt eines leeren Vollbilds erscheint.
 - **FR-011**: Das System MUSS nicht-Bild-Assets (z. B. Videos) beim Aufbau der Diashow-Reihenfolge überspringen (nur Standbilder in v1).
 - **FR-012**: Der Timer-Vorlauf MUSS nur im Vordergrund laufen; im Hintergrund pausiert er und wird bei Rückkehr fortgesetzt (Plattformgrenze, Konstitution V).
 - **FR-013**: Die Diashow MUSS ohne Bedien-Overlays/Effekte als Default starten (ruhig und schlicht, Konstitution VII); Anzeigedauer und Übergänge werden zunächst über einen festen Default bestimmt (Konfigurierbarkeit ist Sache des späteren ThemeSettings-Moduls).
+
+#### Configurable playback & resilience (added 2026-06-22)
+
+- **FR-014**: The system MUST support a configurable photo order — **shuffle** (default) or
+  **sequential** (album order). Shuffle MUST show every photo once per cycle before repeating and
+  reshuffle each new cycle. (Supersedes the fixed order in FR-005/FR-013.)
+- **FR-015**: The per-photo display duration MUST be user-configurable and persisted; default **15 s**.
+  (Supersedes the "fixed default" duration in FR-003/FR-013.)
+- **FR-016**: The transition MUST be selectable — crossfade (default), slide, dissolve, or none — and
+  the system MUST offer an optional **Ken Burns** slow pan/zoom toggle. (Extends FR-004.)
+- **FR-017**: The image fit MUST be configurable — **Fit** (letterbox, default) or **Fill** (crop to
+  fill). (Refines FR-002.)
+- **FR-018**: The fetched image quality MUST be configurable — **Preview** (default) or **Original**.
+- **FR-019**: The system MUST cache images on **disk** so playback survives app relaunch and brief
+  offline periods; the cache MUST have a user-configurable size limit and a user-invokable **Clear
+  cache** action. (Extends the in-memory-only bound in FR-007.)
+- **FR-020**: On a load or connection failure the system MUST **auto-retry with backoff** and recover
+  without requiring user interaction (unattended operation). (Supersedes manual-only retry from US3.)
+- **FR-021**: The system MUST **periodically refresh** the source asset list so photos added in Immich
+  appear without an app restart.
+- **FR-022**: v1 stays **images only** (videos / Live Photos out of scope) — reaffirms FR-011.
 
 ### Key Entities *(include if feature involves data)*
 

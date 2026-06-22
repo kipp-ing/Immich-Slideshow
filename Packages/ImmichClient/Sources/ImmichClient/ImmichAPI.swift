@@ -7,6 +7,7 @@ public protocol ImmichAPI: Sendable {
     func assetInfo(assetID: String) async throws -> AssetInfo
     func preview(assetID: String) async throws -> Data
     func thumbnail(assetID: String) async throws -> Data
+    func original(assetID: String) async throws -> Data
 }
 
 public extension ImmichAPI {
@@ -15,6 +16,10 @@ public extension ImmichAPI {
     }
 
     func thumbnail(assetID: String) async throws -> Data {
+        try await preview(assetID: assetID)
+    }
+
+    func original(assetID: String) async throws -> Data {
         try await preview(assetID: assetID)
     }
 }

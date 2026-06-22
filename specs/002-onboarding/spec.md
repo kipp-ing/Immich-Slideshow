@@ -68,6 +68,32 @@ Onboarding wieder bei Schritt 1 startet und der zuvor gespeicherte Key entfernt 
 
 ---
 
+### User Story 4 - Two connection modes: own server (API key) vs shared link (Priority: P2, seams now)
+
+> Added 2026-06-22 from the feature interview. Decision: **design the seams now, build the shared-link
+> path later.** The API-key flow is unchanged.
+
+Onboarding abstracts over the **connection mode**: the existing "use my server (API key)" path, and a
+future **"paste a shared link + password"** super-simple mode that needs no own Immich instance or API
+key. The shared-link entry is present in the flow but **stubbed/disabled**; the abstraction (so the
+second mode drops in without reworking onboarding or the client) is what ships now.
+
+**Why this priority**: The super-simple mode meaningfully widens who can use the app; getting the seams
+right now avoids a later rewrite. The full shared-link fetch is deferred.
+
+**Independent Test**: The onboarding/auth layer abstracts over auth mode (API key vs shared-link token
++ password) such that the API-key flow works end-to-end and a shared-link mode can be added without
+changing the flow's structure; the shared-link entry is visible but disabled.
+
+**Acceptance Scenarios**:
+
+1. **Given** the start of onboarding, **When** the user views connection options, **Then** "use my
+   server (API key)" works as today and a "paste a shared link" option is present but stubbed.
+2. **Given** the auth abstraction, **When** a shared-link mode is added later, **Then** it plugs into
+   the existing flow and client without reworking the API-key path.
+
+---
+
 ### Edge Cases
 
 - **Ungültiges Adressformat**: Eingabe ist keine gültige HTTPS-URL → Hinweis vor jedem Netzaufruf, Schritt wiederholbar.
@@ -95,6 +121,14 @@ Onboarding wieder bei Schritt 1 startet und der zuvor gespeicherte Key entfernt 
 - **FR-011**: Eine unvollständige (abgebrochene) Einrichtung DARF den Hauptscreen NICHT freigeben; der nächste Start MUSS das Onboarding fortsetzen bzw. neu beginnen.
 - **FR-012**: Der Nutzer MUSS die Konfiguration zurücksetzen können; dabei MÜSSEN Adresse, Album und der sicher gespeicherte Key entfernt werden, und das Onboarding MUSS danach bei Schritt 1 beginnen.
 - **FR-013**: Ist die Albumliste leer, MUSS die App dies verständlich melden, statt den Nutzer in einem Schritt ohne Auswahlmöglichkeit zu blockieren.
+
+#### Connection modes (P2, added 2026-06-22)
+
+- **FR-014**: Onboarding MUST abstract over the **connection/auth mode** (server + API key now; shared
+  link + password later) so a second mode can be added without reworking the flow.
+- **FR-015**: A **shared-link** entry MUST be present in the flow but MAY be **stubbed/disabled**;
+  implementing the actual shared-link connection/fetch is **deferred** (seam only). Secrets handling
+  (FR-006) applies equally to a shared-link password.
 
 ### Key Entities *(include if feature involves data)*
 
