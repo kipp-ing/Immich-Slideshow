@@ -37,7 +37,7 @@ test_sim  (scheme "Immich Slideshow", iPad Pro 11" M5)
 | **SC-003** swipe without chrome | XCUITest `testSwipeAdvancesWithoutRevealingChrome`; VM `showNext/showPrevious` tests. |
 | **SC-004** album switch + jump | XCUITest `testAlbumBrowserOpensDrillsInAndSelectionReturnsToSlideshow`; VM `switchAlbum`/`jump` tests. |
 | **SC-005** info shows/stays quiet | XCUITest `testInfoButtonTogglesDateAndLocationOverlay`; client `AssetInfoTests` (with/without EXIF). |
-| **SC-006** brightness live | XCUITest `testSettingsShowsBrightnessAndPlannedOptionsAndDismisses` (slider present/effective). |
+| **SC-006** brightness live | XCUITest `testSettingsShowsBrightnessAndPlannedOptionsAndDismisses` asserts the brightness slider is **present and adjustable** (and a planned row is previewed). The live brightness change is **not** asserted — XCUITest can't read `UIScreen.brightness`; it rests on the `PowerManager.setBrightness` wiring and is confirmed manually (step 5 below). |
 | **SC-007** default stays calm | as SC-001 + review: no extra visible without a user action. |
 
 ## Simulator verification (manual, optional)

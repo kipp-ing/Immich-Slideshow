@@ -193,7 +193,10 @@ the planned options are visible but disabled.
 - **SC-004**: Picking a different album and photo in the album browser → the slideshow continues from
   that photo in the now-active album.
 - **SC-005**: The info overlay shows date + location where EXIF exists, and nothing where it is absent.
-- **SC-006**: The brightness slider in the settings screen changes screen brightness immediately.
+- **SC-006**: The settings screen offers a brightness control; adjusting it changes screen brightness
+  live (foreground only). *Verification boundary: an automated UI test covers the control's presence
+  and adjustability; the live brightness change rests on the PowerManager wiring and is confirmed
+  manually (see quickstart.md) — XCUITest cannot read `UIScreen.brightness`.*
 - **SC-007**: None of the extras (chrome, info, clock, album browser) is visible without an explicit
   user action — the calm default is preserved (Constitution VII).
 
