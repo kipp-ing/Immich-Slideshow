@@ -2,8 +2,8 @@
 
 Backs the in-app connection editor: validate a candidate server URL + API key (reachable + authorized)
 and, only then, persist atomically. Lives in `OnboardingKit`, depends only on injected protocols, and is
-host-unit-testable against the package's in-memory fakes. No new network path is introduced — it reuses
-`serverVersion()` (reachability) and `albums()` (authorization) on `ImmichClient`.
+host-unit-testable against the package's in-memory fakes. No new network path is introduced — a single
+`albums()` call validates reachability + authorization and supplies the album list (FR-013).
 
 ## Surface (intended shape)
 
@@ -37,7 +37,7 @@ helpers extracted from `OnboardingViewModel` and shared by both view models.
 | 1 | stored config exists | the editor opens | `serverURLInput` is pre-filled with the stored URL; `apiKeyInput` is empty; `keyIsSet == (keychain.read() != nil)` — the stored key is never read into `apiKeyInput` (FR-001, FR-007, D6) |
 | 2 | URL without scheme/host | `save()` | returns `.malformed`, **no** network call, nothing persisted (FR-009) |
 | 3 | reachable server, wrong key | `save()` | `albums()` → `.unauthorized`; returns `.unauthorized`; prior config + key intact (FR-004, SC-002) |
-| 4 | unreachable URL | `save()` | `serverVersion()`/`albums()` → `.unreachable`; returns `.unreachable`; nothing persisted (FR-004) |
+| 4 | unreachable URL | `save()` | `albums()` → `.unreachable`; returns `.unreachable`; nothing persisted (FR-004) |
 | 5 | reachable + valid key + album still present | `save()` | Keychain write then config write; returns `.success`; values replace prior ones atomically (FR-003, FR-005, D3) |
 | 6 | valid key but Keychain write throws | `save()` | returns `.keychainFailure`; config **not** written (FR-005, D3) |
 | 7 | URL-only change, `apiKeyInput` empty | `save()` | validates with the existing stored key; on success persists the new URL and keeps the key (FR-011) |
@@ -57,5 +57,5 @@ helpers extracted from `OnboardingViewModel` and shared by both view models.
 - The live reconnect (rebuilding `SlideshowViewModel`'s client) and the entry points (settings row,
   error-state "fix connection") are app-target/SwiftUI concerns, verified via XcodeBuildMCP — not part
   of this host-testable contract.
-- Confirm no new Immich path is needed: only `serverVersion()` and `albums()` are used, both already in
-  `ImmichAPI` and verified against the live OpenAPI in 001/002.
+- Confirm no new Immich path is needed: only `albums()` is used (already in `ImmichAPI`, verified
+  against the live OpenAPI in 001/002).
