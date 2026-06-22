@@ -17,6 +17,7 @@
 		3DAA01000000000000000015 /* HAControlKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000014 /* HAControlKit */; };
 		3DAA01000000000000000017 /* HAControlMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000016 /* HAControlMQTT */; };
 		3DAA0100000000000000001A /* BrokerSetupKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA01000000000000000019 /* BrokerSetupKit */; };
+		3DAA0100000000000000001B /* ThemeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAA0100000000000000001C /* ThemeKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 				3DAA01000000000000000015 /* HAControlKit in Frameworks */,
 				3DAA01000000000000000017 /* HAControlMQTT in Frameworks */,
 				3DAA0100000000000000001A /* BrokerSetupKit in Frameworks */,
+				3DAA0100000000000000001B /* ThemeKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +144,7 @@
 				3DAA01000000000000000014 /* HAControlKit */,
 				3DAA01000000000000000016 /* HAControlMQTT */,
 				3DAA01000000000000000019 /* BrokerSetupKit */,
+				3DAA0100000000000000001C /* ThemeKit */,
 			);
 			productName = "Immich Slideshow";
 			productReference = 3DDA115E2FE2D16C0059B8FD /* Immich Slideshow.app */;
@@ -236,6 +239,7 @@
 				3DAA01000000000000000010 /* XCLocalSwiftPackageReference "Packages/PowerKit" */,
 				3DAA01000000000000000013 /* XCLocalSwiftPackageReference "Packages/HAControlKit" */,
 				3DAA01000000000000000018 /* XCLocalSwiftPackageReference "Packages/BrokerSetupKit" */,
+				3DAA0100000000000000001D /* XCLocalSwiftPackageReference "Packages/ThemeKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3DDA115F2FE2D16C0059B8FD /* Products */;
@@ -681,6 +685,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/BrokerSetupKit;
 		};
+		3DAA0100000000000000001D /* XCLocalSwiftPackageReference "Packages/ThemeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ThemeKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -723,6 +731,10 @@
 		3DAA01000000000000000019 /* BrokerSetupKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrokerSetupKit;
+		};
+		3DAA0100000000000000001C /* ThemeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ThemeKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
