@@ -36,7 +36,11 @@ final class Immich_SlideshowUITests: XCTestCase {
         // typing to avoid a focus race.
         let keyField = app.secureTextFields["onboarding.apiKey"]
         XCTAssertTrue(keyField.waitForExistence(timeout: 5), "API key field should appear")
-        XCTAssertTrue(waitForEnabled(keyField, timeout: 5), "API key field should become enabled")
+        // Generous ceiling: the helper returns the instant the field enables, so this
+        // only bites when the simulator is loaded (full-suite runs) and the async
+        // reachability check settles slowly. Avoids a timing flake without slowing the
+        // happy path.
+        XCTAssertTrue(waitForEnabled(keyField, timeout: 15), "API key field should become enabled")
         keyField.tap()
         keyField.typeText("dummy-key")
         app.buttons["onboarding.apiKey.connect"].tap()
