@@ -68,7 +68,9 @@ struct SlideshowView: View {
         // (fixes the always-visible iPad clock/battery), revealed with the controls.
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
-        .animation(.easeInOut(duration: 0.6), value: viewModel.currentAssetID)
+        // The image swap is animated per the chosen transition; "none" disables the
+        // animation entirely so there is no residual fade (008/US2, review R5).
+        .animation(swapAnimation, value: viewModel.currentAssetID)
         .task {
             // Entering the slideshow: keep the display awake while it runs in the
             // foreground (FR-001). Idle timer is normalized again on disappear.
@@ -259,15 +261,59 @@ struct SlideshowView: View {
             // `.ignoresSafeArea()` directly to a `scaledToFit` image expands its frame
             // asymmetrically by the safe-area insets, which pushed the picture off-center
             // in landscape; instead the whole ZStack ignores the safe area and the image
-            // fills + centers within it.
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(viewModel.currentAssetID)
-                .transition(.opacity)
+            // fills + centers within it. Fill (or Ken Burns, which implies fill-style
+            // framing) crops to fill with no bars.
+            let base = Image(uiImage: image).resizable()
+            Group {
+                if fillsScreen {
+                    base.scaledToFill()
+                } else {
+                    base.scaledToFit()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .kenBurns(isActive: kenBurnsActive, durationSeconds: photoDurationSeconds)
+            .id(viewModel.currentAssetID)
+            .transition(imageTransition)
         } else {
             Color.black
         }
+    }
+
+    // MARK: - Render-time settings (008)
+
+    /// Fill framing when the user chose Fill, or while Ken Burns is on (so the pan/zoom
+    /// never reveals a letterbox gap).
+    private var fillsScreen: Bool {
+        themeStore.settings.fit == .fill || themeStore.settings.kenBurns
+    }
+
+    private var kenBurnsActive: Bool {
+        themeStore.settings.kenBurns && viewModel.phase == .playing && !viewModel.isPaused
+    }
+
+    private var photoDurationSeconds: Double {
+        Double(themeStore.settings.duration.components.seconds)
+    }
+
+    private var imageTransition: AnyTransition {
+        switch themeStore.settings.transition.descriptor.style {
+        case .crossfade:
+            return .opacity
+        case .slide:
+            return .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        case .dissolve:
+            return .scale(scale: 1.08).combined(with: .opacity)
+        case .none:
+            return .identity
+        }
+    }
+
+    private var swapAnimation: Animation? {
+        themeStore.settings.transition.descriptor.animates ? .easeInOut(duration: 0.6) : nil
     }
 }

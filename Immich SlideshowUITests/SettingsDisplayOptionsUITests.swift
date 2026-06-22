@@ -61,4 +61,54 @@ final class SettingsDisplayOptionsUITests: XCTestCase {
             "30 s duration should persist across relaunch"
         )
     }
+
+    @MainActor
+    func testTransitionAndKenBurnsPersistAcrossRelaunch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--uitest", "--uitest-slideshow", "--uitest-chrome", "--uitest-settings", "--uitest-reset-theme"
+        ]
+        app.launch()
+
+        // Defaults: crossfade transition, Ken Burns off.
+        let transition = app.descendants(matching: .any).matching(identifier: "settings.transition").firstMatch
+        XCTAssertTrue(transition.waitForExistence(timeout: 5), "transition picker should exist")
+        let kenBurns = app.switches["settings.kenBurns"]
+        XCTAssertTrue(kenBurns.waitForExistence(timeout: 2), "Ken Burns toggle should exist")
+        XCTAssertEqual(kenBurns.value as? String, "0", "Ken Burns defaults to off")
+
+        // Change transition crossfade -> slide; enable Ken Burns.
+        transition.tap()
+        app.buttons["Schieben"].firstMatch.tap()
+        // Tap the switch control on the row's trailing edge (a center tap lands on the
+        // label in a Form row and doesn't flip the toggle).
+        kenBurns.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        XCTAssertEqual(kenBurns.value as? String, "1", "tapping the toggle should turn Ken Burns on")
+
+        // Dismiss the sheet (a natural settle so the writes flush) before relaunch.
+        app.buttons["Fertig"].tap()
+        let image = app.descendants(matching: .any).matching(identifier: "slideshow.image").firstMatch
+        XCTAssertTrue(image.waitForExistence(timeout: 3))
+
+        // Relaunch WITHOUT reset: the choices persist.
+        app.terminate()
+        let relaunch = XCUIApplication()
+        relaunch.launchArguments = [
+            "--uitest", "--uitest-slideshow", "--uitest-chrome", "--uitest-settings"
+        ]
+        relaunch.launch()
+
+        XCTAssertTrue(
+            relaunch.descendants(matching: .any).matching(identifier: "settings.transition").firstMatch
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            relaunch.staticTexts["Schieben"].firstMatch.waitForExistence(timeout: 2),
+            "slide transition should persist across relaunch"
+        )
+        XCTAssertEqual(
+            relaunch.switches["settings.kenBurns"].value as? String, "1",
+            "Ken Burns should persist as on across relaunch"
+        )
+    }
 }
