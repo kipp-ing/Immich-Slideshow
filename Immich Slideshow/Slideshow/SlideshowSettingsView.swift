@@ -77,7 +77,22 @@ struct SlideshowSettingsView: View {
                     }
                     .accessibilityIdentifier("settings.kenBurns")
 
-                    placeholderRow("Bildanpassung", value: "Einpassen", systemImage: "aspectratio")
+                    Picker(selection: $themeStore.settings.fit) {
+                        Text("Einpassen").tag(ImageFit.fit)
+                        Text("Ausfüllen").tag(ImageFit.fill)
+                    } label: {
+                        Label("Bildanpassung", systemImage: "aspectratio")
+                    }
+                    .accessibilityIdentifier("settings.fit")
+
+                    Picker(selection: $themeStore.settings.quality) {
+                        Text("Vorschau").tag(ImageQuality.preview)
+                        Text("Original").tag(ImageQuality.original)
+                    } label: {
+                        Label("Qualität", systemImage: "photo")
+                    }
+                    .accessibilityIdentifier("settings.quality")
+
                     placeholderRow("Uhr-Overlay", value: "Aus", systemImage: "clock")
                 } header: {
                     Text("Anzeige")
