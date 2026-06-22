@@ -33,7 +33,6 @@ struct SlideshowView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
-    @State private var showBrokerSetup = ProcessInfo.processInfo.arguments.contains("--uitest-broker")
     @State private var coordinator: HAControlCoordinator?
     @State private var isStartingCoordinator = false
 
@@ -46,7 +45,10 @@ struct SlideshowView: View {
     @State private var chromeVisible = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
     @State private var autoHideTask: Task<Void, Never>?
     private let pinChrome = ProcessInfo.processInfo.arguments.contains("--uitest-chrome")
+    // `--uitest-broker` opens settings directly with the MQTT section pre-expanded
+    // (broker setup folded into settings — 010), replacing the old standalone sheet.
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("--uitest-settings")
+        || ProcessInfo.processInfo.arguments.contains("--uitest-broker")
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
     @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
     // Connection editor reached from the error state (009, US2), separate from the
@@ -114,14 +116,10 @@ struct SlideshowView: View {
             isPresented: $showResetDialog,
             titleVisibility: .visible
         ) {
-            Button("Broker einrichten") { showBrokerSetup = true }
             Button("Reset", role: .destructive, action: onReset)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This clears the server, API key, and album, and returns to setup.")
-        }
-        .sheet(isPresented: $showBrokerSetup) {
-            BrokerSetupView()
         }
         .sheet(isPresented: $showAlbumBrowser) {
             AlbumBrowserView(
@@ -146,6 +144,10 @@ struct SlideshowView: View {
                 makeConnectionViewModel: makeConnectionViewModel,
                 onConnectionChanged: onConnectionChanged
             )
+            // Present the settings as a larger page-sized sheet on iPad so the folded-in
+            // Connection/MQTT sections aren't cut off behind a cramped form-sheet card
+            // (010/US3). All sections remain reachable by scrolling regardless (FR-015).
+            .presentationSizing(.page)
         }
         .sheet(isPresented: $showErrorConnection) {
             if let errorConnectionViewModel {

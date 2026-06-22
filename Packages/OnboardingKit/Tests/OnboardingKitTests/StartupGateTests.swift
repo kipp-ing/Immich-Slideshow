@@ -14,28 +14,28 @@ private let url = URL(string: "https://photos.example.test")!
     #expect(gate.initialStep() == .done)
 }
 
-@Test func startupGateReturnsAPIKeyForCompleteConfigWithoutAPIKey() {
+@Test func startupGateReturnsConnectionForCompleteConfigWithoutAPIKey() {
     let config = InMemoryConfigStore(
         configuration: AppConfiguration(baseURL: url, selectedAlbumID: "a1")
     )
     let keychain = InMemoryKeychainStore()
     let gate = StartupGate(config: config, keychain: keychain)
 
-    #expect(gate.initialStep() == .apiKey)
+    #expect(gate.initialStep() == .connection)
 }
 
-@Test func startupGateReturnsServerWithoutConfigAndWithoutAPIKey() {
+@Test func startupGateReturnsConnectionWithoutConfigAndWithoutAPIKey() {
     let config = InMemoryConfigStore()
     let keychain = InMemoryKeychainStore()
     let gate = StartupGate(config: config, keychain: keychain)
 
-    #expect(gate.initialStep() == .server)
+    #expect(gate.initialStep() == .connection)
 }
 
-@Test func startupGateReturnsServerWithoutConfigEvenWithAPIKey() {
+@Test func startupGateReturnsConnectionWithoutConfigEvenWithAPIKey() {
     let config = InMemoryConfigStore()
     let keychain = InMemoryKeychainStore(apiKey: "key")
     let gate = StartupGate(config: config, keychain: keychain)
 
-    #expect(gate.initialStep() == .server)
+    #expect(gate.initialStep() == .connection)
 }
