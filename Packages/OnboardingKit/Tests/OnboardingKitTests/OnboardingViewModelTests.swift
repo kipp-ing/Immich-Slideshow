@@ -2,106 +2,126 @@ import Foundation
 import Testing
 @testable import OnboardingKit
 import ImmichClient
-import ImmichClientTestSupport
 
-@Test func submitServerURLRejectsNonHTTPSURL() async {
-    let vm = makeVM(transportResult: .failure(URLError(.badURL)))
+@Test func rejectsNonHTTPSURL() async {
+    let api = AlbumsAPI(result: .failure(ImmichError.unreachable))
+    let vm = makeVM(api: api)
     vm.serverURLInput = "http://foo"
-
-    await vm.submitServerURL()
-
-    #expect(vm.step == .server)
-    #expect(vm.errorMessage != nil)
-}
-
-@Test func submitServerURLAdvancesToAPIKeyWhenVersionLoads() async throws {
-    let response = try makeResponse(path: "/api/server/version", statusCode: 200)
-    let data = try #require(#"{"major":1,"minor":119,"patch":0}"#.data(using: .utf8))
-    let vm = makeVM(transportResult: .success((data, response)))
-    vm.serverURLInput = "https://photos.example.test"
-
-    await vm.submitServerURL()
-
-    #expect(vm.step == .apiKey)
-    #expect(vm.errorMessage == nil)
-}
-
-@Test func submitServerURLKeepsServerStepWhenServerIsUnreachable() async {
-    let vm = makeVM(transportResult: .failure(URLError(.timedOut)))
-    vm.serverURLInput = "https://photos.example.test"
-
-    await vm.submitServerURL()
-
-    #expect(vm.step == .server)
-    #expect(vm.errorMessage != nil)
-}
-
-@Test func submitAPIKeyLoadsAlbumsAndSavesKey() async throws {
-    let response = try makeResponse(path: "/api/albums", statusCode: 200)
-    let data = try #require(#"[{"id":"a1","albumName":"Fam"}]"#.data(using: .utf8))
-    let keychain = InMemoryKeychainStore()
-    let vm = makeVM(transportResult: .success((data, response)), keychain: keychain)
-    vm.serverURLInput = "https://photos.example.test"
-    vm.step = .apiKey
     vm.apiKeyInput = "key"
 
-    await vm.submitAPIKey()
+    await vm.submitConnection()
+
+    #expect(vm.step == .connection)
+    #expect(vm.errorMessage != nil)
+    #expect(await api.albumsCallCount == 0)
+}
+
+@Test func advancesToAlbumWhenReachableAndAuthorized() async throws {
+    let keychain = InMemoryKeychainStore()
+    let api = AlbumsAPI(result: .success([Album(id: "a1", name: "Fam")]))
+    let vm = makeVM(api: api, keychain: keychain)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
 
     #expect(vm.step == .album)
-    #expect(vm.albums.count == 1)
     #expect(keychain.read() == "key")
+    #expect(vm.albums.map(\.id) == ["a1"])
     #expect(vm.errorMessage == nil)
+    #expect(await api.albumsCallCount == 1)
 }
 
-@Test func submitAPIKeyKeepsAPIKeyStepWhenUnauthorizedAndDoesNotSaveKey() async throws {
-    let response = try makeResponse(path: "/api/albums", statusCode: 401)
-    let data = Data()
+@Test func staysWhenServerUnreachable() async {
     let keychain = InMemoryKeychainStore()
-    let vm = makeVM(transportResult: .success((data, response)), keychain: keychain)
+    let api = AlbumsAPI(result: .failure(ImmichError.unreachable))
+    let vm = makeVM(api: api, keychain: keychain)
     vm.serverURLInput = "https://photos.example.test"
-    vm.step = .apiKey
     vm.apiKeyInput = "key"
 
-    await vm.submitAPIKey()
+    await vm.submitConnection()
 
-    #expect(vm.step == .apiKey)
-    #expect(vm.errorMessage != nil)
+    #expect(vm.step == .connection)
     #expect(keychain.read() == nil)
+    #expect(vm.errorMessage == ConnectionError.message(for: .unreachable))
+    #expect(await api.albumsCallCount == 1)
 }
 
-@Test func submitAPIKeyKeepsAPIKeyStepWhenKeychainSaveFails() async throws {
-    let response = try makeResponse(path: "/api/albums", statusCode: 200)
-    let data = try #require(#"[{"id":"a1","albumName":"Fam"}]"#.data(using: .utf8))
+@Test func staysWhenUnauthorized() async {
+    let keychain = InMemoryKeychainStore()
+    let api = AlbumsAPI(result: .failure(ImmichError.unauthorized))
+    let vm = makeVM(api: api, keychain: keychain)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    let unauthorizedMessage = ConnectionError.message(for: .unauthorized)
+    let unreachableMessage = ConnectionError.message(for: .unreachable)
+    #expect(vm.step == .connection)
+    #expect(keychain.read() == nil)
+    #expect(vm.errorMessage == unauthorizedMessage)
+    #expect(unauthorizedMessage != unreachableMessage)
+    #expect(await api.albumsCallCount == 1)
+}
+
+@Test func staysWhenKeychainSaveFails() async {
     let keychain = InMemoryKeychainStore(failSave: true)
-    let vm = makeVM(transportResult: .success((data, response)), keychain: keychain)
+    let api = AlbumsAPI(result: .success([Album(id: "a1", name: "Fam")]))
+    let vm = makeVM(api: api, keychain: keychain)
     vm.serverURLInput = "https://photos.example.test"
-    vm.step = .apiKey
     vm.apiKeyInput = "key"
 
-    await vm.submitAPIKey()
+    await vm.submitConnection()
 
-    #expect(vm.step == .apiKey)
+    #expect(vm.step == .connection)
     #expect(vm.errorMessage != nil)
+    #expect(await api.albumsCallCount == 1)
 }
 
-@Test func submitAPIKeyKeepsAPIKeyStepWhenAlbumListIsEmpty() async throws {
-    let response = try makeResponse(path: "/api/albums", statusCode: 200)
-    let data = Data("[]".utf8)
-    let vm = makeVM(transportResult: .success((data, response)))
+@Test func staysWhenAlbumListEmpty() async {
+    let api = AlbumsAPI(result: .success([]))
+    let vm = makeVM(api: api)
     vm.serverURLInput = "https://photos.example.test"
-    vm.step = .apiKey
     vm.apiKeyInput = "key"
 
-    await vm.submitAPIKey()
+    await vm.submitConnection()
 
-    #expect(vm.step == .apiKey)
-    #expect(vm.errorMessage != nil)
+    #expect(vm.step == .connection)
+    #expect(vm.errorMessage == String(localized: "No albums found. Create an album in Immich.", bundle: .module))
     #expect(vm.albums.isEmpty)
+    #expect(await api.albumsCallCount == 1)
+}
+
+@Test func resetReturnsToConnection() {
+    let config = InMemoryConfigStore(configuration: AppConfiguration(
+        baseURL: URL(string: "https://photos.example.test")!,
+        selectedAlbumID: "a1"
+    ))
+    let keychain = InMemoryKeychainStore(apiKey: "key")
+    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, keychain: keychain)
+    vm.step = .album
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+    vm.albums = [Album(id: "a1", name: "Fam")]
+    vm.selectedAlbumID = "a1"
+    vm.errorMessage = "irgendwas"
+
+    vm.reset()
+
+    #expect(config.load() == nil)
+    #expect(keychain.read() == nil)
+    #expect(vm.step == .connection)
+    #expect(vm.serverURLInput == "")
+    #expect(vm.apiKeyInput == "")
+    #expect(vm.albums.isEmpty)
+    #expect(vm.selectedAlbumID == nil)
+    #expect(vm.errorMessage == nil)
 }
 
 @Test func selectAlbumPersistsConfigurationAndFinishes() async {
     let config = InMemoryConfigStore()
-    let vm = makeVM(transportResult: .failure(URLError(.badURL)), config: config)
+    let vm = makeVM(api: AlbumsAPI(result: .failure(ImmichError.unreachable)), config: config)
     vm.serverURLInput = "https://photos.example.test"
     vm.step = .album
     vm.albums = [Album(id: "a1", name: "Fam")]
@@ -115,54 +135,39 @@ import ImmichClientTestSupport
 }
 
 private func makeVM(
-    transportResult: Result<(Data, URLResponse), Error>,
+    api: AlbumsAPI,
     config: InMemoryConfigStore = .init(),
     keychain: InMemoryKeychainStore = .init()
 ) -> OnboardingViewModel {
     OnboardingViewModel(
-        api: { serverConfig in
-            ImmichClient(
-                config: serverConfig,
-                transport: MockTransport(result: transportResult)
-            )
-        },
+        api: { _ in api },
         config: config,
         keychain: keychain
     )
 }
 
-private func makeResponse(path: String, statusCode: Int) throws -> HTTPURLResponse {
-    let url = try #require(URL(string: "https://photos.example.test\(path)"))
-    return try #require(HTTPURLResponse(
-        url: url,
-        statusCode: statusCode,
-        httpVersion: nil,
-        headerFields: nil
-    ))
-}
+private actor AlbumsAPI: ImmichAPI {
+    private let result: Result<[Album], Error>
+    private(set) var albumsCallCount = 0
 
-@Test func resetClearsPersistedStateAndReturnsToServerStep() {
-    let config = InMemoryConfigStore(configuration: AppConfiguration(
-        baseURL: URL(string: "https://photos.example.test")!,
-        selectedAlbumID: "a1"
-    ))
-    let keychain = InMemoryKeychainStore(apiKey: "key")
-    let vm = makeVM(transportResult: .failure(URLError(.badURL)), config: config, keychain: keychain)
-    vm.step = .album
-    vm.serverURLInput = "https://photos.example.test"
-    vm.apiKeyInput = "key"
-    vm.albums = [Album(id: "a1", name: "Fam")]
-    vm.selectedAlbumID = "a1"
-    vm.errorMessage = "irgendwas"
+    init(result: Result<[Album], Error>) {
+        self.result = result
+    }
 
-    vm.reset()
+    func serverVersion() async throws -> String {
+        "1.119.0"
+    }
 
-    #expect(config.load() == nil)
-    #expect(keychain.read() == nil)
-    #expect(vm.step == .server)
-    #expect(vm.serverURLInput == "")
-    #expect(vm.apiKeyInput == "")
-    #expect(vm.albums.isEmpty)
-    #expect(vm.selectedAlbumID == nil)
-    #expect(vm.errorMessage == nil)
+    func albums() async throws -> [Album] {
+        albumsCallCount += 1
+        return try result.get()
+    }
+
+    func assets(albumID: String) async throws -> [Asset] {
+        []
+    }
+
+    func preview(assetID: String) async throws -> Data {
+        Data()
+    }
 }

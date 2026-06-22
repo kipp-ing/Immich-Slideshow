@@ -1,6 +1,5 @@
 public enum OnboardingStep: Sendable, Equatable {
-    case server
-    case apiKey
+    case connection
     case album
     case done
 }
