@@ -62,8 +62,21 @@ struct SlideshowSettingsView: View {
                     }
                     .accessibilityIdentifier("settings.duration")
 
-                    placeholderRow("Übergang", value: "Überblenden", systemImage: "wand.and.stars")
-                    placeholderRow("Ken Burns", value: "Aus", systemImage: "camera.viewfinder")
+                    Picker(selection: $themeStore.settings.transition) {
+                        Text("Überblenden").tag(Transition.crossfade)
+                        Text("Schieben").tag(Transition.slide)
+                        Text("Auflösen").tag(Transition.dissolve)
+                        Text("Ohne").tag(Transition.none)
+                    } label: {
+                        Label("Übergang", systemImage: "wand.and.stars")
+                    }
+                    .accessibilityIdentifier("settings.transition")
+
+                    Toggle(isOn: $themeStore.settings.kenBurns) {
+                        Label("Ken Burns", systemImage: "camera.viewfinder")
+                    }
+                    .accessibilityIdentifier("settings.kenBurns")
+
                     placeholderRow("Bildanpassung", value: "Einpassen", systemImage: "aspectratio")
                     placeholderRow("Uhr-Overlay", value: "Aus", systemImage: "clock")
                 } header: {
