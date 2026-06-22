@@ -21,16 +21,22 @@ host-testable, violates MVVM and Constitution I/II.
 
 ## D2 — Validation reuse
 
-**Decision**: Reuse the onboarding checks exactly: reachability = `serverVersion()` on
-`ServerConfig(baseURL, apiKey: "")`; authorization = `albums()` on `ServerConfig(baseURL, apiKey)`.
-Map `ImmichError.unreachable`/`.unauthorized`/`.invalidResponse` to the same messages onboarding uses.
+**Decision**: Validate the candidate connection with a **single `albums()` call** on
+`ServerConfig(baseURL, apiKey)`. Because the editor supplies both URL and key together, one authorized
+request proves reachability AND authorization at once, and `ImmichError` classifies the failure:
+`.unreachable` (no response), `.unauthorized` (401), `.invalidResponse` (other). The same call returns
+the album list used for FR-013. Map `ImmichError` to messages via the shared `ConnectionError` helper.
 
-**Rationale**: These are the proven onboarding paths; `albums()` doubles as both the auth check and the
-album-existence source needed for FR-013. `ImmichError` already classifies unreachable vs unauthorized
-(FR-004), so no new error surface is needed.
+**Rationale**: Onboarding splits the checks only because it collects the URL and key in two separate
+steps (`serverVersion()` before any key exists, `albums()` after). The settings editor has both values
+at once, so a separate unauthenticated `serverVersion()` call is redundant. A single `albums()` call is
+simpler, classifies unreachable vs unauthorized identically, and yields the album-existence list in the
+same round-trip — and it is testable with the existing single-response `MockTransport`/in-memory fakes.
 
-**Alternatives considered**: A dedicated lightweight `/auth/validate` call — rejected: adds an API
-path to verify against OpenAPI for no gain over `albums()`, which we already need.
+**Alternatives considered**: `serverVersion()` then `albums()` (the onboarding pair) — rejected:
+redundant for a combined URL+key entry and awkward to test (one fixed mock response can't satisfy both a
+version body and an albums body). A dedicated `/auth/validate` path — rejected: a new API path to verify
+against OpenAPI for no gain over `albums()`, which we already need.
 
 ## D3 — Atomic persist ordering
 

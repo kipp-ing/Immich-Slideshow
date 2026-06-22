@@ -55,7 +55,7 @@ value survives a relaunch (quickstart steps 2–4, 6).
 ### Implementation
 
 - [ ] T005 [US1] Define `ConnectionValidationOutcome` in `Packages/OnboardingKit/Sources/OnboardingKit/ConnectionValidationOutcome.swift` with the cases from data-model.md (`.malformed`, `.unreachable`, `.unauthorized`, `.invalidResponse`, `.keychainFailure`, `.albumMissing(albums:)`, `.success`).
-- [ ] T006 [US1] Implement `ConnectionSettingsViewModel` in `Packages/OnboardingKit/Sources/OnboardingKit/ConnectionSettingsViewModel.swift`: inject `(ServerConfig)->ImmichAPI`, `ConfigStore`, `KeychainStore`; prefill URL from `config.load()`, set `keyIsSet` from `keychain.read() != nil` (never read the key into the input); `save()` normalizes via `ConnectionURL`, validates reachable (`serverVersion()`) + authorized (`albums()`), then persists Keychain-first then config (atomic, D3); classify errors via `ConnectionError`; empty key = keep existing; guard re-entrancy with `isBusy`. Make T004 green.
+- [ ] T006 [US1] Implement `ConnectionSettingsViewModel` in `Packages/OnboardingKit/Sources/OnboardingKit/ConnectionSettingsViewModel.swift`: inject `(ServerConfig)->ImmichAPI`, `ConfigStore`, `KeychainStore`; prefill URL from `config.load()`, set `keyIsSet` from `keychain.read() != nil` (never read the key into the input); `save()` normalizes via `ConnectionURL`, validates with a single `albums()` call (reachable + authorized in one round-trip, D2) using the entered key or — if empty — the stored key, then persists Keychain-first then config (atomic, D3); classify errors via `ConnectionError`; guard re-entrancy with `isBusy`. Make T004 green.
 - [ ] T007 [US1] Verify `OnboardingKit` host tests green: `swift test --package-path Packages/OnboardingKit`.
 - [ ] T008 [US1] Create `ConnectionSettingsView` in `Immich Slideshow/Slideshow/ConnectionSettingsView.swift`: editable URL field, masked/secure key field (`SecureField`), "key is set" indicator, Save/Cancel, busy spinner + inline error; bound to `ConnectionSettingsViewModel`. The stored key is never displayed (FR-007).
 - [ ] T009 [US1] Add a "Verbindung" row to `Immich Slideshow/Slideshow/SlideshowSettingsView.swift` that presents `ConnectionSettingsView`, wiring the config/keychain/`ImmichAPI` factory seams from the app layer.
@@ -93,7 +93,7 @@ opens the album browser (quickstart step 5).
 ## Phase 4: Polish & Cross-Cutting Concerns
 
 - [ ] T017 [P] Security spot-check the diff (quickstart "Security spot-check"): the API key string reaches only `keychain.save`; it is never logged, set in UserDefaults, or interpolated into a view label (Constitution III, FR-007, SC-003).
-- [ ] T018 [P] Confirm no new Immich path is introduced — only `serverVersion()` and `albums()` are used (already in `ImmichAPI`, verified against live OpenAPI in 001/002); no contract/endpoint changes needed (FR-008).
+- [ ] T018 [P] Confirm no new Immich path is introduced — only `albums()` is used (already in `ImmichAPI`, verified against live OpenAPI in 001/002); no contract/endpoint changes needed (FR-008).
 - [ ] T019 Cross-model review via `/codex:review` and address findings.
 - [ ] T020 Full gate via XcodeBuildMCP: build the app target + `swift test` for `OnboardingKit`, and record quickstart results.
 

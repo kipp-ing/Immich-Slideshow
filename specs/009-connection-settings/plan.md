@@ -8,9 +8,10 @@
 
 Surface the Immich server URL and API key in the existing in-app Settings screen (built in 008) so
 they can be reviewed and changed after onboarding. A new `ConnectionSettingsViewModel` in
-`OnboardingKit` reuses the exact reachable + authorized validation the onboarding flow already
-performs (`serverVersion()` for reachability, `albums()` for authorization, `ImmichError` for
-classification), persists atomically (Keychain first, then config), and never reveals the key. A new
+`OnboardingKit` validates the candidate connection with a single `albums()` call (which proves
+reachability + authorization at once and yields the album list, with `ImmichError` classifying
+unreachable/unauthorized/invalid), persists atomically (Keychain first, then config), and never
+reveals the key. A new
 `ConnectionSettingsView` is reachable both from the settings screen (proactive change) and from the
 slideshow's connection-error state (recovery). On a successful save the app rebuilds the running
 slideshow's client against the new connection and resumes the selected album — no return to
@@ -29,8 +30,9 @@ view-model validation/persist logic is delegable.
 API key in the Keychain via `KeychainStore`. No new storage introduced.
 
 **Testing**: Swift Testing (`@Test`) host unit tests for `ConnectionSettingsViewModel` against the
-existing `OnboardingKit` fakes (in-memory config/keychain + stub `ImmichAPI`); XcodeBuildMCP for the
-app target, SwiftUI, and simulator validation.
+existing `OnboardingKit` fakes (`InMemoryConfigStore`, `InMemoryKeychainStore(failSave:)`, and a
+`MockTransport`-backed `ImmichAPI` factory — the single-`albums()` design works with one mock
+response); XcodeBuildMCP for the app target, SwiftUI, and simulator validation.
 
 **Target Platform**: iPadOS 18+
 

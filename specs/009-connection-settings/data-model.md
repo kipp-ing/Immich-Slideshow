@@ -24,7 +24,7 @@ Result of validating a draft, before any persistence.
 | Case | Meaning | Source |
 |------|---------|--------|
 | `.malformed` | URL fails scheme+host well-formedness | `ConnectionURL.normalize` returns nil (no network) — FR-009 |
-| `.unreachable` | Server did not respond | `ImmichError.unreachable` from `serverVersion()`/`albums()` — FR-004 |
+| `.unreachable` | Server did not respond | `ImmichError.unreachable` from `albums()` — FR-004 |
 | `.unauthorized` | Key rejected | `ImmichError.unauthorized` from `albums()` — FR-004 |
 | `.invalidResponse` | Unexpected server response | `ImmichError.invalidResponse` |
 | `.keychainFailure` | Validated, but Keychain write failed | `keychain.save` threw — D3 |
@@ -39,8 +39,9 @@ nothing and leave the prior `AppConfiguration` + Keychain key intact (FR-004, SC
 
 - **URL well-formedness** (FR-009): trimmed, `https` scheme, non-nil host; `https://` prepended when no
   scheme is present (matches onboarding normalization, D2). Checked before any network call.
-- **Reachable + authorized before persist** (FR-003): `serverVersion()` then `albums()` must both
-  succeed against the candidate config before any store write.
+- **Reachable + authorized before persist** (FR-003): a single `albums()` call against the candidate
+  config must succeed before any store write (it proves reachability + authorization and returns the
+  album list for FR-013).
 - **Atomic persist** (FR-005, D3): Keychain write first (fallible), then config write (infallible);
   abort with `.keychainFailure` if the Keychain write throws.
 - **Key secrecy** (FR-007): `apiKeyInput` is never logged or persisted outside the Keychain; the stored
