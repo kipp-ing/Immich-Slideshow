@@ -10,6 +10,9 @@ import SwiftUI
 
 struct SlideshowErrorView: View {
     var onRetry: () -> Void = {}
+    // Opens the in-app connection editor so a broken/expired connection can be fixed
+    // in place, without a full reset/re-onboarding (009, US2).
+    var onFixConnection: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -26,6 +29,11 @@ struct SlideshowErrorView: View {
             Button("Try again", action: onRetry)
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("slideshow.retry")
+            if let onFixConnection {
+                Button("Verbindung bearbeiten", action: onFixConnection)
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("slideshow.fixConnection")
+            }
         }
         .padding()
         .foregroundStyle(.white)

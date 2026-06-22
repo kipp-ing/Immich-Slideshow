@@ -35,10 +35,12 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(slider.waitForExistence(timeout: 3), "brightness slider should appear")
         slider.adjust(toNormalizedSliderPosition: 0.4)
 
-        // A planned (disabled) option is previewed in the shell.
+        // A planned (disabled) option is previewed in the shell. Order/duration/
+        // transition/Ken Burns/fit/quality are now live (008); the clock overlay is the
+        // remaining placeholder until US4.
         let plannedRow = app.descendants(matching: .any)
-            .matching(identifier: "settings.row.Ken Burns").firstMatch
-        XCTAssertTrue(plannedRow.exists, "planned options should be previewed")
+            .matching(identifier: "settings.row.Uhr-Overlay").firstMatch
+        XCTAssertTrue(plannedRow.exists, "the clock-overlay option should be previewed")
 
         // Dismiss back to the slideshow.
         app.buttons["Fertig"].tap()

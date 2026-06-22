@@ -41,7 +41,7 @@ import Observation
             _ = try await api(ServerConfig(baseURL: url, apiKey: "")).serverVersion()
             step = .apiKey
         } catch let error as ImmichError {
-            errorMessage = message(for: error)
+            errorMessage = ConnectionError.message(for: error)
         } catch {
             errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
         }
@@ -63,7 +63,7 @@ import Observation
         do {
             list = try await api(ServerConfig(baseURL: url, apiKey: apiKeyInput)).albums()
         } catch let error as ImmichError {
-            errorMessage = message(for: error)
+            errorMessage = ConnectionError.message(for: error)
             return
         } catch {
             errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
@@ -111,29 +111,6 @@ import Observation
     }
 
     private func normalizedURL() -> URL? {
-        let trimmed = serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let urlString = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
-        guard
-            let url = URL(string: urlString),
-            url.scheme == "https",
-            url.host != nil
-        else {
-            return nil
-        }
-
-        return url
-    }
-
-    private func message(for error: ImmichError) -> String {
-        switch error {
-        case .unauthorized:
-            String(localized: "Invalid API key.", bundle: .module)
-        case .unreachable:
-            String(localized: "Server not reachable.", bundle: .module)
-        case .invalidResponse:
-            String(localized: "Unexpected response from the server.", bundle: .module)
-        }
+        ConnectionURL.normalize(serverURLInput)
     }
 }

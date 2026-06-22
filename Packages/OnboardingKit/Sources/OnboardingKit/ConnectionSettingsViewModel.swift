@@ -1,0 +1,84 @@
+import Foundation
+import ImmichClient
+import Observation
+
+@MainActor @Observable public final class ConnectionSettingsViewModel {
+    public var serverURLInput: String
+    public var apiKeyInput: String = ""
+    public private(set) var isBusy = false
+    public private(set) var errorMessage: String?
+    public private(set) var keyIsSet: Bool
+
+    @ObservationIgnored private let api: (ServerConfig) -> any ImmichAPI
+    @ObservationIgnored private let config: ConfigStore
+    @ObservationIgnored private let keychain: KeychainStore
+
+    public init(
+        api: @escaping (ServerConfig) -> any ImmichAPI,
+        config: ConfigStore,
+        keychain: KeychainStore
+    ) {
+        self.api = api
+        self.config = config
+        self.keychain = keychain
+
+        serverURLInput = config.load()?.baseURL.absoluteString ?? ""
+        keyIsSet = keychain.read() != nil
+    }
+
+    public func save() async -> ConnectionValidationOutcome {
+        guard !isBusy else { return .success }
+        isBusy = true
+        defer { isBusy = false }
+        errorMessage = nil
+
+        guard let url = ConnectionURL.normalize(serverURLInput) else {
+            errorMessage = String(localized: "Please enter a valid HTTPS address.", bundle: .module)
+            return .malformed
+        }
+
+        let previousConfiguration = config.load()
+        let selectedAlbumID = previousConfiguration?.selectedAlbumID ?? ""
+        let effectiveKey = apiKeyInput.isEmpty ? (keychain.read() ?? "") : apiKeyInput
+
+        let albums: [Album]
+        do {
+            albums = try await api(ServerConfig(baseURL: url, apiKey: effectiveKey)).albums()
+        } catch let error as ImmichError {
+            errorMessage = ConnectionError.message(for: error)
+            return outcome(for: error)
+        } catch {
+            errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
+            return .invalidResponse
+        }
+
+        if !apiKeyInput.isEmpty {
+            do {
+                try keychain.save(apiKeyInput)
+            } catch {
+                errorMessage = String(localized: "Could not securely store the API key.", bundle: .module)
+                return .keychainFailure
+            }
+        }
+
+        config.save(AppConfiguration(baseURL: url, selectedAlbumID: selectedAlbumID))
+        keyIsSet = keychain.read() != nil
+
+        if !albums.contains(where: { $0.id == selectedAlbumID }) {
+            return .albumMissing(albums: albums)
+        }
+
+        return .success
+    }
+
+    private func outcome(for error: ImmichError) -> ConnectionValidationOutcome {
+        switch error {
+        case .unauthorized:
+            .unauthorized
+        case .unreachable:
+            .unreachable
+        case .invalidResponse:
+            .invalidResponse
+        }
+    }
+}

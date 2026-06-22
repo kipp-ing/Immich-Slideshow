@@ -11,6 +11,7 @@
 
 import HAControlKit
 import ImmichClient
+import OnboardingKit
 import PowerKit
 import SlideshowKit
 import SwiftUI
@@ -25,6 +26,10 @@ struct SlideshowView: View {
     let themeStore: UserDefaultsThemeStore
     var makeCoordinator: () async -> HAControlCoordinator? = { nil }
     var onReset: () -> Void = {}
+    // Connection editor seams (009): build a fresh editor view model on demand, and
+    // report a successful change so the app can reconnect the running slideshow.
+    var makeConnectionViewModel: () -> ConnectionSettingsViewModel? = { nil }
+    var onConnectionChanged: (ConnectionValidationOutcome) -> Void = { _ in }
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
@@ -44,6 +49,10 @@ struct SlideshowView: View {
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("--uitest-settings")
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
     @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
+    // Connection editor reached from the error state (009, US2), separate from the
+    // one in the settings sheet so a broken connection is fixable without chrome.
+    @State private var errorConnectionViewModel: ConnectionSettingsViewModel?
+    @State private var showErrorConnection = false
 
     private static let chromeAutoHide: Duration = .seconds(4.5)
 
@@ -131,7 +140,20 @@ struct SlideshowView: View {
             )
         }
         .sheet(isPresented: $showSettings) {
-            SlideshowSettingsView(powerManager: powerManager, themeStore: themeStore)
+            SlideshowSettingsView(
+                powerManager: powerManager,
+                themeStore: themeStore,
+                makeConnectionViewModel: makeConnectionViewModel,
+                onConnectionChanged: onConnectionChanged
+            )
+        }
+        .sheet(isPresented: $showErrorConnection) {
+            if let errorConnectionViewModel {
+                ConnectionSettingsView(viewModel: errorConnectionViewModel) { outcome in
+                    showErrorConnection = false
+                    onConnectionChanged(outcome)
+                }
+            }
         }
     }
 
@@ -156,7 +178,13 @@ struct SlideshowView: View {
                 SlideshowEmptyView()
 
             case .failed:
-                SlideshowErrorView(onRetry: { Task { await viewModel.retry() } })
+                SlideshowErrorView(
+                    onRetry: { Task { await viewModel.retry() } },
+                    onFixConnection: {
+                        errorConnectionViewModel = makeConnectionViewModel()
+                        showErrorConnection = errorConnectionViewModel != nil
+                    }
+                )
             }
         }
     }
