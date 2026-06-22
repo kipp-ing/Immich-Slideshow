@@ -2,9 +2,11 @@
 //  BrokerSetupUITests.swift
 //  Immich SlideshowUITests
 //
-//  Feature 006 / US2 (T016): the broker-setup sheet shows existing data so it can
-//  be changed or removed, without ever prefilling the password in cleartext.
-//  Driven hermetically via an in-memory broker store seeded by `--uitest-broker-existing`.
+//  Broker (MQTT) setup is folded into the Settings screen as a collapsible section
+//  (010, US2). `--uitest-broker` opens Settings with the MQTT section pre-expanded.
+//  The existing data shows so it can be changed or removed, without ever prefilling
+//  the password in cleartext. Driven hermetically via an in-memory broker store
+//  seeded by `--uitest-broker-existing`.
 //
 
 import XCTest
@@ -24,30 +26,75 @@ final class BrokerSetupUITests: XCTestCase {
         ]
         app.launch()
 
-        // Host / port / username are prefilled from the stored broker so the user can
-        // edit them (FR-007 change flow).
+        // The MQTT section sits at the bottom of the settings form, which lazily
+        // renders rows — so each field is scrolled into view before it is read (this
+        // also exercises the section's reachability, US3/FR-015).
         let host = app.textFields["broker.host"]
-        XCTAssertTrue(host.waitForExistence(timeout: 5), "broker setup should open with existing data")
+        XCTAssertTrue(scrollToElement(host, in: app), "broker fields should be reachable in the MQTT section")
+
+        // Host / port / username are prefilled from the stored broker so the user can
+        // edit them (FR-013 change flow).
         XCTAssertEqual(host.value as? String, "mqtt.example.com")
         XCTAssertEqual(app.textFields["broker.port"].value as? String, "8883")
         XCTAssertEqual(app.textFields["broker.username"].value as? String, "ha-user")
 
         // The stored password is never prefilled in cleartext; a "set" hint stands in
-        // for it instead (FR-009).
+        // for it instead (FR-013).
+        let password = app.secureTextFields["broker.password"]
+        XCTAssertTrue(scrollToElement(password, in: app), "password field should be reachable")
+        XCTAssertNotEqual(password.value as? String, "secret-pass", "password must not be prefilled")
         let passwordHint = app.staticTexts["broker.passwordHint"]
         XCTAssertTrue(passwordHint.exists, "a 'password is set' hint should replace cleartext prefill")
-        let password = app.secureTextFields["broker.password"]
-        XCTAssertTrue(password.exists)
-        XCTAssertNotEqual(password.value as? String, "secret-pass", "password must not be prefilled")
 
-        // Remove clears the stored config and returns to the slideshow (FR-008).
+        // Remove clears the stored config; the inline form resets to a pristine state
+        // (FR-013) — the remove action and the "set" hint disappear and the host clears.
         let remove = app.buttons["broker.remove"]
-        XCTAssertTrue(remove.exists, "existing broker data should offer a remove action")
+        XCTAssertTrue(scrollToElement(remove, in: app), "existing broker data should offer a remove action")
         remove.tap()
 
-        let image = app.descendants(matching: .any)
-            .matching(identifier: "slideshow.image").firstMatch
-        XCTAssertTrue(image.waitForExistence(timeout: 3), "removing should dismiss back to the slideshow")
-        XCTAssertFalse(host.exists, "broker sheet should be gone after removal")
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: remove)
+        waitForExpectations(timeout: 3)
+        XCTAssertFalse(passwordHint.exists, "the 'password is set' hint should disappear after removal")
+        XCTAssertNotEqual(host.value as? String, "mqtt.example.com", "host should be cleared after removal")
+    }
+
+    @MainActor
+    func testTypedBrokerInputSurvivesCollapseAndReExpand() throws {
+        let app = XCUIApplication()
+        // No `--uitest-broker-existing`: the MQTT section starts empty and pre-expanded.
+        app.launchArguments = ["--uitest", "--uitest-slideshow", "--uitest-chrome", "--uitest-broker"]
+        app.launch()
+
+        let host = app.textFields["broker.host"]
+        XCTAssertTrue(scrollToElement(host, in: app), "broker host field should be reachable")
+        host.tap()
+        host.typeText("edited-host.example.com")
+
+        // Collapse then re-expand the MQTT section via its disclosure header.
+        let mqttHeader = app.descendants(matching: .any).matching(identifier: "settings.mqtt").firstMatch
+        XCTAssertTrue(mqttHeader.waitForExistence(timeout: 2))
+        mqttHeader.tap() // collapse
+        XCTAssertTrue(scrollToElement(mqttHeader, in: app))
+        mqttHeader.tap() // re-expand
+
+        // The typed-but-unsaved edit survives (the view model is owned by the settings
+        // screen, not recreated with the disclosure content — 010 edge case / G2).
+        let hostAfter = app.textFields["broker.host"]
+        XCTAssertTrue(scrollToElement(hostAfter, in: app))
+        XCTAssertEqual(hostAfter.value as? String, "edited-host.example.com")
+    }
+
+    /// Swipes up until the element exists (or the swipe budget is exhausted). The
+    /// folded-in MQTT section is below the fold of the settings form.
+    @MainActor
+    private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 8) -> Bool {
+        if element.waitForExistence(timeout: 5) { return true }
+        var swipes = 0
+        while !element.exists && swipes < maxSwipes {
+            app.swipeUp()
+            swipes += 1
+        }
+        return element.exists
     }
 }

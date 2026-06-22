@@ -8,7 +8,9 @@ public struct StartupGate: Sendable {
     }
 
     public func initialStep() -> OnboardingStep {
-        guard config.load() != nil else { return .server }
-        return keychain.read() != nil ? .done : .apiKey
+        // Server URL and API key are now collected on one screen (.connection), so any
+        // incomplete configuration — missing config or missing key — starts there.
+        guard config.load() != nil, keychain.read() != nil else { return .connection }
+        return .done
     }
 }
