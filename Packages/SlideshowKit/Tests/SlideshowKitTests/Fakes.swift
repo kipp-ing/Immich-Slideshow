@@ -1,6 +1,16 @@
 import Foundation
 import ImmichClient
 import SlideshowKit
+import ThemeKit
+import ThemeKitTestSupport
+
+/// A deterministic settings store for the engine tests that assert album-order
+/// behavior. Sequential order keeps `start()`/`advance()` walking the album in a
+/// predictable sequence; tests that exercise shuffle inject their own store.
+@MainActor
+func sequentialThemeStore(duration: Duration = .seconds(15)) -> InMemoryThemeStore {
+    InMemoryThemeStore(settings: ThemeSettings(order: .sequential, duration: duration))
+}
 
 final class ManualTicker: SlideshowTicker, @unchecked Sendable {
     private let lock = NSLock()
@@ -8,8 +18,22 @@ final class ManualTicker: SlideshowTicker, @unchecked Sendable {
     private var waiterObservers: [CheckedContinuation<Void, Never>] = []
     private var consumedObservers: [CheckedContinuation<Void, Never>] = []
     private var consumedTickCount = 0
+    private var recordedDurations: [Duration] = []
 
-    func waitForNextTick() async throws {
+    /// The duration the engine requested for the most recent wait. The live-duration
+    /// ticker records this each cycle so tests can assert the interval re-arms when
+    /// the store's duration changes mid-show (008, review R1).
+    var lastRequestedDuration: Duration? {
+        lock.withLock { recordedDurations.last }
+    }
+
+    var requestedDurations: [Duration] {
+        lock.withLock { recordedDurations }
+    }
+
+    func waitForNextTick(duration: Duration) async throws {
+        lock.withLock { recordedDurations.append(duration) }
+
         if Task.isCancelled {
             throw CancellationError()
         }
@@ -75,6 +99,8 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
         var assetsByAlbumID: [String: [Asset]] = [:]
         var previewDataByAssetID: [String: Data] = [:]
         var previewErrorsByAssetID: [String: any Error] = [:]
+        var originalDataByAssetID: [String: Data] = [:]
+        var originalErrorsByAssetID: [String: any Error] = [:]
         var assetErrorsByAlbumID: [String: any Error] = [:]
         var albumList: [Album] = []
         var serverVersion = "stub"
@@ -83,6 +109,8 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
         var assetsCallCount = 0
         var previewCallCount = 0
         var previewCallCountByAssetID: [String: Int] = [:]
+        var originalCallCount = 0
+        var originalCallCountByAssetID: [String: Int] = [:]
     }
 
     private let lock = NSLock()
@@ -113,6 +141,20 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
         lock.withLock {
             state.previewErrorsByAssetID[assetID] = error
             state.previewDataByAssetID[assetID] = nil
+        }
+    }
+
+    func setOriginalData(_ data: Data, for assetID: String) {
+        lock.withLock {
+            state.originalDataByAssetID[assetID] = data
+            state.originalErrorsByAssetID[assetID] = nil
+        }
+    }
+
+    func setOriginalError(_ error: any Error, for assetID: String) {
+        lock.withLock {
+            state.originalErrorsByAssetID[assetID] = error
+            state.originalDataByAssetID[assetID] = nil
         }
     }
 
@@ -153,6 +195,19 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
         }
     }
 
+    func original(assetID: String) async throws -> Data {
+        try lock.withLock {
+            state.originalCallCount += 1
+            state.originalCallCountByAssetID[assetID, default: 0] += 1
+
+            if let error = state.originalErrorsByAssetID[assetID] {
+                throw error
+            }
+
+            return state.originalDataByAssetID[assetID] ?? Data(("original:" + assetID).utf8)
+        }
+    }
+
     var albumsCallCount: Int {
         lock.withLock { state.albumsCallCount }
     }
@@ -167,6 +222,32 @@ final class StubImmichAPI: ImmichAPI, @unchecked Sendable {
 
     func previewCallCount(for assetID: String) -> Int {
         lock.withLock { state.previewCallCountByAssetID[assetID, default: 0] }
+    }
+
+    var originalCallCount: Int {
+        lock.withLock { state.originalCallCount }
+    }
+
+    func originalCallCount(for assetID: String) -> Int {
+        lock.withLock { state.originalCallCountByAssetID[assetID, default: 0] }
+    }
+}
+
+/// Deterministic RNG (SplitMix64) so shuffle-order tests assert an exact, repeatable
+/// permutation instead of relying on the system generator (SC-004).
+struct SeededRandomNumberGenerator: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 }
 

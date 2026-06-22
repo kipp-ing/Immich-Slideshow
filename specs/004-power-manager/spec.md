@@ -86,6 +86,36 @@ verlassen → die Helligkeit entspricht wieder dem Ausgangswert und der Leerlauf
 
 ---
 
+### User Story 4 - Presence-driven wake/sleep (schedule delegated) (Priority: P3)
+
+> Added 2026-06-22 from the feature interview. The app does **not** implement an in-app time
+> scheduler; night/wake logic is delegated to Home Assistant (spec 005), and the module instead
+> exposes a presence-driven sleep/wake seam.
+
+Beyond manual/remote brightness, the module exposes a **display sleep/wake** capability: on "sleep" it
+dims to near-black (the "display off" stand-in), on "wake" it restores brightness — driven by an
+external **presence** signal. The presence source is abstracted: **Home Assistant / MQTT now** (an HA
+motion sensor drives it), with **on-device camera motion detection a later option behind the same
+abstraction**. No in-app schedule.
+
+**Why this priority**: Makes the frame ambient-aware (dim when nobody's around) while keeping the
+scheduling/sensor concerns out of the app. Builds on US2/US3 (brightness + restore).
+
+**Independent Test**: With a test double for the presence/command source: send "sleep" → brightness
+ramps to near-black; send "wake" → it restores to the prior value; the source is injected (no real
+sensor needed), proving HA-now / camera-later are interchangeable.
+
+**Acceptance Scenarios**:
+
+1. **Given** the slideshow runs, **When** a "sleep" presence/command arrives, **Then** the display
+   ramps to near-black without stopping playback.
+2. **Given** the display is asleep, **When** a "wake" presence/command arrives, **Then** brightness
+   restores to the prior value.
+3. **Given** the presence abstraction, **When** the source is HA/MQTT or (later) on-device camera,
+   **Then** either drives the same sleep/wake behavior without engine changes.
+
+---
+
 ### Edge Cases
 
 - **Hintergrund während des Dimmens**: Geht die App mitten in einer weichen Helligkeitsänderung in
@@ -135,6 +165,15 @@ verlassen → die Helligkeit entspricht wieder dem Ausgangswert und der Leerlauf
   werden.
 - **FR-013**: Das Modul MUSS hinter einer injizierbaren Schnittstelle gekapselt sein (kein verstecktes
   Singleton), sodass das Verhalten ohne echtes Display/echte Hardware deterministisch testbar ist.
+
+#### Presence-driven sleep/wake (P3, added 2026-06-22)
+
+- **FR-014**: The module MUST expose a **display sleep/wake** capability behind the injectable
+  interface — "sleep" dims to near-black (reusing the soft-dim of FR-007/FR-008), "wake" restores the
+  prior brightness (FR-010/FR-011).
+- **FR-015**: Sleep/wake MUST be drivable by an **external presence source** that is source-agnostic
+  (Home Assistant / MQTT now per spec 005; on-device camera motion later) — the module MUST NOT embed
+  a time scheduler (delegated to Home Assistant).
 
 ### Key Entities *(include if feature involves data)*
 

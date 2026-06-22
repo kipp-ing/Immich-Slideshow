@@ -13,12 +13,14 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../ImmichClient"),
+        .package(path: "../ThemeKit"),
     ],
     targets: [
         .target(
             name: "SlideshowKit",
             dependencies: [
                 .product(name: "ImmichClient", package: "ImmichClient"),
+                .product(name: "ThemeKit", package: "ThemeKit"),
             ]
         ),
         .testTarget(
@@ -27,6 +29,7 @@ let package = Package(
                 "SlideshowKit",
                 .product(name: "ImmichClient", package: "ImmichClient"),
                 .product(name: "ImmichClientTestSupport", package: "ImmichClient"),
+                .product(name: "ThemeKitTestSupport", package: "ThemeKit"),
             ]
         ),
     ]

@@ -36,6 +36,7 @@ Packages/*
 !Packages/PowerKit/
 !Packages/HAControlKit/
 !Packages/BrokerSetupKit/
+!Packages/ThemeKit/
 Package.pins
 Package.resolved
 *.xcodeproj/*

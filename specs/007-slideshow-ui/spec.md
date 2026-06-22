@@ -119,6 +119,91 @@ the planned options are visible but disabled.
 
 ---
 
+### User Story 5 - Settings drive real display options (Priority: P2)
+
+> Added 2026-06-22 from the feature interview. Wires the placeholder rows from US4/FR-013 to live,
+> persisted options; the engine behavior is specified in spec 003.
+
+The settings screen's previously-disabled rows become live and persisted: **duration**, **transition**,
+**Ken Burns**, **order** (shuffle/sequential), and **image fit** (Fit/Fill), plus an **image quality**
+(Preview/Original) control and a **cache** section showing the size limit with a **Clear cache** button.
+Changes take effect on the running slideshow.
+
+**Why this priority**: These are the knobs the settings screen already advertises; making them real is
+the core of the display-options milestone. Builds on US4.
+
+**Independent Test**: In the hermetic `--uitest` build, open settings → change duration/transition/
+order/fit/quality → values persist and the running slideshow reflects them; tap Clear cache → the
+cache is emptied.
+
+**Acceptance Scenarios**:
+
+1. **Given** the settings screen, **When** the user changes any display option, **Then** it persists
+   and the running slideshow applies it.
+2. **Given** the cache section, **When** the user taps Clear cache, **Then** the on-disk cache is
+   emptied and the action confirms.
+
+---
+
+### User Story 6 - Optional clock overlay (Priority: P3)
+
+An unobtrusive clock can be enabled in settings. It is **off by default** (calm default). When on, it
+shows the time (optionally the date) in a configurable corner, persistently over the slideshow.
+
+**Why this priority**: A common photo-frame nicety; opt-in so the default stays calm.
+
+**Independent Test**: Enable the clock → a time overlay appears in the chosen corner; toggle date →
+the date appears; disable → no overlay.
+
+**Acceptance Scenarios**:
+
+1. **Given** the clock is off (default), **When** the slideshow runs, **Then** no clock is shown.
+2. **Given** the clock is enabled, **When** the slideshow runs, **Then** the time (and optional date)
+   shows in the configured corner.
+
+---
+
+### User Story 7 - Localized UI (English + German) (Priority: P3)
+
+All UI strings move into a String Catalog and the app ships **English and German**, following the
+device language. (Today the UI is hardcoded German.)
+
+**Why this priority**: Product-readiness and consistency with the English-docs rule; not blocking but
+expected for release.
+
+**Independent Test**: Run with device language English → UI is English; German → UI is German; no
+hardcoded user-facing strings remain in views.
+
+**Acceptance Scenarios**:
+
+1. **Given** an English device, **When** the app runs, **Then** all visible strings are English.
+2. **Given** a German device, **When** the app runs, **Then** all visible strings are German.
+
+---
+
+### User Story 8 - Multi-source selection (Priority: P2)
+
+The browser lets the user pick **multiple albums** (pooled into one rotation) and **Memories** as the
+source, not just a single album. A **shared-link** entry ("paste a link + password", super-simple mode)
+is present but **stubbed** (see spec 002); building it is deferred.
+
+**Why this priority**: Frames usually mix collections; multi-album + Memories is the next-most-valuable
+source capability. Builds on US2 (album browser).
+
+**Independent Test**: In the browser, select two albums → the rotation draws from both; select Memories
+→ memory photos play; the shared-link entry is visible but disabled/stubbed.
+
+**Acceptance Scenarios**:
+
+1. **Given** the browser, **When** the user selects multiple albums, **Then** the slideshow pools
+   photos from all of them.
+2. **Given** the browser, **When** the user selects Memories, **Then** the slideshow plays the
+   Memories source.
+3. **Given** the browser, **When** the user views connection options, **Then** a stubbed shared-link
+   entry is present (deferred).
+
+---
+
 ### Edge Cases
 
 - **Empty album / load failure on switch**: the album browser shows a calm hint ("No albums" / "No
@@ -171,6 +256,21 @@ the planned options are visible but disabled.
 - **FR-015**: The image MUST be displayed fitted (letterbox) and centered in the default.
 - **FR-016**: The UI MUST NOT display or log secrets (no API key, no credentials); existing Keychain
   usage stays untouched (Constitution III).
+
+#### Display options, clock, localization & sources (added 2026-06-22)
+
+- **FR-017**: The settings options (duration, transition, Ken Burns, order, fit, image quality) MUST
+  persist and take effect on the running slideshow. (Activates the placeholder rows from FR-013.)
+- **FR-018**: Settings MUST expose the disk-cache size limit and a **Clear cache** action (engine
+  behavior per spec 003 FR-019).
+- **FR-019**: The UI MUST offer an optional **clock overlay** — off by default, with configurable
+  position and an optional date.
+- **FR-020**: All user-facing strings MUST be localizable via a String Catalog; the app MUST ship
+  **English and German** and follow the device language. (Replaces hardcoded German.)
+- **FR-021**: The source picker MUST support selecting **multiple albums** and **Memories**; a
+  **shared-link** entry MUST be present but MAY be stubbed/disabled (deferred — see spec 002).
+- **FR-022**: The default image fit stays **Fit** (letterbox), with **Fill** selectable in settings.
+  (Refines FR-015.)
 
 ### Key Entities *(include if feature involves data)*
 

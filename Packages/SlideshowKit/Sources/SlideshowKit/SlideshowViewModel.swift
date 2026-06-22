@@ -1,6 +1,7 @@
 import Foundation
 import ImmichClient
 import Observation
+import ThemeKit
 
 @MainActor
 @Observable
@@ -22,8 +23,19 @@ public final class SlideshowViewModel {
     private let ticker: any SlideshowTicker
     private let cache: ImageCache
     private let config: SlideshowConfig
+    /// Live display/playback preferences (order, duration, quality). Read at the
+    /// point of use so changes apply to the running show without a restart (008).
+    private let settingsStore: any ThemeSettingsStore
+    /// RNG for the shuffle play order; injectable so shuffle is deterministic in tests.
+    private var rng: AnyRandomNumberGenerator
     private var imageAssets: [Asset] = []
-    private var currentIndex: Int?
+
+    /// The play order for the current cycle — a permutation of asset indices.
+    /// Sequential is album order; shuffle is a random permutation that reshuffles each
+    /// cycle (D4). `cursor` is the position of the currently shown photo within it.
+    private var playOrder: [Int] = []
+    private var cursor = 0
+    private var builtOrder: PlayOrder?
     private var runTask: Task<Void, Never>?
 
     public init(
@@ -31,13 +43,17 @@ public final class SlideshowViewModel {
         albumID: String,
         ticker: any SlideshowTicker,
         cache: ImageCache = ImageCache(limit: SlideshowConfig.default.cacheLimit),
-        config: SlideshowConfig = .default
+        config: SlideshowConfig = .default,
+        settingsStore: any ThemeSettingsStore,
+        rng: any RandomNumberGenerator = SystemRandomNumberGenerator()
     ) {
         self.api = api
         self.albumID = albumID
         self.ticker = ticker
         self.cache = cache
         self.config = config
+        self.settingsStore = settingsStore
+        self.rng = AnyRandomNumberGenerator(rng)
     }
 
     public func start() async {
@@ -48,22 +64,19 @@ public final class SlideshowViewModel {
         do {
             imageAssets = try await api.assets(albumID: albumID).filter { $0.type == "IMAGE" }
             guard !imageAssets.isEmpty else {
-                currentIndex = nil
-                currentAssetID = nil
-                currentImageData = nil
+                resetCurrent()
                 phase = .empty
                 return
             }
 
-            if let loaded = await loadFirstAvailableImage(startingAt: 0) {
+            rebuildSequence(order: settingsStore.settings.order, anchorAssetIndex: nil)
+            if let loaded = await loadFromCursor(forward: true) {
                 showLoadedImage(loaded)
                 phase = .playing
-                prefetchImages(after: loaded.index)
+                prefetchImages()
                 startTickerLoop()
             } else {
-                currentIndex = nil
-                currentAssetID = nil
-                currentImageData = nil
+                resetCurrent()
                 phase = .failed
             }
         } catch {
@@ -72,7 +85,7 @@ public final class SlideshowViewModel {
     }
 
     public func advance() async {
-        await step(by: 1)
+        await step(forward: true)
     }
 
     /// Manual forward step from the chrome/swipe. Unlike the ticker-driven
@@ -80,7 +93,7 @@ public final class SlideshowViewModel {
     /// is a full interval away; works while paused (without resuming the timer).
     public func showNext() async {
         pause()
-        await step(by: 1)
+        await step(forward: true)
         restartTickerIfPlaying()
     }
 
@@ -88,7 +101,7 @@ public final class SlideshowViewModel {
     /// backwards). Resets the auto-advance timer like `showNext()`.
     public func showPrevious() async {
         pause()
-        await step(by: -1)
+        await step(forward: false)
         restartTickerIfPlaying()
     }
 
@@ -107,35 +120,39 @@ public final class SlideshowViewModel {
     /// Jump straight to a specific asset in the current album (album-browser tap).
     /// No-op if the album doesn't contain it. Resets the auto-advance timer.
     public func jump(to assetID: String) async {
-        guard let index = imageAssets.firstIndex(where: { $0.id == assetID }) else {
+        guard let assetIndex = imageAssets.firstIndex(where: { $0.id == assetID }) else {
             return
         }
 
         pause()
-        if let loaded = await loadFirstAvailableImage(startingAt: index) {
+        ensureSequenceForCurrentOrder()
+        if let position = playOrder.firstIndex(of: assetIndex) {
+            cursor = position
+        }
+        if let loaded = await loadFromCursor(forward: true) {
             showLoadedImage(loaded)
             phase = .playing
-            prefetchImages(after: loaded.index)
+            prefetchImages()
             restartTickerIfPlaying()
         } else {
             phase = .failed
         }
     }
 
-    /// Shared forward/backward step: loads the first available image starting at
-    /// `currentIndex + delta` (wrapping), or fails the show if none load.
-    private func step(by delta: Int) async {
+    /// Shared forward/backward step: honors the live order (rebuilding the sequence if
+    /// it changed, keeping the current photo as the anchor), moves the cursor one step,
+    /// and loads the first available photo from there, or fails the show if none load.
+    private func step(forward: Bool) async {
         guard phase == .playing, !imageAssets.isEmpty else {
             return
         }
 
-        let count = imageAssets.count
-        let baseIndex = currentIndex ?? -1
-        let targetIndex = ((baseIndex + delta) % count + count) % count
+        ensureSequenceForCurrentOrder()
+        moveCursor(forward: forward)
 
-        if let loaded = await loadFirstAvailableImage(startingAt: targetIndex) {
+        if let loaded = await loadFromCursor(forward: forward) {
             showLoadedImage(loaded)
-            prefetchImages(after: loaded.index)
+            prefetchImages()
         } else {
             phase = .failed
             pause()
@@ -186,12 +203,16 @@ public final class SlideshowViewModel {
             guard let self else { return }
 
             while !Task.isCancelled {
+                // Review R1: read the live duration on the MainActor at the top of each
+                // cycle (never read @MainActor store state from the detached task), then
+                // sleep that value. A duration change auto-applies on the next cycle.
+                let duration = await self.currentTickDuration()
                 do {
-                    try await ticker.waitForNextTick()
+                    try await ticker.waitForNextTick(duration: duration)
                     if Task.isCancelled {
                         break
                     }
-                    await advance()
+                    await self.advance()
                 } catch is CancellationError {
                     break
                 } catch {
@@ -201,63 +222,170 @@ public final class SlideshowViewModel {
         }
     }
 
-    private func loadImageData(for assetID: String) async throws -> Data {
-        if let cached = cache.data(for: assetID) {
-            return cached
-        }
-
-        let data = try await api.preview(assetID: assetID)
-        cache.store(data, for: assetID)
-        return data
+    private func currentTickDuration() -> Duration {
+        settingsStore.settings.duration
     }
 
-    private func loadFirstAvailableImage(startingAt startIndex: Int) async -> LoadedImage? {
-        guard !imageAssets.isEmpty else {
+    // MARK: - Play sequence
+
+    /// Rebuild the play order if `settings.order` changed since it was last built,
+    /// keeping the currently shown photo as the cursor anchor (order-switch edge case).
+    private func ensureSequenceForCurrentOrder() {
+        let order = settingsStore.settings.order
+        guard builtOrder != order || playOrder.count != imageAssets.count else {
+            return
+        }
+        rebuildSequence(order: order, anchorAssetIndex: currentAssetIndex)
+    }
+
+    private func rebuildSequence(order: PlayOrder, anchorAssetIndex: Int?) {
+        var indices = Array(0..<imageAssets.count)
+        if order == .shuffle {
+            indices.shuffle(using: &rng)
+        }
+        playOrder = indices
+        builtOrder = order
+        if let anchor = anchorAssetIndex, let position = playOrder.firstIndex(of: anchor) {
+            cursor = position
+        } else {
+            cursor = 0
+        }
+    }
+
+    /// Asset index of the photo currently under the cursor, if the sequence is loaded.
+    private var currentAssetIndex: Int? {
+        guard cursor >= 0, cursor < playOrder.count else {
+            return nil
+        }
+        return playOrder[cursor]
+    }
+
+    private func moveCursor(forward: Bool) {
+        let count = playOrder.count
+        guard count > 0 else {
+            return
+        }
+
+        if forward {
+            if cursor + 1 >= count {
+                startNewCycle()
+                cursor = 0
+            } else {
+                cursor += 1
+            }
+        } else {
+            cursor = (cursor - 1 + count) % count
+        }
+    }
+
+    /// Begin a fresh cycle. Shuffle reshuffles (avoiding an immediate repeat of the
+    /// photo that just ended the previous cycle); sequential repeats the album order.
+    private func startNewCycle() {
+        guard settingsStore.settings.order == .shuffle, playOrder.count > 1 else {
+            return
+        }
+
+        let lastShown = playOrder[playOrder.count - 1]
+        playOrder.shuffle(using: &rng)
+        if playOrder[0] == lastShown {
+            playOrder.swapAt(0, 1)
+        }
+    }
+
+    /// Try to load starting at the current cursor, walking the play order in
+    /// `direction` past unloadable photos, up to one full cycle. Returns the shown
+    /// image or nil if every photo in the cycle failed.
+    private func loadFromCursor(forward: Bool) async -> LoadedImage? {
+        let count = playOrder.count
+        guard count > 0 else {
             return nil
         }
 
-        for offset in 0..<imageAssets.count {
-            let index = (startIndex + offset) % imageAssets.count
-            let asset = imageAssets[index]
-
+        var attempts = 0
+        while attempts < count {
+            let assetID = imageAssets[playOrder[cursor]].id
             do {
-                let data = try await loadImageData(for: asset.id)
-                return LoadedImage(index: index, assetID: asset.id, data: data)
+                let data = try await loadImageData(for: assetID)
+                return LoadedImage(assetID: assetID, data: data)
             } catch {
-                continue
+                moveCursor(forward: forward)
+                attempts += 1
             }
         }
 
         return nil
     }
 
+    private func loadImageData(for assetID: String) async throws -> Data {
+        let quality = settingsStore.settings.quality
+        let key = cacheKey(for: assetID, quality: quality)
+
+        if let cached = cache.data(for: key) {
+            return cached
+        }
+
+        let data = switch quality {
+        case .preview:
+            try await api.preview(assetID: assetID)
+        case .original:
+            try await api.original(assetID: assetID)
+        }
+        cache.store(data, for: key)
+        return data
+    }
+
+    private func cacheKey(for assetID: String, quality: ImageQuality) -> String {
+        "\(assetID)#\(quality.rawValue)"
+    }
+
     private func showLoadedImage(_ loaded: LoadedImage) {
-        currentIndex = loaded.index
         currentAssetID = loaded.assetID
         currentImageData = loaded.data
     }
 
-    private func prefetchImages(after index: Int) {
-        guard !imageAssets.isEmpty else {
+    private func resetCurrent() {
+        currentAssetID = nil
+        currentImageData = nil
+        playOrder = []
+        cursor = 0
+        builtOrder = nil
+    }
+
+    /// Prefetch the next `prefetchDepth` photos along the play order (D4) so an advance
+    /// shows an already-loaded image.
+    private func prefetchImages() {
+        let quality = settingsStore.settings.quality
+        let count = playOrder.count
+        guard count > 0 else {
             return
         }
 
-        let depth = min(config.prefetchDepth, max(imageAssets.count - 1, 0))
+        let depth = min(config.prefetchDepth, max(count - 1, 0))
         guard depth > 0 else {
             return
         }
 
         let assetIDs = (1...depth).map { offset in
-            imageAssets[(index + offset) % imageAssets.count].id
+            imageAssets[playOrder[(cursor + offset) % count]].id
         }
         let api = api
         let cache = cache
 
-        Task {
-            for assetID in assetIDs where cache.data(for: assetID) == nil {
+        Task { [quality] in
+            for assetID in assetIDs {
+                let key = cacheKey(for: assetID, quality: quality)
+                guard cache.data(for: key) == nil else {
+                    continue
+                }
+
                 do {
-                    let data = try await api.preview(assetID: assetID)
-                    cache.store(data, for: assetID)
+                    let data = switch quality {
+                    case .preview:
+                        try await api.preview(assetID: assetID)
+                    case .original:
+                        try await api.original(assetID: assetID)
+                    }
+                    cache.store(data, for: key)
                 } catch {
                     continue
                 }
@@ -267,7 +395,20 @@ public final class SlideshowViewModel {
 }
 
 private struct LoadedImage {
-    let index: Int
     let assetID: String
     let data: Data
+}
+
+/// Type-erased RNG so the view model can store an injected generator (system in
+/// production, seeded in tests) and still pass it `inout` to `Array.shuffle(using:)`.
+private struct AnyRandomNumberGenerator: RandomNumberGenerator {
+    private var base: any RandomNumberGenerator
+
+    init(_ base: any RandomNumberGenerator) {
+        self.base = base
+    }
+
+    mutating func next() -> UInt64 {
+        base.next()
+    }
 }
