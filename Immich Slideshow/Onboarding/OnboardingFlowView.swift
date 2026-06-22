@@ -16,10 +16,8 @@ struct OnboardingFlowView: View {
         NavigationStack {
             Group {
                 switch viewModel.step {
-                case .server:
-                    ServerStepView(viewModel: viewModel)
-                case .apiKey:
-                    APIKeyStepView(viewModel: viewModel)
+                case .connection:
+                    ConnectionStepView(viewModel: viewModel)
                 case .album:
                     AlbumStepView(viewModel: viewModel)
                 case .done:

@@ -16,7 +16,7 @@ import OnboardingKit
 
 struct OnboardingResetTests {
 
-    @Test func resetClearsRealConfigAndKeychainAndReturnsToServer() throws {
+    @Test func resetClearsRealConfigAndKeychainAndReturnsToConnection() throws {
         let suiteName = "de.kippings.ImmichSlideshow.tests.reset"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
@@ -49,6 +49,6 @@ struct OnboardingResetTests {
 
         #expect(config.load() == nil)
         #expect(keychain.read() == nil)
-        #expect(viewModel.step == .server)
+        #expect(viewModel.step == .connection)
     }
 }

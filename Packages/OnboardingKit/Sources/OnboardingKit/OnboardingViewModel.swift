@@ -3,7 +3,7 @@ import ImmichClient
 import Observation
 
 @Observable public final class OnboardingViewModel {
-    public var step: OnboardingStep = .server
+    public var step: OnboardingStep = .connection
     public var serverURLInput: String = ""
     public var apiKeyInput: String = ""
     public var albums: [Album] = []
@@ -25,29 +25,7 @@ import Observation
         self.keychain = keychain
     }
 
-    public func submitServerURL() async {
-        guard !isBusy else { return }
-        errorMessage = nil
-
-        guard let url = normalizedURL() else {
-            errorMessage = String(localized: "Please enter a valid HTTPS address.", bundle: .module)
-            return
-        }
-
-        isBusy = true
-        defer { isBusy = false }
-
-        do {
-            _ = try await api(ServerConfig(baseURL: url, apiKey: "")).serverVersion()
-            step = .apiKey
-        } catch let error as ImmichError {
-            errorMessage = ConnectionError.message(for: error)
-        } catch {
-            errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
-        }
-    }
-
-    public func submitAPIKey() async {
+    public func submitConnection() async {
         guard !isBusy else { return }
         errorMessage = nil
 
@@ -102,7 +80,7 @@ import Observation
     public func reset() {
         config.clear()
         keychain.delete()
-        step = .server
+        step = .connection
         serverURLInput = ""
         apiKeyInput = ""
         albums = []

@@ -2,12 +2,14 @@
 //  SlideshowSettingsView.swift
 //  Immich Slideshow
 //
-//  Slice D — settings shell reached from the chrome. Brightness is live now
-//  (backed by PowerManager / 004). The display options are the planned v1 wishlist
-//  but stay disabled until the ThemeSettings module (#5) lands — the screen "lights
-//  up" as those modules arrive, per the handover.
+//  Settings shell reached from the chrome. Brightness is live (PowerManager / 004)
+//  and the display options bind the ThemeSettings store (008). Connection (009) and
+//  MQTT/broker (006) are folded in here as collapsed-by-default disclosure sections
+//  (010) — the calm default stays brightness + display, with the advanced config
+//  tucked away until opened.
 //
 
+import BrokerSetupKit
 import OnboardingKit
 import PowerKit
 import SwiftUI
@@ -16,18 +18,23 @@ import UIKit
 
 struct SlideshowSettingsView: View {
     let powerManager: PowerManager
-    // The shared display-preferences store. Bound live by the display-option rows as
-    // they come online (008); held here from T011 so the seam exists end to end.
+    // The shared display-preferences store, bound live by the display-option rows (008).
     @Bindable var themeStore: UserDefaultsThemeStore
-    // Connection editor seams (009): build a fresh editor view model on demand, and
-    // report a successful change so the app can reconnect the running slideshow.
+    // Connection editor seams (009): the editor view model and a callback so a saved
+    // change reconnects the running slideshow without re-onboarding.
     var makeConnectionViewModel: () -> ConnectionSettingsViewModel? = { nil }
     var onConnectionChanged: (ConnectionValidationOutcome) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var brightness: Double
+    // Both editors are owned here as @State (not inside the disclosure content) so
+    // collapsing/re-expanding a section keeps typed-but-unsaved edits.
     @State private var connectionViewModel: ConnectionSettingsViewModel?
-    @State private var showConnection = false
+    @State private var brokerViewModel: BrokerSetupViewModel
+    // Advanced sections collapse by default (Constitution VII). UI tests pre-expand a
+    // section via a launch argument so its fields are reachable without a tap.
+    @State private var connectionExpanded: Bool
+    @State private var mqttExpanded: Bool
 
     init(
         powerManager: PowerManager,
@@ -40,6 +47,13 @@ struct SlideshowSettingsView: View {
         self.makeConnectionViewModel = makeConnectionViewModel
         self.onConnectionChanged = onConnectionChanged
         _brightness = State(initialValue: Self.currentScreenBrightness())
+        _connectionViewModel = State(initialValue: makeConnectionViewModel())
+        let broker = BrokerSetupViewModel(store: BrokerSettingsStoreFactory.make())
+        broker.load()
+        _brokerViewModel = State(initialValue: broker)
+        let args = ProcessInfo.processInfo.arguments
+        _connectionExpanded = State(initialValue: args.contains("--uitest-connection"))
+        _mqttExpanded = State(initialValue: args.contains("--uitest-broker"))
     }
 
     var body: some View {
@@ -115,23 +129,34 @@ struct SlideshowSettingsView: View {
                 }
 
                 Section {
-                    Button {
-                        connectionViewModel = makeConnectionViewModel()
-                        showConnection = connectionViewModel != nil
-                    } label: {
-                        HStack {
-                            Label("Verbindung", systemImage: "server.rack")
-                            Spacer()
-                            Image(systemName: "chevron.forward")
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
+                    DisclosureGroup(isExpanded: $connectionExpanded) {
+                        if let connectionViewModel {
+                            ConnectionSettingsSection(viewModel: connectionViewModel) { outcome in
+                                onConnectionChanged(outcome)
+                                connectionExpanded = false
+                            }
                         }
+                    } label: {
+                        Label("Verbindung", systemImage: "server.rack")
+                            .accessibilityIdentifier("settings.connection")
                     }
-                    .accessibilityIdentifier("settings.connection")
                 } header: {
                     Text("Server")
                 } footer: {
                     Text("Server-Adresse und API-Schlüssel ändern.")
+                }
+
+                Section {
+                    DisclosureGroup(isExpanded: $mqttExpanded) {
+                        BrokerSettingsSection(viewModel: brokerViewModel)
+                    } label: {
+                        Label("MQTT", systemImage: "antenna.radiowaves.left.and.right")
+                            .accessibilityIdentifier("settings.mqtt")
+                    }
+                } header: {
+                    Text("Home Assistant")
+                } footer: {
+                    Text("MQTT-Broker für die Fernsteuerung über Home Assistant.")
                 }
             }
             .navigationTitle("Einstellungen")
@@ -144,14 +169,6 @@ struct SlideshowSettingsView: View {
         }
         .onChange(of: brightness) { _, newValue in
             Task { await powerManager.setBrightness(newValue, animated: false) }
-        }
-        .sheet(isPresented: $showConnection) {
-            if let connectionViewModel {
-                ConnectionSettingsView(viewModel: connectionViewModel) { outcome in
-                    showConnection = false
-                    onConnectionChanged(outcome)
-                }
-            }
         }
     }
 
@@ -187,5 +204,64 @@ struct SlideshowSettingsView: View {
             .compactMap { $0 as? UIWindowScene }
         let screen = (windowScenes.first { $0.activationState == .foregroundActive } ?? windowScenes.first)?.screen
         return Double(screen?.brightness ?? 1.0)
+    }
+}
+
+/// Inline connection editor rendered inside the Settings "Verbindung" disclosure
+/// section (010). Reuses the 009 `ConnectionSettingsViewModel`: validate before
+/// persist, apply live on save, and never display the stored key. The standalone
+/// `ConnectionSettingsView` sheet is kept for the slideshow's error-recovery path.
+private struct ConnectionSettingsSection: View {
+    @Bindable var viewModel: ConnectionSettingsViewModel
+    var onSaved: (ConnectionValidationOutcome) -> Void
+
+    var body: some View {
+        Group {
+            TextField("https://photos.example.com", text: $viewModel.serverURLInput)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .accessibilityIdentifier("connection.url")
+
+            SecureField("Neuer API-Schlüssel", text: $viewModel.apiKeyInput)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("connection.apiKey")
+
+            if viewModel.keyIsSet {
+                Label("Schlüssel ist gesetzt", systemImage: "key.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .accessibilityIdentifier("connection.keySet")
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("connection.error")
+            }
+
+            if viewModel.isBusy {
+                ProgressView()
+            } else {
+                Button("Verbindung speichern", action: save)
+                    .disabled(viewModel.serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("connection.save")
+            }
+        }
+    }
+
+    private func save() {
+        Task {
+            let outcome = await viewModel.save()
+            switch outcome {
+            case .success, .albumMissing:
+                onSaved(outcome)
+            default:
+                // A failure leaves the prior connection intact; the inline error shows
+                // and the section stays open so the user can correct it.
+                break
+            }
+        }
     }
 }

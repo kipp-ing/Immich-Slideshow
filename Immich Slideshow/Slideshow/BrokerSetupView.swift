@@ -2,142 +2,69 @@
 //  BrokerSetupView.swift
 //  Immich Slideshow
 //
+//  Inline MQTT/broker editor rendered inside the Settings screen's collapsible
+//  "MQTT" section (010 — folded in from the old standalone sheet). Backed by the
+//  host-tested BrokerSetupViewModel, which the settings screen owns in its own
+//  @State so collapsing/re-expanding the section keeps typed-but-unsaved edits.
+//  Credentials live only in the Keychain via the injected store, and the stored
+//  password is never prefilled in cleartext (FR-013).
+//
 
-import Foundation
 import BrokerSetupKit
+import Foundation
 import SwiftUI
 
-struct BrokerSetupView: View {
-    private let store: any BrokerSettingsStore
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var host = ""
-    @State private var port = "8883"
-    @State private var username = ""
-    @State private var password = ""
-    // True once existing settings are loaded: a password is already stored, so we
-    // show a "set" hint instead of prefilling it (FR-009) and offer removal (FR-008).
-    @State private var passwordIsSet = false
-    @State private var validationMessage: String?
-
-    init(store: (any BrokerSettingsStore)? = nil) {
-        self.store = store ?? Self.defaultStore()
-    }
-
-    private static func defaultStore() -> any BrokerSettingsStore {
-        #if DEBUG
-        // Hermetic XCUITests drive an in-memory store so the change/remove flow never
-        // touches the real Keychain. The production path uses the Keychain store.
-        if ProcessInfo.processInfo.arguments.contains("--uitest") {
-            return BrokerSetupUITestStore.shared
-        }
-        #endif
-        return KeychainBrokerSettingsStore()
-    }
+struct BrokerSettingsSection: View {
+    @Bindable var viewModel: BrokerSetupViewModel
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Host", text: $host)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("broker.host")
+        Group {
+            TextField("Host", text: $viewModel.host)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("broker.host")
 
-                    TextField("Port", text: $port)
-                        .keyboardType(.numberPad)
-                        .accessibilityIdentifier("broker.port")
+            TextField("Port", text: $viewModel.port)
+                .keyboardType(.numberPad)
+                .accessibilityIdentifier("broker.port")
 
-                    TextField("Benutzername", text: $username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("broker.username")
+            TextField("Benutzername", text: $viewModel.username)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("broker.username")
 
-                    SecureField(passwordIsSet ? "Neues Passwort" : "Passwort", text: $password)
-                        .accessibilityIdentifier("broker.password")
+            SecureField(viewModel.passwordIsSet ? "Neues Passwort" : "Passwort", text: $viewModel.password)
+                .accessibilityIdentifier("broker.password")
 
-                    if passwordIsSet {
-                        Text("Passwort ist gesetzt — zum Ändern neu eingeben.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("broker.passwordHint")
-                    }
-                }
-
-                if let validationMessage {
-                    Section {
-                        Text(validationMessage)
-                            .foregroundStyle(.red)
-                            .accessibilityIdentifier("broker.validation")
-                    }
-                }
-
-                if passwordIsSet {
-                    Section {
-                        Button("Entfernen", role: .destructive, action: remove)
-                            .accessibilityIdentifier("broker.remove")
-                    }
-                }
+            if viewModel.passwordIsSet {
+                Text("Passwort ist gesetzt — zum Ändern neu eingeben.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("broker.passwordHint")
             }
-            .navigationTitle("Broker einrichten")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Speichern", action: save)
-                        .accessibilityIdentifier("broker.save")
-                }
+
+            if let message = viewModel.validationError.map(Self.message(for:)) {
+                Text(message)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("broker.validation")
             }
-            .onAppear(perform: loadExisting)
+
+            Button("Speichern") {
+                // On success, reload from the store so the password masks itself again
+                // and the "password is set" hint / remove action appear (FR-013).
+                if viewModel.save() { viewModel.load() }
+            }
+            .accessibilityIdentifier("broker.save")
+
+            if viewModel.passwordIsSet {
+                Button("Entfernen", role: .destructive) { viewModel.remove() }
+                    .accessibilityIdentifier("broker.remove")
+            }
         }
     }
 
-    // Prefill host/port/username from a stored broker so it can be edited. The
-    // password is intentionally left blank (FR-009) — `passwordIsSet` drives the hint.
-    private func loadExisting() {
-        guard let existing = store.load() else { return }
-        host = existing.host
-        port = String(existing.port)
-        username = existing.username
-        passwordIsSet = true
-    }
-
-    private func save() {
-        // An empty password field while a password is already stored means "keep it":
-        // reuse the stored secret rather than forcing re-entry (FR-007). The secret is
-        // only read transiently here and never displayed.
-        let effectivePassword: String
-        if password.isEmpty, let existing = store.load() {
-            effectivePassword = existing.password
-        } else {
-            effectivePassword = password
-        }
-
-        let settings = BrokerSettings(
-            host: host,
-            port: Int(port) ?? 0,
-            username: username,
-            password: effectivePassword
-        )
-
-        do {
-            try store.save(settings)
-            dismiss()
-        } catch let error as BrokerValidationError {
-            validationMessage = message(for: error)
-        } catch {
-            validationMessage = "Die Broker-Einstellungen konnten nicht gespeichert werden."
-        }
-    }
-
-    private func remove() {
-        store.clear()
-        dismiss()
-    }
-
-    private func message(for error: BrokerValidationError) -> String {
+    private nonisolated static func message(for error: BrokerValidationError) -> String {
         switch error {
         case .emptyHost:
             "Bitte gib einen Broker-Host ein."
@@ -148,6 +75,19 @@ struct BrokerSetupView: View {
         case .emptyPassword:
             "Bitte gib ein Passwort ein."
         }
+    }
+}
+
+/// Selects the broker settings store: an in-memory store under `--uitest` so the
+/// hermetic flow never touches the real Keychain, the Keychain store in production.
+enum BrokerSettingsStoreFactory {
+    static func make() -> any BrokerSettingsStore {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--uitest") {
+            return BrokerSetupUITestStore.shared
+        }
+        #endif
+        return KeychainBrokerSettingsStore()
     }
 }
 
