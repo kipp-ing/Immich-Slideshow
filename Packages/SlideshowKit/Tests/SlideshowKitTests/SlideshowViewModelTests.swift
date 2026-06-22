@@ -180,8 +180,8 @@ private func waitUntil(_ condition: @autoclosure () -> Bool) async {
     await model.start()
 
     #expect(model.currentAssetID == "image-1")
-    await waitUntil(cache.contains("image-2"))
-    #expect(cache.contains("image-2"))
+    await waitUntil(cache.contains("image-2#preview"))
+    #expect(cache.contains("image-2#preview"))
     #expect(api.previewCallCount(for: "image-2") == 1)
 }
 

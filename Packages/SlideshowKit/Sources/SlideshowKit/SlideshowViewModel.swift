@@ -317,13 +317,25 @@ public final class SlideshowViewModel {
     }
 
     private func loadImageData(for assetID: String) async throws -> Data {
-        if let cached = cache.data(for: assetID) {
+        let quality = settingsStore.settings.quality
+        let key = cacheKey(for: assetID, quality: quality)
+
+        if let cached = cache.data(for: key) {
             return cached
         }
 
-        let data = try await api.preview(assetID: assetID)
-        cache.store(data, for: assetID)
+        let data = switch quality {
+        case .preview:
+            try await api.preview(assetID: assetID)
+        case .original:
+            try await api.original(assetID: assetID)
+        }
+        cache.store(data, for: key)
         return data
+    }
+
+    private func cacheKey(for assetID: String, quality: ImageQuality) -> String {
+        "\(assetID)#\(quality.rawValue)"
     }
 
     private func showLoadedImage(_ loaded: LoadedImage) {
@@ -342,6 +354,7 @@ public final class SlideshowViewModel {
     /// Prefetch the next `prefetchDepth` photos along the play order (D4) so an advance
     /// shows an already-loaded image.
     private func prefetchImages() {
+        let quality = settingsStore.settings.quality
         let count = playOrder.count
         guard count > 0 else {
             return
@@ -358,11 +371,21 @@ public final class SlideshowViewModel {
         let api = api
         let cache = cache
 
-        Task {
-            for assetID in assetIDs where cache.data(for: assetID) == nil {
+        Task { [quality] in
+            for assetID in assetIDs {
+                let key = cacheKey(for: assetID, quality: quality)
+                guard cache.data(for: key) == nil else {
+                    continue
+                }
+
                 do {
-                    let data = try await api.preview(assetID: assetID)
-                    cache.store(data, for: assetID)
+                    let data = switch quality {
+                    case .preview:
+                        try await api.preview(assetID: assetID)
+                    case .original:
+                        try await api.original(assetID: assetID)
+                    }
+                    cache.store(data, for: key)
                 } catch {
                     continue
                 }
