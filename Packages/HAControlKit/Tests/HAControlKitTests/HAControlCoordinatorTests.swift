@@ -49,6 +49,23 @@ struct HAControlCoordinatorTests {
     }
 
     @Test
+    func rapidPlaybackCommandsApplyLatestValidCommandAndEchoActualState() async throws {
+        let transport = FakeMQTTTransport()
+        let control = FakeRemoteControl()
+        let coordinator = makeCoordinator(transport: transport, control: control)
+
+        await coordinator.handleIncoming(message("OFF", entity: .playback))
+        await coordinator.handleIncoming(message("ON", entity: .playback))
+        await coordinator.handleIncoming(message("OFF", entity: .playback))
+
+        #expect(control.playbackState == .paused)
+        #expect(control.pauseCount == 2)
+        #expect(control.resumeCount == 1)
+        #expect(transport.published.last?.topic == HATopics.stateTopic(deviceID: "dev1", entity: .playback))
+        #expect(transport.published.last?.payload.string == "OFF")
+    }
+
+    @Test
     func invalidPlaybackPayloadDoesNotChangeStateButEchoesCurrentState() async throws {
         let transport = FakeMQTTTransport()
         let control = FakeRemoteControl()

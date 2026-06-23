@@ -2,8 +2,15 @@ import Foundation
 
 public protocol ConfigStore: Sendable {
     func load() -> AppConfiguration?
+    func loadBaseURL() -> URL?
     func save(_ configuration: AppConfiguration)
     func clear()
+}
+
+public extension ConfigStore {
+    func loadBaseURL() -> URL? {
+        load()?.baseURL
+    }
 }
 
 public struct UserDefaultsConfigStore: ConfigStore, @unchecked Sendable {
@@ -20,10 +27,7 @@ public struct UserDefaultsConfigStore: ConfigStore, @unchecked Sendable {
 
     public func load() -> AppConfiguration? {
         guard
-            let baseURLString = defaults.string(forKey: Keys.baseURL),
-            let baseURL = URL(string: baseURLString),
-            baseURL.scheme == "https",
-            baseURL.host != nil,
+            let baseURL = loadBaseURL(),
             let selectedAlbumID = defaults.string(forKey: Keys.selectedAlbumID),
             !selectedAlbumID.isEmpty
         else {
@@ -31,6 +35,19 @@ public struct UserDefaultsConfigStore: ConfigStore, @unchecked Sendable {
         }
 
         return AppConfiguration(baseURL: baseURL, selectedAlbumID: selectedAlbumID)
+    }
+
+    public func loadBaseURL() -> URL? {
+        guard
+            let baseURLString = defaults.string(forKey: Keys.baseURL),
+            let baseURL = URL(string: baseURLString),
+            baseURL.scheme == "https",
+            baseURL.host != nil
+        else {
+            return nil
+        }
+
+        return baseURL
     }
 
     public func save(_ configuration: AppConfiguration) {

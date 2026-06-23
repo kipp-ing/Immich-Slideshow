@@ -21,11 +21,26 @@ When the slideshow starts and broker configuration exists, the app connects to t
 **Acceptance Scenarios**:
 
 1. **Given** valid broker details are available from secure storage, **When** the slideshow starts, **Then** the app connects securely, publishes Home Assistant discovery for a pause/play switch, and reports online availability.
-2. **Given** the app is connected and the slideshow is running, **When** Home Assistant sends "pause", **Then** the slideshow pauses and the app reports the paused state.
-3. **Given** the slideshow is paused, **When** Home Assistant sends "play", **Then** the slideshow resumes and the app reports the running state.
+2. **Given** the app is connected and the slideshow is running, **When** Home Assistant sends the switch `OFF` (pause) command, **Then** the slideshow pauses and the app echoes the paused (`OFF`) state.
+3. **Given** the slideshow is paused, **When** Home Assistant sends the switch `ON` (play) command, **Then** the slideshow resumes and the app echoes the running (`ON`) state.
 4. **Given** the user pauses the slideshow locally in the app, **When** the state changes, **Then** Home Assistant reflects the new state and does not drift.
 5. **Given** the app is connected, **When** the connection drops unexpectedly, **Then** Home Assistant shows the device offline through the Last Will and Testament.
 6. **Given** the app was offline or disconnected, **When** it reconnects, **Then** online availability is published again and the discovery configuration is present.
+
+### User Story 2 - Control brightness and album from Home Assistant (Priority: P2)
+
+Alongside pause/play, the app exposes a dimmable light entity for brightness and a select entity for the active album, so the slideshow's brightness and source album can be driven from Home Assistant and stay in sync with the app.
+
+**Why this priority**: Brightness and album control are the next most useful remote controls after pause/play for an ambient frame; both are already wired through the app's own modules (brightness through PowerManager, album through the slideshow source).
+
+**Independent Test**: With a fake MQTT transport, start the slideshow and verify discovery publishes a light entity (brightness scale 255) and a select entity listing album names; send a brightness command and verify it is clamped, applied through PowerManager, and echoed; send a valid album name and verify the active album switches and is echoed; send an unknown album name and verify state is unchanged and the actual album is echoed.
+
+**Acceptance Scenarios**:
+
+1. **Given** the app is connected, **When** discovery is published, **Then** it includes a dimmable light entity (brightness scale 255) and a select entity whose options are the available album names.
+2. **Given** the light entity exists, **When** Home Assistant sends a brightness value, **Then** the value is clamped to range, applied through PowerManager (topic 400), and the resulting brightness is echoed.
+3. **Given** the select entity exists, **When** Home Assistant selects a valid album name, **Then** the slideshow switches to that album and echoes the new selection.
+4. **Given** the select entity exists, **When** Home Assistant selects an album name that is not an available option, **Then** the active album is left unchanged and the app echoes the actual current album.
 
 ### Edge Cases
 
@@ -49,25 +64,28 @@ When the slideshow starts and broker configuration exists, the app connects to t
 - **FR-700-05**: After disconnect, the app MUST attempt reconnect and, on success, reannounce online availability and current state.
 - **FR-700-06**: The app MUST register through Home Assistant MQTT discovery using stable, duplicate-free device and entity IDs.
 - **FR-700-07**: The app MUST expose a pause/play switch entity whose availability follows the app's online/offline availability.
-- **FR-700-08**: An inbound "pause" command MUST pause the running slideshow, and an inbound "play" command MUST resume it.
+- **FR-700-08**: The pause/play switch MUST use Home Assistant switch payloads (`ON` = playing/running, `OFF` = paused); an inbound `OFF` MUST pause the running slideshow and an inbound `ON` MUST resume it.
 - **FR-700-09**: The app MUST echo the current pause/play state after remote commands and after local state changes, so Home Assistant mirrors the real app state.
 - **FR-700-10**: MQTT transport MUST be behind an injectable protocol so discovery payloads, topics, state, availability, and command handling are testable without a real broker.
 - **FR-700-11**: Invalid or unknown command payloads MUST be ignored safely without crashing or changing to an inconsistent state.
 - **FR-700-12**: For conflicting or rapid valid commands, the latest valid command MUST determine the result, and echoed state MUST match the actual app state.
+- **FR-700-13**: The app MUST expose a dimmable light entity for brightness via discovery (brightness scale 255); an inbound brightness command MUST be clamped to range, applied through PowerManager (topic 400), and the resulting brightness MUST be echoed.
+- **FR-700-14**: The app MUST expose a select entity for the active album via discovery, with the available album names as options; a valid selection MUST switch the active album and be echoed, while an unknown album MUST leave state unchanged and echo the actual current album.
+- **FR-700-15**: The set of entities enabled in the current app is pause/play, brightness, and album select; sleep/wake remains deferred (see Roadmap).
 
 ### Key Entities *(include if feature involves data)*
 
 - **Broker Configuration**: Host, port, username, password, and stable device ID supplied by broker setup; credentials originate from the Keychain.
 - **Device Identity**: Stable unique identity for the iPad in Home Assistant, used by all discovery payloads, entities, and availability topics.
-- **Home Assistant Entity**: A remotely controllable capability with discovery configuration, command topic, state topic, and availability binding. In this active spec, the entity is pause/play.
+- **Home Assistant Entity**: A remotely controllable capability with discovery configuration, command topic, state topic, and availability binding. In this active spec, the entities are pause/play (switch), brightness (dimmable light), and album select.
 - **Remote Control State**: The app state echoed to Home Assistant, including running or paused and online or offline.
 - **MQTT Transport**: The injectable protocol boundary for publishing, subscribing, connecting, reconnecting, and LWT behavior.
 
 ### Roadmap / Deferred (not yet built)
 
-- Reserved sub-spec `710`: Brightness via a dimmable light entity routed through PowerManager. Acceptance preserved from the source: discovery publishes a light entity; inbound brightness commands are clamped, applied through PowerManager, and echoed; background foreground limits are respected.
-- Reserved sub-spec `720`: Album select entity switches the active album. Acceptance preserved from the source: discovery publishes available album names; a valid selection switches the slideshow and is echoed; an unknown album leaves state unchanged and reports the actual state.
-- Reserved sub-spec `730`: Sleep/wake control through Home Assistant discovery, driven by an inbound presence signal from Home Assistant. Acceptance preserved from the source: discovery publishes sleep/wake control; no-presence or sleep dims to near black; presence or wake restores; schedules and sensors live in Home Assistant, not in the app.
+- Reserved sub-spec `730`: Sleep/wake control through Home Assistant discovery, driven by an inbound presence signal from Home Assistant. Acceptance preserved from the source: discovery publishes sleep/wake control; no-presence or sleep dims to near black; presence or wake restores; schedules and sensors live in Home Assistant, not in the app. Pairs with the topic 400 sleep/wake roadmap item.
+
+*(Brightness and album-select were previously reserved as `710`/`720`; they are implemented and now Active above — see FR-700-13 / FR-700-14.)*
 
 ## Success Criteria *(mandatory)*
 
@@ -81,6 +99,8 @@ When the slideshow starts and broker configuration exists, the app connects to t
 - **SC-700-06**: With unreachable broker or missing credentials, the slideshow continues locally without crashing or visibly blocking image display.
 - **SC-700-07**: Broker username and password appear in no log, UserDefaults entry, cache, source file, or committed file.
 - **SC-700-08**: All discovery, topic, availability, state, and command behavior can be tested through the injected MQTT transport without a real broker.
+- **SC-700-09**: A brightness command from Home Assistant is clamped, applied through PowerManager, and the resulting brightness is echoed back.
+- **SC-700-10**: Selecting a valid album from Home Assistant switches the active album and echoes it; an unknown album leaves the active album unchanged.
 
 ## Assumptions
 

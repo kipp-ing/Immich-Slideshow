@@ -33,7 +33,7 @@ existing module becomes a sub-spec (`N10`, `N20`, …) or amends the module spec
 | 400 | [power-manager](../specs/400-power-manager/spec.md)               | PowerKit         | Keep the display awake and dim brightness while the slideshow runs in the foreground.     | Active   |
 | 500 | [display-options](../specs/500-display-options/spec.md)           | ThemeKit         | User-configurable order/duration/transition/Ken Burns/fit/quality/clock, applied live.   | Active   |
 | 600 | [broker-setup](../specs/600-broker-setup/spec.md)                 | BrokerSetupKit   | Enter and persist MQTT broker credentials (Keychain) so 700 has something to connect to. | Active   |
-| 700 | [ha-control](../specs/700-ha-control/spec.md)                     | HAControlKit     | Remote control via MQTT/Home Assistant: availability + pause/play (then 710/720/730).     | Active   |
+| 700 | [ha-control](../specs/700-ha-control/spec.md)                     | HAControlKit     | Remote control via MQTT/HA: availability + pause/play + brightness + album (730 deferred). | Active   |
 
 ## How they connect
 
@@ -46,7 +46,8 @@ existing module becomes a sub-spec (`N10`, `N20`, …) or amends the module spec
        110 Shared Album Link (deferred source) ── reserved seam in 200
 
 600 Broker Setup ──> 700 HA Control (MQTT remote control)
-                              └─ reserved: 710 brightness · 720 album select · 730 sleep/wake
+                              ├─ active: pause/play, brightness, album-select
+                              └─ reserved: 730 sleep/wake
 ```
 
 - **200** owns the Settings-screen surface; it *surfaces* the 600 (Broker) and 500 (Display)
@@ -62,10 +63,17 @@ read it only to understand the reserved shared-link seam in `100`/`200`.
 
 ## Reserved / deferred (roadmap)
 
+Recorded in each owning topic's `Roadmap / Deferred` section; none are scheduled.
+
+**Reserved sub-specs / future sources:**
 - `110` Shared album link source (+ password) — outline only, open questions unresolved.
-- `710` HA brightness via dimmable light entity (routes through 400).
-- `720` HA album-select entity.
 - `730` HA sleep/wake driven by an HA presence signal (pairs with the 400 sleep/wake roadmap item).
 - Multi-album pooling and Memories as sources (topic 100 roadmap).
 
-Each is recorded in its owning topic's `Roadmap / Deferred` section; none are scheduled.
+**Specified but not yet built** (carried over from old "extended/added" notes, deferred during the
+overhaul so every Active requirement maps to real, tested code):
+- Disk image cache + size limit + Clear-cache action (topic 300).
+- Auto-retry with backoff (topic 300).
+- Periodic source refresh (topic 300).
+- Rendered clock overlay — settings are stored (500), renderer deferred (topic 300).
+- Settings shared-link placeholder — onboarding placeholder exists; Settings one deferred (topic 200).
