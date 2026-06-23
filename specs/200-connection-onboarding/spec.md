@@ -154,7 +154,7 @@ The user can still reset the app configuration. Reset removes the server URL, se
 - **FR-200-22**: Every Settings section and action MUST be reachable by scrolling in portrait, landscape, reduced-width layouts, and while the keyboard is open.
 - **FR-200-23**: The reset confirmation dialog MUST offer only reset and cancel; broker setup MUST be reachable from Settings instead.
 - **FR-200-24**: Reset MUST clear server URL, selected album, and the Keychain API key, then return onboarding to the combined connection step.
-- **FR-200-25**: The combined onboarding screen and Settings MUST reserve a visible, non-functional shared-link placeholder owned by reserved sub-spec `110-shared-album-link`.
+- **FR-200-25**: The combined onboarding screen MUST reserve a visible, non-functional shared-link placeholder owned by reserved sub-spec `110-shared-album-link`. (A matching placeholder in Settings is deferred — see Roadmap.)
 - **FR-200-26**: This topic MUST add no new Immich backend behavior or REST endpoints; it reuses topic 100 data access and validates paths against the running server's OpenAPI when planning implementation.
 - **FR-200-27**: Connection, Keychain, configuration, and client dependencies MUST remain injected behind protocols so the flows are testable without a real server or real Keychain, in alignment with Modular Isolation.
 
@@ -168,7 +168,7 @@ The user can still reset the app configuration. Reset removes the server URL, se
 
 ### Roadmap / Deferred (not yet built)
 
-- Reserved sub-spec `110-shared-album-link`: A visible, non-functional placeholder for future shared-link entry is reserved in both the combined onboarding screen and Settings. The future feature accepts a shared/public Immich album link and optional password as an alternative source; this topic owns only the inert placement.
+- Reserved sub-spec `110-shared-album-link`: A visible, non-functional placeholder for future shared-link entry. The onboarding placeholder is in place today; the matching Settings placeholder is **deferred** (not yet built). The future feature accepts a shared/public Immich album link and optional password as an alternative source; this topic owns only the inert placement.
 
 ## Success Criteria *(mandatory)*
 

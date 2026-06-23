@@ -9,8 +9,15 @@ public struct StartupGate: Sendable {
 
     public func initialStep() -> OnboardingStep {
         // Server URL and API key are now collected on one screen (.connection), so any
-        // incomplete configuration — missing config or missing key — starts there.
-        guard config.load() != nil, keychain.read() != nil else { return .connection }
-        return .done
+        // state without both of those pieces starts there. If the connection is
+        // present but the album is missing, resume at album selection.
+        guard keychain.read() != nil else { return .connection }
+        if config.load() != nil {
+            return .done
+        }
+        if config.loadBaseURL() != nil {
+            return .album
+        }
+        return .connection
     }
 }

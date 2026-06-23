@@ -40,6 +40,18 @@ import Testing
     #expect(store.load() == BrokerSettings(host: "mqtt-new.example.com", port: 8883, username: "ha-user", password: "secret"))
 }
 
+@Test func saveNewPasswordOverwritesExistingPassword() throws {
+    let store = InMemoryBrokerSettingsStore()
+    try store.save(BrokerSettings(host: "mqtt.example.com", port: 8883, username: "ha-user", password: "secret"))
+    let viewModel = BrokerSetupViewModel(store: store)
+
+    viewModel.load()
+    viewModel.password = "new-secret"
+
+    #expect(viewModel.save() == true)
+    #expect(store.load() == BrokerSettings(host: "mqtt.example.com", port: 8883, username: "ha-user", password: "new-secret"))
+}
+
 @Test func saveInvalidPortReportsError() {
     let store = InMemoryBrokerSettingsStore()
     let viewModel = BrokerSetupViewModel(store: store)

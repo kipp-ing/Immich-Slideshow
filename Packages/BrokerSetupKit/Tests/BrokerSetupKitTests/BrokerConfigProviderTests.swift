@@ -9,6 +9,18 @@ import Testing
     #expect(provider.load() == nil)
 }
 
+@Test func providerReturnsNilForPersistedInvalidSettings() {
+    let store = InMemoryBrokerSettingsStore(settings: BrokerSettings(
+        host: "broker.local",
+        port: 1883,
+        username: "mqtt",
+        password: ""
+    ))
+    let provider = BrokerConfigProvider(settingsStore: store, deviceID: "ipad-wall")
+
+    #expect(provider.load() == nil)
+}
+
 @Test func providerBuildsBrokerConfigFromSettingsAndDeviceID() throws {
     let store = InMemoryBrokerSettingsStore()
     try store.save(BrokerSettings(host: "broker.local", port: 1883, username: "mqtt", password: "secret"))
@@ -21,4 +33,19 @@ import Testing
         password: "secret",
         deviceID: "ipad-wall"
     ))
+}
+
+@Test func providerUsesStableDeviceIDAcrossStoreAndProviderReloads() throws {
+    let settings = BrokerSettings(host: "broker.local", port: 1883, username: "mqtt", password: "secret")
+    let firstStore = InMemoryBrokerSettingsStore()
+    try firstStore.save(settings)
+    let deviceID = "ipad-wall"
+
+    let first = BrokerConfigProvider(settingsStore: firstStore, deviceID: deviceID).load()
+    let reloadedStore = InMemoryBrokerSettingsStore(settings: firstStore.load())
+    let second = BrokerConfigProvider(settingsStore: reloadedStore, deviceID: deviceID).load()
+
+    #expect(first?.deviceID == deviceID)
+    #expect(second?.deviceID == deviceID)
+    #expect(first == second)
 }

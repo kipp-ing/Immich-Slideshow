@@ -39,3 +39,20 @@ private let url = URL(string: "https://photos.example.test")!
 
     #expect(gate.initialStep() == .connection)
 }
+
+@Test func startupGateReturnsAlbumWhenServerURLAndAPIKeyExistWithoutSelectedAlbum() {
+    let defaults = makeStartupGateDefaults()
+    defaults.set(url.absoluteString, forKey: "immich.baseURL")
+    let config = UserDefaultsConfigStore(defaults: defaults)
+    let keychain = InMemoryKeychainStore(apiKey: "key")
+    let gate = StartupGate(config: config, keychain: keychain)
+
+    #expect(gate.initialStep() == .album)
+}
+
+private func makeStartupGateDefaults() -> UserDefaults {
+    let suiteName = "StartupGateTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    return defaults
+}
