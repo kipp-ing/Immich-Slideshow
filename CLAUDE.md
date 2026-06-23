@@ -1,104 +1,119 @@
 # ImmichSlideshow
 
-iPad-Slideshow-App für Immich. Eigenständig, **kein Fork** der offiziellen Immich-App.
-Immich dient nur als Datenquelle über die REST-API.
+iPad slideshow app for Immich. Standalone, **not a fork** of the official Immich app.
+Immich serves only as a data source via the REST API.
 
 ## Quick Reference
 - Platform: iPadOS 18+ (iPhone optional)
 - Language: Swift 6
 - UI: SwiftUI
-- Architektur: MVVM mit `@Observable`
+- Architecture: MVVM with `@Observable`
 - Package Manager: Swift Package Manager
-- Test-Framework: Swift Testing (`@Test`), XCTest nur wo nötig
+- Test Framework: Swift Testing (`@Test`), XCTest only where needed
 
 ## XcodeBuildMCP
-Dieses Projekt nutzt XcodeBuildMCP für Builds, Tests und Simulator.
-- Builds/Tests über die MCP-Tools ausführen, **nicht** rohes `xcodebuild` parsen.
-- Bei roten Tests: Fehler aus dem strukturierten MCP-Output lesen, gezielt fixen.
-- SwiftUI-Previews zur visuellen Verifikation nutzen, wenn Apple-Xcode-MCP aktiv ist.
+This project uses XcodeBuildMCP for builds, tests, and the simulator.
+- Run builds/tests via the MCP tools, **not** by parsing raw `xcodebuild` output.
+- On red tests: read the error from the structured MCP output, fix it targetedly.
+- Use SwiftUI previews for visual verification when the Apple Xcode MCP is active.
 
-## Arbeitsweise (verbindlich)
-- **TDD**: Test zuerst (rot), dann minimale Implementierung (grün), dann Refactor. Details in `tdd-workflow.md`.
-- **SDD via Spec Kit**: Kein Feature-Code ohne vorherige Spec + Plan + Tasks. Siehe `.specify/`.
-- Jedes Modul ist isoliert testbar (Protokolle + Dependency Injection, keine versteckten Singletons).
-- Netzwerk hinter einem Protokoll (`ImmichAPI`), damit Tests ohne echten Server laufen (Mock/Stub).
+## Working Method (binding)
+- **TDD**: test first (red), then minimal implementation (green), then refactor. Details in
+  `tdd-workflow.md`.
+- **SDD via Spec Kit**: no feature code without a prior spec + plan + tasks. See `.specify/`.
+- Every module is testable in isolation (protocols + dependency injection, no hidden
+  singletons).
+- Network behind a protocol (`ImmichAPI`), so tests run without a real server (mock/stub).
 
-## Orchestrierung: Claude orchestriert, Codex implementiert
-Für nicht-triviale Implementierungsarbeit gilt ein Zwei-Modell-Workflow:
+## Orchestration: Claude Orchestrates, Codex Implements
+A two-model workflow applies to non-trivial implementation work:
 
-- **Claude (du) orchestriert und urteilt.** Aufgabe lesen, entscheiden was delegiert wird, Briefing
-  schreiben, Codex' Diff reviewen, das Verifikations-Gate verantworten. Selbst möglichst wenig Code
-  schreiben — die Implementierung wird delegiert.
-- **Codex ist die Implementierungs-Armee.** Codex-Agenten (über die `codex-agent`-CLI des Plugins
-  `codex-orchestrator`, oder `/codex:rescue` für kleine/schnelle Aufgaben) implementieren gegen ein
-  Briefing, fahren ihre eigenen Unit-Tests und committen ihre Arbeit selbst.
-- **Cross-Model-Review.** `/codex:review` bzw. `/codex:adversarial-review` für einen unabhängigen
-  Blick — ein anderes Modell prüft Code, den es nicht selbst erzeugt hat.
+- **Claude (you) orchestrates and judges.** Read the task, decide what to delegate, write the
+  briefing, review Codex's diff, own the verification gate. Write as little code yourself as
+  possible — implementation is delegated.
+- **Codex is the implementation army.** Codex agents (via the `codex-agent` CLI of the
+  `codex-orchestrator` plugin, or `/codex:rescue` for small/quick tasks) implement against a
+  briefing, run their own unit tests, and commit their own work.
+- **Cross-model review.** `/codex:review` or `/codex:adversarial-review` for an independent
+  look — a different model reviews code it didn't generate itself.
 
-### Wann delegieren
-Gut umreißbare Implementierungsarbeit delegieren: eine Feature-Scheibe, ein Bugfix, ein Refactor mit
-klarem Ziel. **Inline behalten:**
-- Test-*Design* für geteilten/nebenläufigen Zustand, Races, Timing (z. B. SlideshowView-Timer)
-- Sicherheitskritisches/Querschnittliches: Keychain, TLS, Onboarding-Verdrahtung, App-Entry
-- SwiftUI/UI, die zur Verifikation den Simulator braucht (Codex testet nur Logik auf dem Host)
-- Alles, was die 2-Runden-Grenze unten reißt — dann selbst zu Ende bringen
+### When to Delegate
+Delegate well-scoped implementation work: a feature slice, a bugfix, a refactor with a clear
+goal. **Keep inline:**
+- Test *design* for shared/concurrent state, races, timing (e.g. the SlideshowView timer)
+- Security-critical/cross-cutting work: keychain, TLS, onboarding wiring, app entry point
+- SwiftUI/UI that needs the simulator for verification (Codex only tests logic on the host)
+- Anything that would break the 2-round limit below — finish it inline instead
 
-### Briefing-Workflow
-Vor dem Delegieren:
+### Briefing Workflow
+Before delegating:
 
-    .claude/scripts/codex-brief.sh "<Task-Beschreibung>" <datei1> <datei2> ...
+    .claude/scripts/codex-brief.sh "<task description>" <file1> <file2> ...
 
-Das rendert ein Briefing nach stdout: Aufgabe, In-Scope-Dateien, aktueller `git status` /
-`git diff --stat`, Verifikationsbefehl und die Hausregeln. `codex-agent start` nimmt seinen Prompt
-als Positionsargument (nicht via stdin), also per Command-Substitution übergeben:
+This renders a briefing to stdout: task, in-scope files, current `git status` /
+`git diff --stat`, verification command, and house rules. `codex-agent start` takes its prompt
+as a positional argument (not via stdin), so pass it via command substitution:
 
     codex-agent start "$(.claude/scripts/codex-brief.sh "..." Packages/ImmichClient/Sources/ImmichClient/ImmichClient.swift)" --map -s workspace-write
 
-`--map` injiziert `docs/CODEBASE_MAP.md`. Diese Datei wird **bei jedem Session-Start automatisch lean
-neu generiert** (`.claude/scripts/build-map.sh`, deterministisch, kein LLM — per `SessionStart`-Hook in
-`.claude/settings.json`; die Datei ist git-ignored). Für die reichere, narrierte Variante bei Bedarf
-manuell `/cartographer` laufen lassen (token-intensiv — Claude startet das nie selbst).
-`--dry-run` zeigt den Prompt vorab, ohne einen Agenten zu starten.
+`--map` injects `docs/CODEBASE_MAP.md`. This file is **automatically regenerated lean on every
+session start** (`.claude/scripts/build-map.sh`, deterministic, no LLM — via the `SessionStart`
+hook in `.claude/settings.json`; the file is git-ignored). For the richer, narrated variant, run
+`/cartographer` manually when needed (token-intensive — Claude never starts it on its own).
+`--dry-run` shows the prompt up front without starting an agent.
 
-### Codex-Coding-Session (Sollablauf)
-1. **Map** — automatisch beim Session-Start (`build-map.sh`); sonst manuell `/cartographer`.
-2. **Briefing** — `codex-brief.sh` rendern, `codex-agent start ... --map` (Map wird injiziert).
-3. **Implementieren** — Codex gegen das Briefing (Hausregeln unten, 2-Runden-Grenze).
-4. **Review** — am Ende `/codex:review` (Cross-Model). Optional als Stop-Gate via `/codex:setup`.
+### Codex Coding Session (Target Flow)
+1. **Map** — automatic on session start (`build-map.sh`); otherwise manual `/cartographer`.
+2. **Briefing** — render `codex-brief.sh`, `codex-agent start ... --map` (map gets injected).
+3. **Implement** — Codex against the briefing (house rules below, 2-round limit).
+4. **Review** — at the end, `/codex:review` (cross-model). Optional as a stop gate via
+   `/codex:setup`.
 
-### Hausregeln (nicht verhandelbar)
-- **TDD zuerst:** roter Test vor Implementierung (Konstitution, NON-NEGOTIABLE).
-- **Nur die im Briefing gelisteten Dateien anfassen.** Sonst stoppen und zurückmelden.
-- **Keine Secrets im Code/UserDefaults/Logs; TLS nicht deaktivieren** (Konstitution III/IV).
-- **Nicht anfassen:** `.specify/**`, `specs/**`, `*.xcodeproj/project.pbxproj` — außer ausdrücklich in Scope.
-- **Stagen nur mit expliziten Pfaden** (`git add <pfad>`), nie `-A`/`.`. Bei `.git/index.lock`: uncommitted lassen und melden.
-- **Codex: nur Unit-Tests** (`swift test` auf dem Host) — keine Simulator-/Integrationstests.
-- **Harte 2-Runden-Grenze:** eine Implement-Runde + eine Fix-Runde. Sonst inline fertigstellen.
-- **Bulk-Lesen großer Codex-Diffs/Logs an einen `Explore`-Subagenten** delegieren, nicht direkt `Read`.
+### House Rules (non-negotiable)
+- **TDD first:** red test before implementation (constitution, NON-NEGOTIABLE).
+- **Only touch files listed in the briefing.** Otherwise stop and report back.
+- **No secrets in code/UserDefaults/logs; don't disable TLS** (constitution III/IV).
+- **Do not touch:** `.specify/**`, `specs/**`, `*.xcodeproj/project.pbxproj` — unless explicitly
+  in scope.
+- **Stage only with explicit paths** (`git add <path>`), never `-A`/`.`. On `.git/index.lock`:
+  leave it uncommitted and report it.
+- **Codex: unit tests only** (`swift test` on the host) — no simulator/integration tests.
+- **Hard 2-round limit:** one implement round + one fix round. Otherwise finish inline.
+- **Delegate bulk reading of large Codex diffs/logs to an `Explore` subagent**, not direct
+  `Read`.
 
-### Verifikations-Gate (von Claude verantwortet)
-- Build + Tests über **XcodeBuildMCP** (Swift Testing) — der primäre Gate.
-- Codex liefert grüne `swift build`/`swift test` (Host, Unit only); Claude verifiziert App-Target,
-  Simulator und UI/Preview zusätzlich über XcodeBuildMCP.
+### Verification Gate (owned by Claude)
+- Build + tests via **XcodeBuildMCP** (Swift Testing) — the primary gate.
+- Codex delivers green `swift build`/`swift test` (host, unit only); Claude additionally
+  verifies the app target, simulator, and UI/preview via XcodeBuildMCP.
 
-## Module
-1. **ImmichClient** — REST gegen Immich. Auth über Header `x-api-key`. Endpoints: Albumliste, Album-Assets, Asset-Preview-Thumbnail. URLSession.
-2. **SlideshowView** — Vollbild, ein Asset, Timer, Fade. Prefetch der nächsten 1–2 Bilder. Begrenzter Bild-Cache.
-3. **Onboarding** — 3 Schritte: Server-URL → API-Key → Album. API-Key im **Keychain**, nie UserDefaults.
-4. **PowerManager** — `isIdleTimerDisabled` während Slideshow; `UIScreen.brightness` (0.0–1.0).
-5. **ThemeSettings** — Übergang, Dauer, Ken-Burns, Hintergrund, Uhr-Overlay. In UserDefaults. Default: hell, ruhig, kein Overlay.
-6. **HAControl** — MQTT über **TLS** zum vorhandenen Broker. HA-Discovery (light/select/switch + LWT-Availability). Steuert Helligkeit, Album, Pause/Play fern.
+## Modules
+1. **ImmichClient** — REST against Immich. Auth via `x-api-key` header. Endpoints: album list,
+   album assets, asset preview thumbnail. URLSession.
+2. **SlideshowView** — full screen, one asset, timer, fade. Prefetch of the next 1–2 images.
+   Bounded image cache.
+3. **Onboarding** — 3 steps: server URL → API key → album. API key in the **keychain**, never
+   UserDefaults.
+4. **PowerManager** — `isIdleTimerDisabled` during the slideshow; `UIScreen.brightness`
+   (0.0–1.0).
+5. **ThemeSettings** — transition, duration, Ken Burns, background, clock overlay. In
+   UserDefaults. Default: light, calm, no overlay.
+6. **HAControl** — MQTT over **TLS** to the existing broker. HA discovery (light/select/switch +
+   LWT availability). Remotely controls brightness, album, pause/play.
 
-## Constraints (harte Grenzen, nicht dagegen anprogrammieren)
-- iOS-App kann das Display **nicht physisch ausschalten** — nur Helligkeit ~0 dimmen.
-- Helligkeit/Idle-Timer wirken **nur im Vordergrund**. Geht die App in den Hintergrund, gibt iOS die Kontrolle zurück.
-- Aktueller Stand: Immich-Server hat **gültiges** Zertifikat → Standard-URLSession ohne TLS-Ausnahme. Self-signed/lokale Downgrades sind **bewusst nicht** im Scope (kommen später).
-- API-Pfade gegen die OpenAPI-Spec der laufenden Immich-Version prüfen (`/api/server/version`). Nicht auf Pfade aus alten Tutorials verlassen.
+## Constraints (hard limits, don't design against them)
+- An iOS app **cannot physically turn off the display** — only dim brightness toward ~0.
+- Brightness/idle timer only take effect **in the foreground**. Once the app goes to the
+  background, iOS reclaims control.
+- Current state: the Immich server has a **valid** certificate → standard URLSession without a
+  TLS exception. Self-signed/local downgrades are **deliberately not** in scope (coming later).
+- Check API paths against the OpenAPI spec of the running Immich version
+  (`/api/server/version`). Don't rely on paths from old tutorials.
 
-## Verbote
-- Keine Secrets im Code oder in UserDefaults. API-Key + MQTT-Credentials → Keychain.
-- Keine TLS-Validierung deaktivieren (solange gültiges Zert vorhanden ist).
-- Keine Abhängigkeit zur offiziellen Immich-Codebasis.
+## Prohibitions
+- No secrets in code or in UserDefaults. API key + MQTT credentials → keychain.
+- Never disable TLS validation (as long as a valid certificate is in place).
+- No dependency on the official Immich codebase.
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,

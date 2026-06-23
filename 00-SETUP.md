@@ -1,63 +1,65 @@
 # Setup — Immich Slideshow (Claude Code + XcodeBuildMCP + Spec Kit)
 
-Reihenfolge zum Loslegen auf dem Mac. Alles, was hier steht, läuft *dort* — nicht im Chat.
+Order of steps to get started on the Mac. Everything here runs *there* — not in chat.
 
-## Voraussetzungen (dein Stand)
-- Dev-Account vorhanden ✓
-- Immich-Server per HTTPS mit **gültigem** Zertifikat ✓ (lokale Downgrades/self-signed kommen später)
-- MQTT-Broker mit **TLS** vorhanden ✓
-- Xcode 26.3+ (für Apple Xcode-MCP + Agent-Previews)
-- Node (für `npx`), Python `uv` (für Spec Kit)
+## Prerequisites (your current state)
+- Dev account in place ✓
+- Immich server over HTTPS with a **valid** certificate ✓ (local downgrades/self-signed come
+  later)
+- MQTT broker with **TLS** in place ✓
+- Xcode 26.3+ (for Apple Xcode MCP + agent previews)
+- Node (for `npx`), Python `uv` (for Spec Kit)
 
-## 1. Xcode-Projekt anlegen
-In Xcode: neues App-Projekt, SwiftUI, Ziel **iPadOS** (iPhone optional). Name z.B. `ImmichSlideshow`.
-Minimum Deployment auf das Target setzen, das in `CLAUDE.md` steht (Default iOS/iPadOS 18).
-Projekt schließen — ab hier arbeitet Claude Code im Terminal.
+## 1. Create the Xcode Project
+In Xcode: new app project, SwiftUI, target **iPadOS** (iPhone optional). Name e.g.
+`ImmichSlideshow`. Set the minimum deployment on the target to what's specified in `CLAUDE.md`
+(default iOS/iPadOS 18). Close the project — from here on, Claude Code works in the terminal.
 
-## 2. Claude Code im Projektordner starten
+## 2. Start Claude Code in the Project Folder
 ```
 cd ~/Developer/ImmichSlideshow
 claude
 ```
 
-## 3. XcodeBuildMCP anbinden (autonome Builds/Tests)
+## 3. Connect XcodeBuildMCP (autonomous builds/tests)
 ```
 claude mcp add --transport stdio XcodeBuildMCP --scope project \
   --env INCREMENTAL_BUILDS_ENABLED=true \
   --env XCODEBUILDMCP_DYNAMIC_TOOLS=true \
   -- npx -y xcodebuildmcp@latest
 ```
-Optional zusätzlich Apples nativer Xcode-MCP (ab Xcode 26.3) für SwiftUI-Preview-Verifikation —
-prüfe den exakten `xcrun mcpbridge`-Befehl in deiner Xcode-Version, der ändert sich noch.
+Optionally also add Apple's native Xcode MCP (from Xcode 26.3) for SwiftUI preview
+verification — check the exact `xcrun mcpbridge` command for your Xcode version, it's still
+changing.
 
-## 4. Dateien aus diesem Bundle ins Projekt kopieren
-- `CLAUDE.md` → Projekt-Root
-- `docs/` → Projekt-Root/docs/
+## 4. Copy Files From This Bundle Into the Project
+- `CLAUDE.md` → project root
+- `docs/` → project-root/docs/
 
-`CLAUDE.md` wird von Claude Code beim Start automatisch geladen.
+`CLAUDE.md` is loaded automatically by Claude Code on startup.
 
-## 5. Spec Kit initialisieren
+## 5. Initialize Spec Kit
 ```
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify init --here --ai claude
 ```
-Das legt `.specify/` (Konstitution, Templates) + die Claude-Skills an.
-**Nicht** von Hand nachbauen — Spec Kit verwaltet das selbst.
+This creates `.specify/` (constitution, templates) + the Claude skills.
+**Do not** rebuild this by hand — Spec Kit manages it itself.
 
-## 6. Konstitution + erste Spec einspielen
-Inhalte aus diesem Bundle in die Spec-Kit-Commands einfügen:
-- `docs/constitution-input.md` → Inhalt für `/speckit.constitution`
-- `docs/spec-input-immichclient.md` → Inhalt für `/speckit.specify` (erstes Feature)
+## 6. Feed In the Constitution + First Spec
+Paste content from this bundle into the Spec Kit commands:
+- `docs/constitution-input.md` → content for `/speckit.constitution`
+- `docs/spec-input-immichclient.md` → content for `/speckit.specify` (first feature)
 
-Dann der Spec-Kit-Loop:
+Then the Spec Kit loop:
 `constitution → specify → clarify → checklist → plan → tasks → analyze → implement`
 
-## 7. Reihenfolge der Features (= Reihenfolge der Specs)
-1. **ImmichClient** (Server verbinden, Albumliste, Assets laden) ← Machbarkeits-Test
-2. **SlideshowView** (Vollbild, Timer, Fade)
-3. **Onboarding** (3 Schritte, Keychain)
-4. **PowerManager** (Idle-Timer, Helligkeit)
-5. **Theme-Settings**
-6. **HAControl** (MQTT/TLS, Discovery) ← größter Brocken, zuletzt
+## 7. Feature Order (= Spec Order)
+1. **ImmichClient** (connect to server, album list, load assets) ← feasibility test
+2. **SlideshowView** (full screen, timer, fade)
+3. **Onboarding** (3 steps, keychain)
+4. **PowerManager** (idle timer, brightness)
+5. **Theme settings**
+6. **HAControl** (MQTT/TLS, discovery) ← biggest chunk, last
 
-Erst wenn 1+2 grün laufen, lohnt der Rest. Siehe `docs/tdd-workflow.md`.
+Only once 1+2 run green is the rest worth it. See `docs/tdd-workflow.md`.

@@ -1,124 +1,123 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Bump rationale: Initial ratification of the project constitution (MAJOR baseline).
+Version change: 1.0.0 → 1.0.1
+Bump rationale: PATCH — translated constitution from German to English. Wording only,
+  no semantic change to principles, constraints, workflow, or governance.
 
-Principles defined (7):
+Principles defined (7, unchanged):
   I.   Test-First (NON-NEGOTIABLE)
-  II.  Modulare Isolation
-  III. Keine Secrets im Klartext (NON-NEGOTIABLE)
-  IV.  Sicherheit der Transportschicht
-  V.   Plattformgrenzen respektieren
-  VI.  Verifizierbare Akzeptanzkriterien
-  VII. Schlicht und hell als Default
+  II.  Modular Isolation
+  III. No Secrets in Plaintext (NON-NEGOTIABLE)
+  IV.  Transport-Layer Security
+  V.   Respect Platform Boundaries
+  VI.  Verifiable Acceptance Criteria
+  VII. Plain and Light by Default
 
-Added sections:
-  - Zusätzliche Constraints (Tech-Stack & Architektur)
-  - Entwicklungs-Workflow (TDD-Loop & SDD via Spec Kit)
-  - Governance
+Added sections: none
 
-Removed sections: none (template baseline replaced)
+Removed sections: none
 
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md   (reviewed — generic Constitution Check gate compatible)
-  ✅ .specify/templates/spec-template.md   (reviewed — requirements/acceptance sections align)
-  ✅ .specify/templates/tasks-template.md  (reviewed — TDD task ordering align)
+  ✅ .specify/templates/plan-template.md   (already English — no change needed)
+  ✅ .specify/templates/spec-template.md   (already English — no change needed)
+  ✅ .specify/templates/tasks-template.md  (already English — no change needed)
 
 Follow-up TODOs: none
 -->
 
 # ImmichSlideshow Constitution
 
-ImmichSlideshow ist eine eigenständige iPad-App, die Immich ausschließlich als Datenquelle
-über dessen REST-API nutzt. Sie ist **kein Fork** der offiziellen Immich-App und unterhält
-keine Abhängigkeit zur offiziellen Immich-Codebasis. Die folgenden Prinzipien sind verbindlich.
+ImmichSlideshow is a standalone iPad app that uses Immich exclusively as a data source via its
+REST API. It is **not a fork** of the official Immich app and maintains no dependency on the
+official Immich codebase. The following principles are binding.
 
 ## Core Principles
 
 ### I. Test-First (NON-NEGOTIABLE)
-Jede Funktionalität beginnt mit einem fehlgeschlagenen Test. Es wird KEIN Implementierungscode
-geschrieben, bevor ein zugehöriger Test existiert und nachweislich rot ist. Der Zyklus
-Red → Green → Refactor wird strikt eingehalten: zuerst der rote Test, dann die minimale
-Implementierung bis grün, danach Refactor bei grün bleibenden Tests.
+Every piece of functionality starts with a failing test. NO implementation code is written
+before a corresponding test exists and is demonstrably red. The Red → Green → Refactor cycle is
+strictly followed: red test first, then the minimal implementation until green, then refactor
+while tests stay green.
 
-**Rationale:** Ein Test, der nie rot war, beweist nichts. Test-First erzwingt überprüfbares
-Verhalten und verhindert nachträglich angepasste Scheinabsicherung.
+**Rationale:** A test that was never red proves nothing. Test-First enforces verifiable behavior
+and prevents safety nets that were retrofitted after the fact.
 
-### II. Modulare Isolation
-Jedes Modul ist über ein Protokoll von seinen Abhängigkeiten entkoppelt — insbesondere Netzwerk
-(`ImmichAPI`), Keychain (`KeychainStore`), MQTT (`MQTTTransport`) und Zeit/Timer. Tests laufen
-ohne echten Server, Broker oder Keychain gegen Mocks/Fakes. Versteckte Singletons sind untersagt;
-Abhängigkeiten werden injiziert.
+### II. Modular Isolation
+Every module is decoupled from its dependencies via a protocol — in particular network
+(`ImmichAPI`), keychain (`KeychainStore`), MQTT (`MQTTTransport`), and time/timers. Tests run
+without a real server, broker, or keychain, against mocks/fakes. Hidden singletons are
+prohibited; dependencies are injected.
 
-**Rationale:** Isolation macht jedes Modul deterministisch testbar und hält die Suite schnell und
-unabhängig von externer Infrastruktur.
+**Rationale:** Isolation makes every module deterministically testable and keeps the suite fast
+and independent of external infrastructure.
 
-### III. Keine Secrets im Klartext (NON-NEGOTIABLE)
-Immich-API-Key und MQTT-Credentials liegen ausschließlich im Keychain. Sie erscheinen niemals in
-UserDefaults, im Quellcode, in Logs oder in committeten Dateien.
+### III. No Secrets in Plaintext (NON-NEGOTIABLE)
+The Immich API key and MQTT credentials live exclusively in the keychain. They never appear in
+UserDefaults, in source code, in logs, or in committed files.
 
-**Rationale:** Secrets im Klartext sind ein dauerhaftes Leck-Risiko, das durch keinen späteren Fix
-heilbar ist; der Keychain ist die einzige zulässige Ablage.
+**Rationale:** Plaintext secrets are a permanent leak risk that no later fix can heal; the
+keychain is the only permitted storage.
 
-### IV. Sicherheit der Transportschicht
-TLS-Validierung wird nicht deaktiviert. Der Immich-Server hat ein gültiges Zertifikat (Standard-
-URLSession ohne TLS-Ausnahme); MQTT läuft über TLS. Self-signed- oder Klartext-Verbindungen sind
-ausdrücklich außerhalb des aktuellen Scopes und werden nicht durch Umgehung der Validierung
-nachgebaut.
+### IV. Transport-Layer Security
+TLS validation is never disabled. The Immich server has a valid certificate (standard
+URLSession, no TLS exception); MQTT runs over TLS. Self-signed or plaintext connections are
+explicitly out of the current scope and are not approximated by bypassing validation.
 
-**Rationale:** Eine einmal deaktivierte TLS-Prüfung untergräbt die Sicherheit aller Verbindungen;
-solange ein gültiges Zertifikat vorliegt, gibt es keinen Grund dafür.
+**Rationale:** A TLS check disabled even once undermines the security of all connections; as
+long as a valid certificate is in place, there is no reason for it.
 
-### V. Plattformgrenzen respektieren
-Die App entwirft keine Features gegen die Grenzen von iOS/iPadOS an. Sie schaltet das Display nicht
-physisch aus (nur Helligkeit gegen ~0 dimmen) und steuert Helligkeit sowie Idle-Timer nur im
-Vordergrund; geht die App in den Hintergrund, gibt iOS die Kontrolle zurück.
+### V. Respect Platform Boundaries
+The app does not design features against the boundaries of iOS/iPadOS. It does not physically
+turn off the display (only dims brightness toward ~0) and controls brightness and the idle timer
+only in the foreground; once the app moves to the background, iOS reclaims control.
 
-**Rationale:** Gegen Plattformgrenzen programmierter Code ist fragil und erzeugt falsche Erwartungen;
-Features werden innerhalb der real verfügbaren Kontrolle entworfen.
+**Rationale:** Code written against platform boundaries is fragile and creates false
+expectations; features are designed within the control that is actually available.
 
-### VI. Verifizierbare Akzeptanzkriterien
-Jede Spec endet mit prüfbaren Kriterien: konkrete Eingaben/Ausgaben und explizite Fehlerfälle,
-nicht vage Qualitätswünsche. Jedes Kriterium muss durch einen Test abbildbar sein.
+### VI. Verifiable Acceptance Criteria
+Every spec ends with checkable criteria: concrete inputs/outputs and explicit error cases, not
+vague quality wishes. Every criterion must be expressible as a test.
 
-**Rationale:** Nur überprüfbare Kriterien lassen sich abnehmen; vage Wünsche erzeugen Streit statt
-einer roten oder grünen Anzeige.
+**Rationale:** Only verifiable criteria can be signed off; vague wishes produce arguments instead
+of a red or green signal.
 
-### VII. Schlicht und hell als Default
-UI-Voreinstellungen sind ruhig und hell. Zusatzfunktionen (Übergänge, Ken-Burns, Overlays) sind
-opt-in und werden nicht aufgedrängt. Default: hell, ruhig, kein Overlay.
+### VII. Plain and Light by Default
+UI defaults are calm and light. Extra features (transitions, Ken Burns, overlays) are opt-in and
+are never imposed. Default: light, calm, no overlay.
 
-**Rationale:** Eine Slideshow soll zuerst die Bilder zeigen; Effekte sind Würze, kein Grundzustand.
+**Rationale:** A slideshow should show the photos first; effects are seasoning, not the baseline
+state.
 
-## Zusätzliche Constraints (Tech-Stack & Architektur)
+## Additional Constraints (Tech Stack & Architecture)
 
-- Plattform: iPadOS 18+ (iPhone optional). Sprache: Swift 6. UI: SwiftUI. Architektur: MVVM mit
-  `@Observable`. Package Manager: Swift Package Manager.
-- Test-Framework: Swift Testing (`@Test`); XCTest nur, wo zwingend nötig.
-- Builds und Tests laufen über XcodeBuildMCP; roher `xcodebuild`-Output wird nicht von Hand geparst.
-- API-Pfade werden gegen die OpenAPI-Spec der laufenden Immich-Version geprüft
-  (`/api/server/version`), nicht aus alten Tutorials übernommen.
+- Platform: iPadOS 18+ (iPhone optional). Language: Swift 6. UI: SwiftUI. Architecture: MVVM
+  with `@Observable`. Package manager: Swift Package Manager.
+- Test framework: Swift Testing (`@Test`); XCTest only where strictly necessary.
+- Builds and tests run via XcodeBuildMCP; raw `xcodebuild` output is not parsed by hand.
+- API paths are checked against the OpenAPI spec of the running Immich version
+  (`/api/server/version`), not taken from old tutorials.
 
-## Entwicklungs-Workflow (TDD & SDD)
+## Development Workflow (TDD & SDD)
 
-- **SDD via Spec Kit:** Kein Feature-Code ohne vorherige Spec + Plan + Tasks. Der Loop lautet
+- **SDD via Spec Kit:** No feature code without a prior spec + plan + tasks. The loop is
   constitution → specify → clarify → checklist → plan → tasks → analyze → implement.
-- **TDD pro Task:** Red → Green → Refactor (siehe `tdd-workflow.md`). Kein Sprung über mehrere Tasks.
-- **Definition of Done pro Task:** Tests grün über XcodeBuildMCP; keine Secrets im Code; Constraints
-  aus `CLAUDE.md` eingehalten; bei UI rendert die Preview ohne Crash.
+- **TDD per task:** Red → Green → Refactor (see `tdd-workflow.md`). No skipping across multiple
+  tasks.
+- **Definition of Done per task:** Tests green via XcodeBuildMCP; no secrets in code; constraints
+  from `CLAUDE.md` honored; for UI, the preview renders without crashing.
 
 ## Governance
 
-Diese Konstitution hat Vorrang vor allen anderen Praktiken. Änderungen erfordern eine dokumentierte
-Begründung im Sync Impact Report und eine Versionsanpassung nach SemVer:
+This constitution takes precedence over all other practices. Changes require a documented
+rationale in the Sync Impact Report and a version bump following SemVer:
 
-- **MAJOR:** rückwärtsinkompatible Entfernung oder Neudefinition von Prinzipien/Governance.
-- **MINOR:** neues Prinzip/neuer Abschnitt oder materiell erweiterte Vorgaben.
-- **PATCH:** Klarstellungen, Wortlaut, Tippfehler, nicht-semantische Verfeinerungen.
+- **MAJOR:** backward-incompatible removal or redefinition of principles/governance.
+- **MINOR:** new principle/section or materially expanded requirements.
+- **PATCH:** clarifications, wording, typos, non-semantic refinements.
 
-Jede Spec, jeder Plan und jeder Review prüft die Einhaltung dieser Prinzipien. Abweichungen müssen
-explizit begründet werden; eine NON-NEGOTIABLE-Verletzung blockiert den Merge. Laufende
-Entwicklungs-Leitlinien stehen in `CLAUDE.md` und `tdd-workflow.md`.
+Every spec, plan, and review checks compliance with these principles. Deviations must be
+explicitly justified; a NON-NEGOTIABLE violation blocks the merge. Ongoing development
+guidelines live in `CLAUDE.md` and `tdd-workflow.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-17 | **Last Amended**: 2026-06-17
+**Version**: 1.0.1 | **Ratified**: 2026-06-17 | **Last Amended**: 2026-06-23
