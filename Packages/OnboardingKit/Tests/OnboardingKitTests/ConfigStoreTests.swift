@@ -37,6 +37,14 @@ import Testing
     #expect(store.load() == nil)
 }
 
+@Test func userDefaultsConfigStoreLoadsBaseURLWithoutSelectedAlbumID() throws {
+    let defaults = makeDefaults()
+    defaults.set("https://photos.example.test", forKey: "immich.baseURL")
+    let store = UserDefaultsConfigStore(defaults: defaults)
+
+    #expect(store.loadBaseURL() == URL(string: "https://photos.example.test"))
+}
+
 @Test func userDefaultsConfigStoreLoadReturnsNilWhenOnlySelectedAlbumIDExists() {
     let defaults = makeDefaults()
     defaults.set("album-1", forKey: "immich.selectedAlbumID")
