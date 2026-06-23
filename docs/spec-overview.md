@@ -1,0 +1,79 @@
+# Spec Overview
+
+The map to `specs/`. Each module spec is the **source of truth** for its area — this page is the
+map, not the territory.
+
+## Structure & numbering
+
+Specs are organized as **one durable spec per module**, mirroring the Swift packages. There is no
+chronological feature numbering anymore; a single concern lives in exactly one spec.
+
+- **Hundreds-block per topic.** Each module owns a `Nxx` block: `100`, `200`, … `700`.
+- **Sub-spec room.** `N10`, `N20`, … inside a block are reserved for sub-specs (a deferred or
+  spun-off capability of that topic). Example: `110-shared-album-link` is a sub-spec of the
+  `100` data-access topic.
+- **Requirement IDs carry the full spec number:** `FR-<specnum>-NN` and `SC-<specnum>-NN`
+  (e.g. `FR-700-03`, `SC-200-05`). This keeps a sub-spec's IDs from colliding with its parent
+  block and makes any ID self-locating.
+- **Deferred capabilities** are not deleted: each topic spec ends with a `Roadmap / Deferred`
+  section, and substantial future work gets a reserved sub-spec number (and, where it already has
+  a real outline, its own `Status: Deferred` spec).
+
+When a genuinely new module appears, give it the next free hundreds-block. A new capability of an
+existing module becomes a sub-spec (`N10`, `N20`, …) or amends the module spec directly.
+
+## Topics
+
+| #   | Spec                                                              | Package          | Purpose                                                                                  | Status   |
+|-----|-------------------------------------------------------------------|------------------|------------------------------------------------------------------------------------------|----------|
+| 100 | [immich-client](../specs/100-immich-client/spec.md)               | ImmichClient     | REST data access: albums, album assets, preview/original/thumbnail image data, errors.   | Active   |
+| 110 | [shared-album-link](../specs/110-shared-album-link/spec.md)       | ImmichClient     | *(sub-spec of 100)* Play a shared/public Immich link (+ optional password) as a source.  | Deferred |
+| 200 | [connection-onboarding](../specs/200-connection-onboarding/spec.md) | OnboardingKit  | First-run setup, in-place connection editing, and the Settings-screen structure.         | Active   |
+| 300 | [slideshow](../specs/300-slideshow/spec.md)                       | SlideshowKit     | Fullscreen playback engine + Liquid Glass UI: chrome, gestures, album browser, info.     | Active   |
+| 400 | [power-manager](../specs/400-power-manager/spec.md)               | PowerKit         | Keep the display awake and dim brightness while the slideshow runs in the foreground.     | Active   |
+| 500 | [display-options](../specs/500-display-options/spec.md)           | ThemeKit         | User-configurable order/duration/transition/Ken Burns/fit/quality/clock, applied live.   | Active   |
+| 600 | [broker-setup](../specs/600-broker-setup/spec.md)                 | BrokerSetupKit   | Enter and persist MQTT broker credentials (Keychain) so 700 has something to connect to. | Active   |
+| 700 | [ha-control](../specs/700-ha-control/spec.md)                     | HAControlKit     | Remote control via MQTT/HA: availability + pause/play + brightness + album (730 deferred). | Active   |
+
+## How they connect
+
+```
+100 ImmichClient ──> 200 Connection & Onboarding ──> 300 Slideshow (engine + UI)
+        │                                                  │
+        │                          400 PowerManager <──────┤  (foreground brightness / idle)
+        │                          500 Display Options <───┘  (order/duration/transition/clock)
+        │
+       110 Shared Album Link (deferred source) ── reserved seam in 200
+
+600 Broker Setup ──> 700 HA Control (MQTT remote control)
+                              ├─ active: pause/play, brightness, album-select
+                              └─ reserved: 730 sleep/wake
+```
+
+- **200** owns the Settings-screen surface; it *surfaces* the 600 (Broker) and 500 (Display)
+  sections and the 400 (brightness) control without re-specifying their behavior.
+- **300** *consumes* 500 (option values), 400 (brightness), 100/110 (sources) and *delegates*
+  reset to 200 — it does not redefine them.
+
+## Reading order
+
+Core path: **100 → 200 → 300**, then **400 / 500** as the slideshow's foreground-power and
+display layers, then **600 → 700** for the Home Assistant remote-control path. `110` is deferred —
+read it only to understand the reserved shared-link seam in `100`/`200`.
+
+## Reserved / deferred (roadmap)
+
+Recorded in each owning topic's `Roadmap / Deferred` section; none are scheduled.
+
+**Reserved sub-specs / future sources:**
+- `110` Shared album link source (+ password) — outline only, open questions unresolved.
+- `730` HA sleep/wake driven by an HA presence signal (pairs with the 400 sleep/wake roadmap item).
+- Multi-album pooling and Memories as sources (topic 100 roadmap).
+
+**Specified but not yet built** (carried over from old "extended/added" notes, deferred during the
+overhaul so every Active requirement maps to real, tested code):
+- Disk image cache + size limit + Clear-cache action (topic 300).
+- Auto-retry with backoff (topic 300).
+- Periodic source refresh (topic 300).
+- Rendered clock overlay — settings are stored (500), renderer deferred (topic 300).
+- Settings shared-link placeholder — onboarding placeholder exists; Settings one deferred (topic 200).

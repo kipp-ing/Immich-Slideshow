@@ -83,6 +83,38 @@ import ThemeKitTestSupport
 }
 
 @MainActor
+@Test func qualityChangeAppliesToNextLoadedImageWithoutRestart() async {
+    let api = StubImmichAPI()
+    let ticker = ManualTicker()
+    api.setAssets([
+        Asset(id: "a", type: "IMAGE"),
+        Asset(id: "b", type: "IMAGE")
+    ], for: "album")
+    api.setPreviewData(Data([1]), for: "a")
+    api.setPreviewData(Data([2]), for: "b")
+    api.setOriginalData(Data([10]), for: "a")
+    api.setOriginalData(Data([20]), for: "b")
+    let store = themeStore(quality: .preview)
+
+    let model = SlideshowViewModel(
+        api: api,
+        albumID: "album",
+        ticker: ticker,
+        settingsStore: store
+    )
+    await model.start()
+    #expect(model.currentAssetID == "a")
+    #expect(model.currentImageData == Data([1]))
+
+    store.settings.quality = .original
+    await model.advance()
+
+    #expect(model.currentAssetID == "b")
+    #expect(model.currentImageData == Data([20]))
+    #expect(api.originalCallCount(for: "b") == 1)
+}
+
+@MainActor
 private func themeStore(quality: ImageQuality) -> InMemoryThemeStore {
     InMemoryThemeStore(settings: ThemeSettings(order: .sequential, quality: quality))
 }

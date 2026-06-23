@@ -65,6 +65,26 @@ import ImmichClient
     #expect(await api.albumsCallCount == 1)
 }
 
+@Test func staysWhenInvalidResponsePreservesConnectionInputsAndClassifiesError() async {
+    let keychain = InMemoryKeychainStore()
+    let api = AlbumsAPI(result: .failure(ImmichError.invalidResponse))
+    let vm = makeVM(api: api, keychain: keychain)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    let invalidResponseMessage = ConnectionError.message(for: .invalidResponse)
+    #expect(vm.step == .connection)
+    #expect(keychain.read() == nil)
+    #expect(vm.serverURLInput == "https://photos.example.test")
+    #expect(vm.apiKeyInput == "key")
+    #expect(vm.errorMessage == invalidResponseMessage)
+    #expect(invalidResponseMessage != ConnectionError.message(for: .unreachable))
+    #expect(invalidResponseMessage != ConnectionError.message(for: .unauthorized))
+    #expect(await api.albumsCallCount == 1)
+}
+
 @Test func staysWhenKeychainSaveFails() async {
     let keychain = InMemoryKeychainStore(failSave: true)
     let api = AlbumsAPI(result: .success([Album(id: "a1", name: "Fam")]))

@@ -4,6 +4,10 @@ import Foundation
 final class InMemoryBrokerSettingsStore: BrokerSettingsStore, @unchecked Sendable {
     private var settings: BrokerSettings?
 
+    init(settings: BrokerSettings? = nil) {
+        self.settings = settings
+    }
+
     func save(_ settings: BrokerSettings) throws {
         if let error = settings.validate() {
             throw error
