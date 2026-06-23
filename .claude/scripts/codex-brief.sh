@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rendert ein Codex-Implementierungs-Briefing: festes Template + eingebetteter
-# git-Status und Diffstat.
+# Renders a Codex implementation briefing: fixed template + embedded git
+# status and diffstat.
 #
-# Benutzung: codex-brief.sh "<Task-Beschreibung>" [datei1] [datei2] ...
-# Gelistete Dateien sind die In-Scope-Liste. Alles andere ist Out of Scope.
+# Usage: codex-brief.sh "<task description>" [file1] [file2] ...
+# Listed files are the in-scope list. Everything else is out of scope.
 #
-# Optional: VERIFY_PACKAGE setzt das zu bauende/testende Swift-Paket
-# (Default: Packages/ImmichClient).
+# Optional: VERIFY_PACKAGE sets the Swift package to build/test
+# (default: Packages/ImmichClient).
 
 if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 \"<Task-Beschreibung>\" [datei1] [datei2] ..." >&2
+  echo "Usage: $0 \"<task description>\" [file1] [file2] ..." >&2
   exit 1
 fi
 
@@ -21,18 +21,18 @@ FILES=("$@")
 VERIFY_PACKAGE="${VERIFY_PACKAGE:-Packages/ImmichClient}"
 
 cat <<EOF
-# Codex-Implementierungs-Briefing
+# Codex Implementation Briefing
 
-## Aufgabe
+## Task
 
 $TASK
 
-## In-Scope-Dateien
+## In-Scope Files
 
 EOF
 
 if [ "${#FILES[@]}" -eq 0 ]; then
-  echo "(keine angegeben — Scope vor dem Editieren mit dem Orchestrator klären)"
+  echo "(none given — clarify scope with the orchestrator before editing)"
 else
   for f in "${FILES[@]}"; do
     echo "- $f"
@@ -43,14 +43,14 @@ cat <<'EOF'
 
 ## Out of Scope
 
-Alles, was oben nicht gelistet ist. Insbesondere NICHT anfassen:
-- `.specify/**` und `specs/**` (Konstitution, Spec/Plan/Tasks — Governance-Artefakte)
-- `*.xcodeproj/project.pbxproj` und Schemes (Projektstruktur)
-- Abhängigkeiten/Versionen in `Package.swift`, sofern nicht ausdrücklich in Scope
+Everything not listed above. In particular do NOT touch:
+- `.specify/**` and `specs/**` (constitution, spec/plan/tasks — governance artifacts)
+- `*.xcodeproj/project.pbxproj` and schemes (project structure)
+- Dependencies/versions in `Package.swift`, unless explicitly in scope
 - `CLAUDE.md`, `.claude/**`, `tdd-workflow.md`
-Keine neuen Drittbibliotheken hinzufügen, sofern nicht explizit beauftragt.
+Do not add new third-party libraries unless explicitly requested.
 
-## Aktueller Repo-Zustand
+## Current Repo State
 
 ### git status
 EOF
@@ -63,38 +63,38 @@ git diff --stat
 
 cat <<EOF
 
-## Verifikation (Codex: nur Unit-Tests, kein Simulator)
+## Verification (Codex: unit tests only, no simulator)
 
-Im Paketverzeichnis \`$VERIFY_PACKAGE\` ausführen und Erfolg bestätigen:
+Run in the package directory \`$VERIFY_PACKAGE\` and confirm success:
 
     swift build
     swift test
 
-Das ImmichClient-Modul ist Foundation-only und läuft ohne Simulator auf dem Host.
-Keine UI-/Integrationstests, die einen Simulator oder einen echten Server/Broker
-brauchen — die deckt der Orchestrator (Claude) über XcodeBuildMCP ab.
+The ImmichClient module is Foundation-only and runs without a simulator on the host.
+No UI/integration tests that need a simulator or a real server/broker — the
+orchestrator (Claude) covers those via XcodeBuildMCP.
 EOF
 
 cat <<'EOF'
 
-## Hausregeln (nicht verhandelbar)
+## House Rules (non-negotiable)
 
-- **TDD zuerst (Konstitution, NON-NEGOTIABLE).** Erst den fehlschlagenden Test
-  schreiben und rot sehen, dann die minimale Implementierung bis grün, dann
-  Refactor. Kein Implementierungscode ohne vorher roten Test.
-- **Nur die im Briefing gelisteten Dateien anfassen.** Werden weitere Dateien
-  nötig, stoppen und zurückmelden statt den Scope stillschweigend auszuweiten.
-- **Keine Secrets im Code/in UserDefaults/in Logs.** API-Key und
-  MQTT-Credentials gehören in den Keychain. Den API-Key niemals loggen.
-- **TLS-Validierung nicht deaktivieren.** Standard-URLSession über HTTPS; der
-  Server hat ein gültiges Zertifikat.
-- **Stagen nur mit expliziten Pfaden:** `git add <pfad>` je geänderter Datei.
-  Niemals `git add -A` oder `git add .`.
-- **Wenn `.git/index.lock` existiert:** Working Tree uncommitted lassen und
-  zurückmelden — den Lock nicht entfernen und den Commit nicht erzwingen.
-- **Nur Unit-Tests** (`swift test` auf dem Host) — keine Integrations-/UI-Tests
-  und keine externen Dienste.
-- **Harte 2-Runden-Grenze.** Eine Implement-Runde + eine Fix-Runde. Ist Runde
-  zwei nicht grün, war die Aufgabe unterspezifiziert — dann inline zu Ende
-  bringen, nicht ein drittes Mal briefen.
+- **TDD first (constitution, NON-NEGOTIABLE).** Write the failing test and see
+  it red first, then the minimal implementation until green, then refactor.
+  No implementation code without a previously red test.
+- **Only touch files listed in the briefing.** If more files turn out to be
+  needed, stop and report back instead of silently expanding scope.
+- **No secrets in code/UserDefaults/logs.** The API key and MQTT credentials
+  belong in the keychain. Never log the API key.
+- **Don't disable TLS validation.** Standard URLSession over HTTPS; the
+  server has a valid certificate.
+- **Stage only with explicit paths:** `git add <path>` per changed file.
+  Never `git add -A` or `git add .`.
+- **If `.git/index.lock` exists:** leave the working tree uncommitted and
+  report it — don't remove the lock and don't force the commit.
+- **Unit tests only** (`swift test` on the host) — no integration/UI tests
+  and no external services.
+- **Hard 2-round limit.** One implement round + one fix round. If round two
+  isn't green, the task was underspecified — finish it inline then, don't
+  brief a third time.
 EOF

@@ -1,35 +1,42 @@
-# TDD-Workflow
+# TDD Workflow
 
-Verbindlicher Loop für jedes Feature. Claude Code fährt ihn pro Task aus `tasks.md`.
+Binding loop for every feature. Claude Code runs it per task from `tasks.md`.
 
 ## Red → Green → Refactor
-1. **Red** — Test schreiben, der das gewünschte Verhalten beschreibt. Über XcodeBuildMCP ausführen → muss **fehlschlagen** (sonst testet er nichts).
-2. **Green** — minimale Implementierung, bis der Test grün ist. Nicht mehr als nötig.
-3. **Refactor** — aufräumen, Tests bleiben grün. Erst dann zum nächsten Task.
+1. **Red** — write a test describing the desired behavior. Run it via XcodeBuildMCP → it must
+   **fail** (otherwise it isn't testing anything).
+2. **Green** — minimal implementation until the test is green. Nothing more than necessary.
+3. **Refactor** — clean up, tests stay green. Only then move to the next task.
 
-Keine Implementierung ohne vorher fehlgeschlagenen Test. Kein Sprung über mehrere Tasks.
+No implementation without a previously failing test. No skipping across multiple tasks.
 
-## Teststufen
-- **Unit** (Schwerpunkt): Logik pro Modul, isoliert. Netzwerk/MQTT/Keychain hinter Protokollen mocken.
-- **Integration** (wenige, gezielt): echter Immich-Server / echter Broker. Nur lokal, nicht in jedem Lauf.
-- **UI/Preview**: SwiftUI-Previews zur visuellen Kontrolle (Apple-Xcode-MCP), keine Pflicht-Assertions.
+## Test Levels
+- **Unit** (main focus): logic per module, isolated. Mock network/MQTT/keychain behind
+  protocols.
+- **Integration** (few, targeted): real Immich server / real broker. Local only, not on every
+  run.
+- **UI/Preview**: SwiftUI previews for visual review (Apple Xcode MCP), no mandatory assertions.
 
-## Testbarkeit erzwingen
-- `ImmichAPI`-Protokoll → Live-Impl (URLSession) + Mock-Impl (feste Antworten) für Tests.
-- `KeychainStore`-Protokoll → echtes Keychain + In-Memory-Fake.
-- `MQTTTransport`-Protokoll → echter Client + Fake, der published Nachrichten aufzeichnet.
-- Zeit/Timer injizierbar (kein `Date()` direkt in der Logik), damit Slideshow-Timing deterministisch testbar ist.
+## Enforcing Testability
+- `ImmichAPI` protocol → live impl (URLSession) + mock impl (fixed responses) for tests.
+- `KeychainStore` protocol → real keychain + in-memory fake.
+- `MQTTTransport` protocol → real client + fake that records published messages.
+- Time/timer injectable (no `Date()` directly in logic), so slideshow timing is deterministically
+  testable.
 
-## Pro Modul: was zuerst getestet wird
-- **ImmichClient**: Album-JSON → Modelle parsen; Auth-Header gesetzt; Fehlerfälle (401, Timeout).
-- **SlideshowView (ViewModel)**: Reihenfolge, Mischen, Vorwärtsschalten nach Intervall, Prefetch-Auslösung.
-- **Onboarding**: Schritt-Validierung; Verbindungstest-Resultat → richtiger Folgeschritt; Key landet im Keychain.
-- **PowerManager**: Helligkeit clamped auf 0…1; Idle-Timer an/aus bei Start/Stop.
-- **ThemeSettings**: Persistenz round-trip; Defaults korrekt.
-- **HAControl**: Discovery-Payload korrekt aufgebaut; eingehender Command → richtige Aktion ausgelöst; LWT gesetzt.
+## Per Module: What Gets Tested First
+- **ImmichClient**: parsing album JSON → models; auth header set; error cases (401, timeout).
+- **SlideshowView (ViewModel)**: ordering, shuffling, advancing after interval, prefetch
+  triggering.
+- **Onboarding**: step validation; connection-test result → correct next step; key lands in the
+  keychain.
+- **PowerManager**: brightness clamped to 0…1; idle timer on/off at start/stop.
+- **ThemeSettings**: persistence round-trip; defaults correct.
+- **HAControl**: discovery payload built correctly; incoming command → correct action triggered;
+  LWT set.
 
-## Definition of Done (pro Task)
-- Test(s) grün über XcodeBuildMCP.
-- Keine Secrets im Code.
-- Constraints aus `CLAUDE.md` eingehalten.
-- Bei UI: Preview rendert ohne Crash.
+## Definition of Done (per task)
+- Test(s) green via XcodeBuildMCP.
+- No secrets in code.
+- Constraints from `CLAUDE.md` honored.
+- For UI: preview renders without crashing.

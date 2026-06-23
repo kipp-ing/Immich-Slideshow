@@ -1,8 +1,8 @@
 ---
-description: Rendert ein Codex-Implementierungs-Briefing für eine Aufgabe und ihre In-Scope-Dateien
+description: Renders a Codex implementation briefing for a task and its in-scope files
 ---
 
-Den Briefing-Renderer mit der Task-Beschreibung und den In-Scope-Dateipfaden aus
-den Argumenten ausführen und das Ergebnis zeigen:
+Run the briefing renderer with the task description and the in-scope file paths from
+the arguments, and show the result:
 
     .claude/scripts/codex-brief.sh $ARGUMENTS
