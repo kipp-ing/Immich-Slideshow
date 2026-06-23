@@ -116,7 +116,9 @@ hook in `.claude/settings.json`; the file is git-ignored). For the richer, narra
 - No dependency on the official Immich codebase.
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-`specs/010-settings-onboarding-ux/plan.md`
+Specs are organized as **one durable spec per module**, numbered in hundreds-blocks (`Nxx` per
+topic, with `N10/N20…` reserved for sub-specs). Start at `docs/spec-overview.md` for the map and
+reading order, then read the relevant module spec under `specs/Nxx-*/spec.md`. FR/SC IDs carry
+the full spec number (`FR-700-03`). There is no single "current plan" — each module spec is the
+source of truth for its area.
 <!-- SPECKIT END -->
