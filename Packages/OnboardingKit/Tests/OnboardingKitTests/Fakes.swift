@@ -2,22 +2,35 @@ import Foundation
 import OnboardingKit
 
 final class InMemoryConfigStore: ConfigStore, @unchecked Sendable {
-    private var configuration: AppConfiguration?
+    private var baseURL: URL?
+    private var selectedAlbumID: String?
 
     init(configuration: AppConfiguration? = nil) {
-        self.configuration = configuration
+        self.baseURL = configuration?.baseURL
+        self.selectedAlbumID = configuration?.selectedAlbumID
     }
 
     func load() -> AppConfiguration? {
-        configuration
+        guard let baseURL, let selectedAlbumID, !selectedAlbumID.isEmpty else { return nil }
+        return AppConfiguration(baseURL: baseURL, selectedAlbumID: selectedAlbumID)
+    }
+
+    func loadBaseURL() -> URL? {
+        baseURL
     }
 
     func save(_ configuration: AppConfiguration) {
-        self.configuration = configuration
+        baseURL = configuration.baseURL
+        selectedAlbumID = configuration.selectedAlbumID
+    }
+
+    func saveBaseURL(_ baseURL: URL) {
+        self.baseURL = baseURL
     }
 
     func clear() {
-        configuration = nil
+        baseURL = nil
+        selectedAlbumID = nil
     }
 }
 

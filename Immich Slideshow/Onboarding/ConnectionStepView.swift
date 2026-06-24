@@ -4,8 +4,7 @@
 //
 //  Step 1 (merged): enter the server URL and API key on one screen. A single
 //  Continue validates reachability AND authorization in one action (010), then
-//  advances to album selection. The shared-album-link row is a reserved, inert
-//  placeholder for a future feature (spec 011) — visible but disabled.
+//  advances to the add-source step (album or shared link, 120).
 //
 
 import OnboardingKit
@@ -41,19 +40,6 @@ struct ConnectionStepView: View {
                 Text("API Key")
             } footer: {
                 Text("Create one in Immich under Account Settings → API Keys.")
-            }
-
-            Section {
-                HStack {
-                    Label("Shared album link", systemImage: "link")
-                    Spacer()
-                    Text("Coming soon")
-                        .foregroundStyle(.tertiary)
-                }
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("onboarding.sharedLinkPlaceholder")
-            } footer: {
-                Text("Using a shared album link will be available in a future update.")
             }
 
             if let errorMessage = viewModel.errorMessage {

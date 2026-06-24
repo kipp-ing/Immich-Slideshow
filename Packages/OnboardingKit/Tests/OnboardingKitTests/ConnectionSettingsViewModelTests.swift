@@ -251,6 +251,11 @@ private final class CountingConfigStore: ConfigStore, @unchecked Sendable {
         self.configuration = configuration
     }
 
+    func saveBaseURL(_ baseURL: URL) {
+        guard let configuration else { return }
+        self.configuration = AppConfiguration(baseURL: baseURL, selectedAlbumID: configuration.selectedAlbumID)
+    }
+
     func clear() {
         configuration = nil
     }

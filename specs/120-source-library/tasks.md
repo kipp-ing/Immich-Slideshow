@@ -12,6 +12,31 @@ preceded by a red Swift Testing (host) or XCUITest task; no code before a demons
 
 **Organization**: by user story (US1–US4 from spec.md). Setup + Foundational are shared prerequisites.
 
+## Progress (2026-06-24, cont.) — US2 onboarding redesign DONE
+
+- **US2 onboarding redesign done & verified** (T017, T019, T021, T022): the onboarding flow is now
+  connection → **add source** (`Immich Slideshow/Onboarding/SourceStepView.swift`: segmented album
+  picker / shared-link URL+password form, reusing `SourceLibraryViewModel`) → **confirm**
+  (`OnboardingConfirmStepView` lists the library, marks the active source, Start) → slideshow. The
+  `.album` onboarding step was renamed `.source` and a `.confirm` step added (`OnboardingStep`).
+- **Logic generalized off `selectedAlbumID`** (plan: "superseded by the library"): added
+  `ConfigStore.saveBaseURL` (base URL persisted at connection so a shared-link-first install with no
+  album still resolves); `StartupGate` now takes a `SourceLibraryStore` and routes `.done` on
+  key+baseURL+active-source, `.source` when connected but no source, else `.connection` (legacy
+  `selectedAlbumID` still migrates to `.done`); `OnboardingViewModel.submitConnection` persists the
+  base URL and advances to `.source` even with zero albums; `finish()` keeps `AppConfiguration`
+  populated for an album active source (HA album list / 009 re-select stay working) and needs only the
+  base URL for a shared-link source. App: `resolveActiveSource`/`makeServerAPI` use `loadBaseURL`.
+- **Verification**: OnboardingKit **76 host tests** green; app builds clean; **full XCUITest suite 30
+  + launch runs green** including new `SourceOnboardingUITests` (album + shared-link onboarding both
+  reach the running slideshow with the chosen source's photos). Fixed a continue-button race (wait for
+  `onboarding.source.continue` to exist before tapping). Source step screenshotted (portrait). New
+  `--uitest-onboarding-source` visual-verification seam; uitest seam reworked so onboarding + the
+  slideshow share one set of in-memory stores (an onboarded source flows into the show).
+- **Resume here → US3 (HA) T023–T026**, then US4 (persistence/secret gate) T027–T029, then polish
+  T030–T033 (incl. moving source management/select from Roadmap to Active in 200/700 specs +
+  `docs/spec-overview.md`; secret grep; real-link end-to-end). Then carried-over 300/500 items.
+
 ## Progress (2026-06-24) — branch `feat/120-source-library`
 
 - **Done & verified**: T001–T016 (Setup + all Foundational + **US1 complete**). OnboardingKit 54
@@ -131,20 +156,21 @@ source's photos show; switching active swaps to the other source's photos.
 **Independent test**: onboarding adds a first source and completes; Settings adds a second, switches,
 removes; confirmation lists the library with the active one marked.
 
-- [ ] T017 [P] [US2] Red XCUITest: onboarding "add source" (album pick or shared-link form) → confirm
+- [X] T017 [P] [US2] Red XCUITest: onboarding "add source" (album pick or shared-link form) → confirm
   → slideshow runs the chosen source, in `Immich SlideshowUITests/SourceOnboardingUITests.swift`
 - [X] T018 [P] [US2] Red XCUITest: Settings → Sources manager adds a second source, switches active,
   removes one; running slideshow swaps on switch, in `Immich SlideshowUITests/SourceLibraryUITests.swift`
-- [ ] T019 [US2] Build the onboarding add-source step (album picker reusing `AlbumBrowserView`, or a
-  shared-link URL+password form) in `Immich Slideshow/Onboarding/SourceStepView.swift` (+ wire into
-  `OnboardingFlowView`)
+- [X] T019 [US2] Build the onboarding add-source step (album picker / shared-link URL+password form)
+  in `Immich Slideshow/Onboarding/SourceStepView.swift` (+ wire into `OnboardingFlowView`)
 - [X] T020 [US2] Build the Settings **Sources** manager (list + add/remove/reorder/rename/set-active,
   unique-label enforced) in `Immich Slideshow/Slideshow/SourceLibraryView.swift` and surface it in
   `Immich Slideshow/Slideshow/SlideshowSettingsView.swift`
-- [ ] T021 [US2] Make the onboarding confirmation list the library and mark the active source
-- [~] T022 [US2] Green T017/T018 via XcodeBuildMCP/XCUITest; screenshot portrait + landscape
-  — T018 green + full UITest suite (19) green; Sources manager screenshotted portrait + landscape.
-  T017 (onboarding XCUITest) still pending with the onboarding redesign.
+- [X] T021 [US2] Make the onboarding confirmation list the library and mark the active source
+  (`OnboardingConfirmStepView` in `SourceStepView.swift`)
+- [X] T022 [US2] Green T017/T018 via XcodeBuildMCP/XCUITest; screenshot portrait + landscape
+  — full XCUITest suite 30 + launch runs green (incl. `SourceOnboardingUITests`); Sources manager +
+  onboarding source step screenshotted (Settings manager portrait+landscape earlier; source step
+  portrait). Landscape Form reachability guarded by `SettingsUITests`.
 
 **Checkpoint**: full source management from onboarding + Settings.
 

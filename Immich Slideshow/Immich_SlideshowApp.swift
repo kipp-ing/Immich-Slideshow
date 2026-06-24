@@ -71,22 +71,37 @@ struct Immich_SlideshowApp: App {
         // real keychain — so the UI walkthrough is deterministic and CI-safe. The
         // production path below is untouched.
         if UITestSupport.isActive {
-            let uitestViewModel = UITestSupport.makeViewModel()
-            // Optional fast path for manual/visual verification: skip onboarding and
-            // launch straight into the stubbed slideshow (used to screenshot the
-            // running show, incl. landscape centering). Additive — the default
-            // `--uitest` path still starts at onboarding step 1.
-            if ProcessInfo.processInfo.arguments.contains("--uitest-slideshow") {
-                uitestViewModel.step = .done
-            }
-            _viewModel = State(initialValue: uitestViewModel)
-            // Hermetic source library (120): one album source active by default. The
-            // Sources-manager UITest adds/switches/removes against this in-memory store,
-            // and switching swaps the running stub slideshow's album (a1 → a2) so the
-            // photo visibly changes. Stub resolver maps any shared link to album a2.
-            let sourceStore = InMemorySourceLibraryStore(library: UITestSupport.seededLibrary())
+            // One shared set of in-memory stores backs both onboarding and the slideshow,
+            // so a source added during onboarding flows into the running show (120, US2).
+            let config = InMemoryConfigStore()
+            let keychain = InMemoryKeychainStore()
+            let sourceStore = InMemorySourceLibraryStore()
             let secretStore = InMemorySharedLinkSecretStore()
             let resolver = UITestSharedLinkResolver()
+
+            let uitestViewModel = OnboardingViewModel(
+                api: { _ in StubImmichAPI() },
+                config: config,
+                keychain: keychain,
+                sourceStore: sourceStore
+            )
+            // Optional fast path for manual/visual verification and the Settings/chrome
+            // tests: seed a complete state (key + base URL + one active album source) and
+            // jump straight into the stubbed slideshow. The default `--uitest` path leaves
+            // the stores empty so onboarding drives the first source itself.
+            if ProcessInfo.processInfo.arguments.contains("--uitest-slideshow") {
+                config.save(AppConfiguration(baseURL: URL(string: "https://photos.example.test")!, selectedAlbumID: "a1"))
+                try? keychain.save("uitest-key")
+                sourceStore.save(UITestSupport.seededLibrary())
+                uitestViewModel.step = .done
+            } else if ProcessInfo.processInfo.arguments.contains("--uitest-onboarding-source") {
+                // Visual-verification seam: jump straight to the add-source step with the
+                // connection already validated (the step loads the stub albums itself).
+                config.saveBaseURL(URL(string: "https://photos.example.test")!)
+                try? keychain.save("uitest-key")
+                uitestViewModel.step = .source
+            }
+            _viewModel = State(initialValue: uitestViewModel)
             let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
                 var library = sourceStore.load()
                 let previous = library.active
@@ -127,12 +142,13 @@ struct Immich_SlideshowApp: App {
         let viewModel = OnboardingViewModel(
             api: { serverConfig in ImmichClient(config: serverConfig) },
             config: config,
-            keychain: keychain
+            keychain: keychain,
+            sourceStore: sourceStore
         )
 
-        // Resume at the first missing step on launch; only a complete state
-        // (config + key) routes straight to the slideshow (FR-001/FR-011).
-        viewModel.step = StartupGate(config: config, keychain: keychain).initialStep()
+        // Resume at the first missing step on launch; a complete state (key + base URL +
+        // an active source) routes straight to the slideshow (FR-001/FR-011, 120).
+        viewModel.step = StartupGate(config: config, keychain: keychain, sourceStore: sourceStore).initialStep()
 
         _viewModel = State(initialValue: viewModel)
 
@@ -141,10 +157,10 @@ struct Immich_SlideshowApp: App {
         // client here; they are never logged or persisted elsewhere (Konstitution III).
         // nil when state is incomplete or the active source fails to resolve.
         let resolveActiveSource: @MainActor @Sendable () async -> ResolvedSource? = {
-            guard let appConfig = config.load(), let apiKey = keychain.read(),
+            guard let baseURL = config.loadBaseURL(), let apiKey = keychain.read(),
                   let active = sourceStore.load().active else { return nil }
             let resolver = ActiveSourceResolver(
-                albumBaseURL: appConfig.baseURL,
+                albumBaseURL: baseURL,
                 apiKey: apiKey,
                 secretStore: secretStore,
                 sharedLinkResolver: sharedLinkResolver
@@ -172,8 +188,8 @@ struct Immich_SlideshowApp: App {
         // Server API-key client, independent of the active source — the Settings source
         // manager lists the server's albums even when the active source is a shared link.
         let makeServerAPI: @MainActor @Sendable () async -> (any ImmichAPI)? = {
-            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
-            return ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+            guard let baseURL = config.loadBaseURL(), let apiKey = keychain.read() else { return nil }
+            return ImmichClient(config: ServerConfig(baseURL: baseURL, apiKey: apiKey))
         }
 
         // Switch the active source and persist it; report how the running slideshow
@@ -328,7 +344,13 @@ private struct RootView: View {
                     }
             }
         } else {
-            OnboardingFlowView(viewModel: onboarding)
+            // Onboarding's source/confirm steps write the same persisted library the app
+            // resolves the active source from. No running slideshow yet, so the switch
+            // callback is a no-op (120, US2).
+            OnboardingFlowView(
+                viewModel: onboarding,
+                makeSourceLibrary: { factories.makeSourceLibraryViewModel { _ in } }
+            )
         }
     }
 
@@ -398,14 +420,6 @@ private struct RootView: View {
 enum UITestSupport {
     static var isActive: Bool {
         ProcessInfo.processInfo.arguments.contains("--uitest")
-    }
-
-    static func makeViewModel() -> OnboardingViewModel {
-        OnboardingViewModel(
-            api: { _ in StubImmichAPI() },
-            config: InMemoryConfigStore(),
-            keychain: InMemoryKeychainStore()
-        )
     }
 
     /// One album source ("Wohnzimmer" → album a1), active. The Sources-manager UITest
@@ -535,11 +549,21 @@ private struct StubImmichAPI: ImmichAPI {
 
 private final class InMemoryConfigStore: ConfigStore, @unchecked Sendable {
     private let lock = NSLock()
-    private var stored: AppConfiguration?
+    private var baseURL: URL?
+    private var selectedAlbumID: String?
 
-    func load() -> AppConfiguration? { lock.withLock { stored } }
-    func save(_ configuration: AppConfiguration) { lock.withLock { stored = configuration } }
-    func clear() { lock.withLock { stored = nil } }
+    func load() -> AppConfiguration? {
+        lock.withLock {
+            guard let baseURL, let selectedAlbumID, !selectedAlbumID.isEmpty else { return nil }
+            return AppConfiguration(baseURL: baseURL, selectedAlbumID: selectedAlbumID)
+        }
+    }
+    func loadBaseURL() -> URL? { lock.withLock { baseURL } }
+    func save(_ configuration: AppConfiguration) {
+        lock.withLock { baseURL = configuration.baseURL; selectedAlbumID = configuration.selectedAlbumID }
+    }
+    func saveBaseURL(_ baseURL: URL) { lock.withLock { self.baseURL = baseURL } }
+    func clear() { lock.withLock { baseURL = nil; selectedAlbumID = nil } }
 }
 
 private final class InMemoryKeychainStore: KeychainStore, @unchecked Sendable {

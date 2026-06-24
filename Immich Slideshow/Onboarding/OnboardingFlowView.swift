@@ -2,15 +2,23 @@
 //  OnboardingFlowView.swift
 //  Immich Slideshow
 //
-//  Three-step first-run setup: server URL -> API key -> album. Drives the
-//  OnboardingViewModel; the app shows the slideshow once step == .done.
+//  First-run setup: server URL + API key -> add a source (album or shared link) ->
+//  confirm -> slideshow. Drives the OnboardingViewModel; the source/confirm steps also
+//  bind a SourceLibraryViewModel that writes the persisted library shared with the app.
+//  Routing to the main screen happens at the app level once step == .done.
 //
 
 import OnboardingKit
 import SwiftUI
 
 struct OnboardingFlowView: View {
-    @Bindable var viewModel: OnboardingViewModel
+    let viewModel: OnboardingViewModel
+    @State private var sourceLibrary: SourceLibraryViewModel
+
+    init(viewModel: OnboardingViewModel, makeSourceLibrary: () -> SourceLibraryViewModel) {
+        self.viewModel = viewModel
+        _sourceLibrary = State(initialValue: makeSourceLibrary())
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,8 +26,10 @@ struct OnboardingFlowView: View {
                 switch viewModel.step {
                 case .connection:
                     ConnectionStepView(viewModel: viewModel)
-                case .album:
-                    AlbumStepView(viewModel: viewModel)
+                case .source:
+                    SourceStepView(onboarding: viewModel, sourceLibrary: sourceLibrary)
+                case .confirm:
+                    OnboardingConfirmStepView(onboarding: viewModel, sourceLibrary: sourceLibrary)
                 case .done:
                     // Routing to the main screen happens at the app level.
                     EmptyView()
