@@ -79,6 +79,11 @@ import Observation
             .unreachable
         case .invalidResponse:
             .invalidResponse
+        case .invalidShareLink, .shareLinkExpired, .wrongPassword, .passwordRequired:
+            // Shared-link-specific errors cannot arise from API-key connection validation;
+            // treat them as an unexpected response here. The source library surfaces them
+            // through its own shared-link flow (120).
+            .invalidResponse
         }
     }
 }
