@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-24
 
-**Status**: Draft — scheduled (active development target)
+**Status**: Scheduled — approved 2026-06-24 (active development target)
 
 **Input**: User request: save several slideshow sources (Immich albums and shared/public album
 links) as one library, switch which one is playing, and expose that switch in the Home Assistant
@@ -179,17 +179,17 @@ shared-link password never appears in UserDefaults/logs.
 
 ## Open Questions
 
-1. **Password-protected shared links**: The unprotected slug→key→assets path is verified against the
-   running server (Immich 2.7.5, see `110`). The exact mechanism for *protected* links —
-   `me?slug=<slug>&password=<pw>` returning the key vs. a separate validation/auth call — is **not yet
-   verified** (no protected link was available). Resolve in `/speckit-clarify` against a protected
-   test link before the shared-link slice is built.
-2. **HA select disambiguation**: How to make the select options unambiguous when two sources share a
-   label (append kind, append an index, or require unique labels in the UI).
-3. **Slug→key freshness**: Re-resolve a shared-link slug to its key on each launch (tolerates a
-   rotated key) versus caching the resolved key; trade-off between extra calls and resilience.
-4. **Label source of truth**: Default a source's label from the album/shared-link name, with an
-   optional user override — confirm whether overrides are needed for v1.
+1. **Password-protected shared links**: RESOLVED — verified against the running server (Immich 2.7.5,
+   see `110`). Both the unprotected and protected paths are confirmed: a protected link's password is
+   supplied once as `me?slug=<slug>&password=<pw>` to obtain the key, and all later asset calls use the
+   key alone. The remaining questions below are plan-stage design decisions, not blockers.
+2. **HA select disambiguation** *(decide in `/speckit-plan`)*: How to make the select options
+   unambiguous when two sources share a label (append kind, append an index, or require unique labels
+   in the UI).
+3. **Slug→key freshness** *(decide in `/speckit-plan`)*: Re-resolve a shared-link slug to its key on
+   each launch (tolerates a rotated/expired key) versus caching the resolved key.
+4. **Label source of truth** *(decide in `/speckit-plan`)*: Default a source's label from the
+   album/shared-link name, with an optional user override — confirm whether overrides are needed for v1.
 
 ## Assumptions
 

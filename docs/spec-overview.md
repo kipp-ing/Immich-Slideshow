@@ -70,9 +70,9 @@ below); the rest remain unscheduled.
 
 **Scheduled (not deferred):**
 - `120` Source library — save several switchable sources (albums + shared links), one active at a
-  time; surfaced in `200` and `700`. Unprotected shared-link mechanics verified against Immich 2.7.5.
-- `110` Shared album link source (+ optional password) — a source kind feeding `120`; unprotected
-  path verified, protected-password mechanism still to clarify.
+  time; surfaced in `200` and `700`. Spec approved; shared-link mechanics verified against Immich 2.7.5.
+- `110` Shared album link source (+ optional password) — a source kind feeding `120`; both unprotected
+  and password-protected paths verified against Immich 2.7.5.
 
 **Reserved sub-specs / future sources:**
 - `730` HA sleep/wake driven by an HA presence signal (pairs with the 400 sleep/wake roadmap item).

@@ -6,8 +6,8 @@
 
 **Updated**: 2026-06-24
 
-**Status**: Scheduled — a source kind feeding `120` (source library). The unprotected path is
-verified against the running server (Immich 2.7.5); the password-protected path remains unverified.
+**Status**: Scheduled — a source kind feeding `120` (source library). Both the unprotected and the
+password-protected paths are verified against the running server (Immich 2.7.5).
 
 **Input**: Reserved sub-spec distilled from `specs/011-shared-album-link/spec.md`: Immich
 shared/public album link support as an alternative slideshow source, with optional password and
@@ -31,10 +31,21 @@ instead of the `x-api-key` header:
    `GET /api/assets/{id}/original?key=<key>` → original bytes (HEIC in the sample). The same requests
    **without** `?key=` return 401, confirming the key is the bearer for unauthenticated shared access.
 
+**Password-protected links** (verified against a protected link with an `expiresAt` set): without the
+password, `GET /api/shared-links/me?slug=<slug>` returns 401. Supplying the password as a query
+parameter — `GET /api/shared-links/me?slug=<slug>&password=<pw>` — returns 200 with the same shape
+including the real `key` (the server also sets an `immich_shared_link_token` cookie, which the app
+does not need). The password is required **only** at this resolve step; every later
+`albums/{id}?key=` and `assets/{id}/...?key=` call uses the key alone — no password or cookie. A
+wrong or missing password yields 401, distinct from an unreachable server. The 200 `me` response
+echoes the submitted password back in its body, so the whole `me` response is sensitive and MUST NOT
+be logged.
+
 Implications for the source/transport abstraction (topic 100): `ImmichClient` needs a share-key auth
 mode (`?key=` query) alongside the existing API-key header mode; the shared-link source stores the
 base URL + slug (non-secret, from the pasted URL) and re-resolves to the key, and any password is a
-Keychain secret. Originals can be HEIC, so prefer the `preview` (JPEG) path for display.
+Keychain secret supplied only at the resolve step. Links may carry an `expiresAt`, so an expired link
+must surface a distinct error. Originals can be HEIC, so prefer the `preview` (JPEG) path for display.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -103,10 +114,10 @@ The future shared-link entry becomes functional from both the combined onboardin
 
 ## Open Questions
 
-1. **Immich mechanism**: RESOLVED for unprotected links (see Verified mechanics — slug resolves via
-   `me?slug=`, assets via `albums/{id}?key=`, images via `?key=`). REMAINING: how the password is
-   supplied for *protected* links (`me?slug=<slug>&password=<pw>` returning the key vs. a separate
-   validation/auth call) — not yet verified against a protected test link.
+1. **Immich mechanism**: RESOLVED for both unprotected and protected links (see Verified mechanics).
+   Unprotected: slug resolves via `me?slug=`, assets via `albums/{id}?key=`, images via `?key=`.
+   Protected: the password is supplied once as `me?slug=<slug>&password=<pw>` to obtain the key; all
+   later calls use the key alone. Verified against the running server.
 2. **Secret classification**: RESOLVED — when present, the shared-link password is a true secret and
    is stored in the Keychain. The slug is non-secret (it is in the pasted URL); the resolved key token
    is a sensitive bearer and MUST never be logged.
