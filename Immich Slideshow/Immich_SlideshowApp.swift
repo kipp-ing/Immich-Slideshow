@@ -29,15 +29,21 @@ struct Immich_SlideshowApp: App {
     private let factories: Factories
 
     struct Factories: Sendable {
-        // Built lazily at the `.done` route: reads the saved config + Keychain key and
-        // constructs an authenticated slideshow. Returns nil only if state is somehow
-        // incomplete (the StartupGate normally prevents reaching `.done` without it).
-        // The shared ThemeSettingsStore is injected so the engine reads live display
-        // preferences (008); the same instance backs the settings UI.
-        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel?
+        // Built lazily at the `.done` route: reads the saved config + Keychain key,
+        // resolves the **active source** (album or shared link) into a ServerConfig +
+        // album, and constructs an authenticated slideshow. `async` because resolving a
+        // shared link hits the network (120). Returns nil only if state is incomplete
+        // or the active source fails to resolve. The shared ThemeSettingsStore is
+        // injected so the engine reads live display preferences (008); the same
+        // instance backs the settings UI.
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) async -> SlideshowViewModel?
         // The authenticated Immich client for UI that browses beyond the active
-        // album (the album-browser sheet). Same config/key as the slideshow.
-        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)?
+        // album (the album-browser sheet). Built from the active source (120).
+        let makeAPI: @MainActor @Sendable () async -> (any ImmichAPI)?
+        // Persist a new active source and report how the running slideshow should
+        // restart: album→album swaps the album on the same client; anything involving a
+        // shared link rebuilds (120, US1). nil = no restart (unknown or already active).
+        let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy?
         // Keeps the display awake during the slideshow and can control brightness.
         // Backed by the live screen in production, a fake under `--uitest` so the
         // hermetic test never touches real device brightness.
@@ -70,6 +76,7 @@ struct Immich_SlideshowApp: App {
             factories = Factories(
                 makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store) },
                 makeAPI: { @MainActor @Sendable in StubImmichAPI() },
+                switchActiveSource: { @MainActor @Sendable _ in nil },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
                 makeCoordinator: { @MainActor @Sendable _, _ in nil },
                 makeConnectionSettingsViewModel: { @MainActor @Sendable in UITestSupport.makeConnectionSettingsViewModel() },
@@ -81,6 +88,12 @@ struct Immich_SlideshowApp: App {
 
         let config = UserDefaultsConfigStore()
         let keychain = KeychainAPIKeyStore()
+        // Source library (120): the persisted list of slideshow sources and the active
+        // one. `load()` migrates a legacy `selectedAlbumID` into a one-entry album
+        // library on first read, so existing installs keep working unchanged.
+        let sourceStore = UserDefaultsSourceLibraryStore()
+        let secretStore = KeychainSharedLinkSecretStore()
+        let sharedLinkResolver = SharedLinkResolver()
         let brokerStore = KeychainBrokerSettingsStore()
         let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "immich-slideshow-device"
         let brokerProvider = BrokerConfigProvider(settingsStore: brokerStore, deviceID: deviceID)
@@ -96,26 +109,50 @@ struct Immich_SlideshowApp: App {
 
         _viewModel = State(initialValue: viewModel)
 
-        // The API key stays in the Keychain and is only handed to the client here;
-        // it is never logged or persisted elsewhere (Konstitution III).
-        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel? = { settingsStore in
-            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
-            let client = ImmichClient(
-                config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey)
+        // Resolve the active source into a ServerConfig (auth) + album. The API key and
+        // any shared-link password stay in the Keychain and are only handed to the
+        // client here; they are never logged or persisted elsewhere (Konstitution III).
+        // nil when state is incomplete or the active source fails to resolve.
+        let resolveActiveSource: @MainActor @Sendable () async -> ResolvedSource? = {
+            guard let appConfig = config.load(), let apiKey = keychain.read(),
+                  let active = sourceStore.load().active else { return nil }
+            let resolver = ActiveSourceResolver(
+                albumBaseURL: appConfig.baseURL,
+                apiKey: apiKey,
+                secretStore: secretStore,
+                sharedLinkResolver: sharedLinkResolver
             )
+            return try? await resolver.resolve(active)
+        }
+
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) async -> SlideshowViewModel? = { settingsStore in
+            guard let resolved = await resolveActiveSource() else { return nil }
             return SlideshowViewModel(
-                api: client,
-                albumID: appConfig.selectedAlbumID,
+                api: ImmichClient(config: resolved.serverConfig),
+                albumID: resolved.albumID,
                 ticker: RealTicker(),
                 settingsStore: settingsStore
             )
         }
 
-        // Authenticated client for the album browser; nil only if state is somehow
-        // incomplete (same guard as the slideshow factory).
-        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)? = {
-            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
-            return ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+        // Authenticated client for the album browser, built from the active source;
+        // nil only if state is incomplete or resolve fails (same guard as the slideshow).
+        let makeAPI: @MainActor @Sendable () async -> (any ImmichAPI)? = {
+            guard let resolved = await resolveActiveSource() else { return nil }
+            return ImmichClient(config: resolved.serverConfig)
+        }
+
+        // Switch the active source and persist it; report how the running slideshow
+        // should restart (120, US1). Returns nil when the id is unknown or already
+        // active, so callers skip an unnecessary restart.
+        let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
+            var library = sourceStore.load()
+            let previous = library.active
+            guard previous?.id != id, library.sources.contains(where: { $0.id == id }) else { return nil }
+            library.setActive(id: id)
+            sourceStore.save(library)
+            guard let next = library.active else { return nil }
+            return SourceLibrary.restartStrategy(from: previous, to: next)
         }
 
         // Production: drive the real device screen. The PowerManager gates all
@@ -162,11 +199,17 @@ struct Immich_SlideshowApp: App {
         let saveSelectedAlbum: @MainActor @Sendable (String) -> Void = { albumID in
             guard let appConfig = config.load() else { return }
             config.save(AppConfiguration(baseURL: appConfig.baseURL, selectedAlbumID: albumID))
+            // Keep the source library in sync: the 009 album re-selection repoints the
+            // active album source so the resolved slideshow picks up the new album.
+            var library = sourceStore.load()
+            library.updateActiveAlbumID(albumID)
+            sourceStore.save(library)
         }
 
         factories = Factories(
             makeSlideshow: makeSlideshow,
             makeAPI: makeAPI,
+            switchActiveSource: switchActiveSource,
             makePowerManager: makePowerManager,
             makeCoordinator: makeCoordinator,
             makeConnectionSettingsViewModel: makeConnectionSettingsViewModel,
@@ -232,9 +275,9 @@ private struct RootView: View {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        slideshow = factories.makeSlideshow(themeStore)
+                        slideshow = await factories.makeSlideshow(themeStore)
                         powerManager = factories.makePowerManager()
-                        api = factories.makeAPI()
+                        api = await factories.makeAPI()
                     }
             }
         } else {
@@ -247,20 +290,36 @@ private struct RootView: View {
     /// first prompts for a new album (the old selection no longer exists), then rebuilds;
     /// `.success` rebuilds straight away. Failure outcomes never reach here.
     private func handleConnectionChange(_ outcome: ConnectionValidationOutcome) {
-        api = factories.makeAPI()
         if case .albumMissing = outcome {
+            Task { api = await factories.makeAPI() }
             showAlbumReselect = true
         } else {
             rebuildSlideshow()
         }
     }
 
-    /// Rebuild the slideshow view model from the updated stores and bump the generation
-    /// so SlideshowView is recreated and its `.task` re-runs `start()` against the new
-    /// connection — no return to onboarding.
+    /// Switch the active source (120, US1): persist it and restart the running show —
+    /// `switchAlbum` when only the album changes, a full rebuild when the client/auth
+    /// changes (album↔shared link). No-op when the id is unknown or already active.
+    func switchSource(id: String) {
+        guard let strategy = factories.switchActiveSource(id) else { return }
+        switch strategy {
+        case let .switchAlbum(albumID):
+            Task { await slideshow?.switchAlbum(albumID) }
+        case .rebuild:
+            rebuildSlideshow()
+        }
+    }
+
+    /// Rebuild the slideshow view model (and the API client) from the updated stores and
+    /// bump the generation so SlideshowView is recreated and its `.task` re-runs `start()`
+    /// against the new connection/source — no return to onboarding.
     private func rebuildSlideshow() {
-        slideshow = factories.makeSlideshow(themeStore)
-        connectionGeneration += 1
+        Task {
+            slideshow = await factories.makeSlideshow(themeStore)
+            api = await factories.makeAPI()
+            connectionGeneration += 1
+        }
     }
 
     private static func makeThemeStore() -> UserDefaultsThemeStore {

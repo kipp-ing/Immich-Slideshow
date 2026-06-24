@@ -94,6 +94,33 @@ public struct SourceLibrary: Codable, Sendable, Equatable {
         activeID = id
     }
 
+    /// Repoint the active source to a new album, if it is an album source. Keeps the
+    /// library in sync with the 009 connection-change album re-selection (which only
+    /// applies to album sources; shared links carry their own album). No-op otherwise.
+    public mutating func updateActiveAlbumID(_ albumID: String) {
+        guard
+            let activeID,
+            let index = sources.firstIndex(where: { $0.id == activeID }),
+            case .album = sources[index].kind
+        else {
+            return
+        }
+
+        sources[index].kind = .album(albumID: albumID)
+    }
+
+    /// How a running slideshow should restart when the active source changes from
+    /// `previous` to `next`. Album→album keeps the same authenticated client and only
+    /// swaps the album (cheap); anything touching a shared link changes the auth
+    /// (`apiKey`↔`shareKey`) and needs a full client rebuild.
+    public static func restartStrategy(from previous: Source?, to next: Source) -> SourceRestartStrategy {
+        if case let .album(albumID) = next.kind,
+           let previous, case .album = previous.kind {
+            return .switchAlbum(albumID: albumID)
+        }
+        return .rebuild
+    }
+
     private static func isValidLabel(_ label: String) -> Bool {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }

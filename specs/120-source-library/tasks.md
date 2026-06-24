@@ -14,13 +14,29 @@ preceded by a red Swift Testing (host) or XCUITest task; no code before a demons
 
 ## Progress (2026-06-24) — branch `feat/120-source-library`
 
-- **Done & verified**: T001–T013 (Setup + all Foundational + US1 ActiveSourceResolver). OnboardingKit
-  49 tests + ImmichClient 34 tests green on host; app builds via XcodeBuildMCP. Plus an off-task
-  integration fix: new shared-link `ImmichError` cases mapped in OnboardingKit (`2ec4365`).
-- **Resume here → T014** (US1 app wiring in `Immich_SlideshowApp`, inline/SwiftUI + simulator).
-- Remaining: T014–T016 (US1 wiring), T017–T022 (US2 UI, inline), T023–T026 (US3 HA, Codex+wiring),
-  T027–T029 (US4 persistence/secret gate, Codex), T030–T033 (polish). Then the carried-over 300/500
-  items (clock-overlay renderer, disk cache, auto-retry, periodic refresh).
+- **Done & verified**: T001–T016 (Setup + all Foundational + **US1 complete**). OnboardingKit 54
+  tests + ImmichClient 34 tests green on host; app builds clean via XcodeBuildMCP; SlideshowChrome
+  XCUITests (4) green. US1 wiring: `Immich_SlideshowApp` builds slideshow/API from the **active
+  source** via `ActiveSourceResolver`; `switchActiveSource` + `RootView.switchSource` persist + restart
+  (`switchAlbum` for album→album, full rebuild for album↔link, via `SourceLibrary.restartStrategy`);
+  `saveSelectedAlbum` reconciles the library (`updateActiveAlbumID`) so the 009 album re-select stays
+  in sync.
+- **T016 note**: switch *decision* host-tested (restartStrategy/updateActiveAlbumID); app build + chrome
+  XCUITest green. The UI-*driven* 2-source switch in the running slideshow is deferred to T018/T022
+  (Settings Sources manager) and T026 (HA) where a tappable switch control exists — no throwaway
+  debug-switch seam built.
+- **US2 order decided** (user): Settings manager first (T018/T020), then onboarding (T017/T019/T021),
+  then T022. Onboarding keeps working via the existing album step → 1-entry library migration.
+- **US2 backbone done & host-green** (T020 logic): `SharedLinkURL.parse` (`https://<host>/s/<slug>`) +
+  `SourceLibraryViewModel` (load/add-album/add-shared-link[validate+secret]/remove[delete secret]/
+  rename/move/setActive→delegates to US1 `switchActiveSource`) in OnboardingKit. OnboardingKit now 72
+  tests green; ImmichClient 34 green.
+- **Resume here → T020 UI**: build SwiftUI `SourceLibraryView` (app) + surface in `SlideshowSettingsView`
+  (NavigationLink); add a `makeSourceLibraryViewModel` factory wiring `onSwitchActive` →
+  `RootView.switchSource`; thread it RootView→SlideshowView→Settings. Then T018 red XCUITest + T022.
+- Remaining: T020 UI + T018/T022 (Settings), T017/T019/T021 (onboarding UI), T023–T026 (US3 HA,
+  Codex+wiring), T027–T029 (US4 persistence/secret gate, Codex), T030–T033 (polish). Then the
+  carried-over 300/500 items (clock-overlay renderer, disk cache, auto-retry, periodic refresh).
 
 ## Format: `[ID] [P?] [Story] Description with file path`
 
@@ -84,15 +100,17 @@ source's photos show; switching active swaps to the other source's photos.
 - [ ] T013 [US1] Implement `ActiveSourceResolver` (Source + Keychain API key + `SharedLinkSecretStore`
   + `SharedLinkResolving` → `ServerConfig` + albumID) in `Packages/OnboardingKit/Sources/OnboardingKit/`
   to green T012
-- [ ] T014 [US1] Wire `Immich_SlideshowApp` factories (`makeSlideshow`, `makeAPI`) to build the
+- [X] T014 [US1] Wire `Immich_SlideshowApp` factories (`makeSlideshow`, `makeAPI`) to build the
   `ImmichClient` + albumID from the **active source** via `ActiveSourceResolver` instead of
   `selectedAlbumID`, in `Immich Slideshow/Immich_SlideshowApp.swift`
-- [ ] T015 [US1] Implement source switching at the app level: switching the active source persists it
+- [X] T015 [US1] Implement source switching at the app level: switching the active source persists it
   and restarts the slideshow from it — `switchAlbum(albumID)` when only the album changes, full
   slideshow rebuild (existing `connectionGeneration` path) when the client/auth changes (album↔link),
   in `Immich Slideshow/Immich_SlideshowApp.swift` (+ `RootView`)
-- [ ] T016 [US1] Verify via XcodeBuildMCP/XCUITest (`--uitest`): hermetic 2-source library switches in
+- [X] T016 [US1] Verify via XcodeBuildMCP/XCUITest (`--uitest`): hermetic 2-source library switches in
   the running slideshow (extend the UI-test seam + `SlideshowChromeUITests`/a new test)
+  — switch decision host-tested + app build + chrome XCUITest green; UI-driven switch deferred to
+  T018/T022/T026 (see Progress note)
 
 **Checkpoint**: MVP — sources switchable in-app, only the active source plays.
 

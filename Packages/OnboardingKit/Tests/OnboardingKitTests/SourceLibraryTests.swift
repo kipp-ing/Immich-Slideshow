@@ -108,3 +108,46 @@ import Testing
 
     #expect(library.activeID == "source-1")
 }
+
+@Test func restartStrategyAlbumToAlbumSwapsAlbumOnly() {
+    let previous = Source(id: "source-1", label: "Family", kind: .album(albumID: "album-1"))
+    let next = Source(id: "source-2", label: "Travel", kind: .album(albumID: "album-2"))
+
+    #expect(SourceLibrary.restartStrategy(from: previous, to: next) == .switchAlbum(albumID: "album-2"))
+}
+
+@Test func restartStrategyRebuildsWhenSharedLinkInvolved() {
+    let album = Source(id: "source-1", label: "Family", kind: .album(albumID: "album-1"))
+    let link = Source(id: "source-2", label: "Shared", kind: .sharedLink(baseURL: URL(string: "https://photos.example.test")!, slug: "shared"))
+    let otherLink = Source(id: "source-3", label: "Other", kind: .sharedLink(baseURL: URL(string: "https://photos.example.test")!, slug: "other"))
+
+    #expect(SourceLibrary.restartStrategy(from: album, to: link) == .rebuild)
+    #expect(SourceLibrary.restartStrategy(from: link, to: album) == .rebuild)
+    #expect(SourceLibrary.restartStrategy(from: link, to: otherLink) == .rebuild)
+}
+
+@Test func restartStrategyRebuildsWithoutPreviousActiveSource() {
+    let next = Source(id: "source-1", label: "Family", kind: .album(albumID: "album-1"))
+
+    #expect(SourceLibrary.restartStrategy(from: nil, to: next) == .rebuild)
+}
+
+@Test func updateActiveAlbumIDRepointsActiveAlbumSource() {
+    var library = SourceLibrary()
+    library.add(Source(id: "source-1", label: "Family", kind: .album(albumID: "album-1")))
+
+    library.updateActiveAlbumID("album-9")
+
+    #expect(library.active?.kind == .album(albumID: "album-9"))
+    #expect(library.sources[0].label == "Family")
+}
+
+@Test func updateActiveAlbumIDIgnoresSharedLinkActiveSource() {
+    var library = SourceLibrary()
+    let link = Source(id: "source-1", label: "Shared", kind: .sharedLink(baseURL: URL(string: "https://photos.example.test")!, slug: "shared"))
+    library.add(link)
+
+    library.updateActiveAlbumID("album-9")
+
+    #expect(library.active == link)
+}
