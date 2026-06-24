@@ -16,8 +16,8 @@ final class Immich_SlideshowUITests: XCTestCase {
 
     /// Launches the hermetic `--uitest` build (stub API + in-memory stores) and
     /// drives onboarding end to end, asserting the app lands on the running
-    /// slideshow (first image visible). Server URL and API key are now collected on
-    /// one screen (010), so it is a single Continue then album selection. No network,
+    /// slideshow (first image visible). Connection (server URL + API key on one
+    /// screen) → add a source (album) → confirm → slideshow (120, US2). No network,
     /// no real keychain — deterministic.
     @MainActor
     func testOnboardingHappyPathReachesSlideshow() throws {
@@ -39,16 +39,22 @@ final class Immich_SlideshowUITests: XCTestCase {
         // One action validates reachability + authorization, then advances (FR-001/FR-002).
         app.buttons["onboarding.connection.continue"].tap()
 
-        // Pick the first stubbed album.
+        // Add the first source (the first stubbed album), then confirm and start.
         let album = app.buttons["onboarding.album.a1"]
         XCTAssertTrue(album.waitForExistence(timeout: 5), "stubbed album row should appear")
         album.tap()
+        // The Continue button appears once the source is added (async state update).
+        let cont = app.buttons["onboarding.source.continue"]
+        XCTAssertTrue(cont.waitForExistence(timeout: 5), "Continue should appear after adding a source")
+        cont.tap()
+        let start = app.buttons["onboarding.confirm.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5), "confirmation step should offer Start")
+        start.tap()
 
         // Done — the slideshow starts and shows the first image (FR-002/SC-001).
-        // Generous ceiling: the merged one-screen flow reaches here faster than the
-        // old three-step flow, so the first asset load/render now lands on a colder
-        // simulator under full-suite load. The wait returns the instant the image
-        // appears; the ceiling only bites when the simulator is heavily loaded.
+        // Generous ceiling: the first asset load/render can land on a colder simulator
+        // under full-suite load. The wait returns the instant the image appears; the
+        // ceiling only bites when the simulator is heavily loaded.
         let slideshowImage = app.descendants(matching: .any)
             .matching(identifier: "slideshow.image").firstMatch
         XCTAssertTrue(
