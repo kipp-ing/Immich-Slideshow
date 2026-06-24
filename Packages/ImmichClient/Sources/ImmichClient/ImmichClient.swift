@@ -71,13 +71,19 @@ public struct ImmichClient: ImmichAPI {
     private func makeRequest(path: String, queryItems: [URLQueryItem] = []) -> URLRequest {
         let url = config.baseURL.appending(path: path)
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        components?.queryItems = queryItems.isEmpty ? nil : queryItems
+        var requestQueryItems = queryItems
+        if case let .shareKey(key) = config.auth {
+            requestQueryItems.append(URLQueryItem(name: "key", value: key))
+        }
+        components?.queryItems = requestQueryItems.isEmpty ? nil : requestQueryItems
         var request = URLRequest(url: url)
         if let componentURL = components?.url {
             request.url = componentURL
         }
         request.httpMethod = "GET"
-        request.setValue(config.apiKey, forHTTPHeaderField: "x-api-key")
+        if case let .apiKey(apiKey) = config.auth {
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        }
         return request
     }
 

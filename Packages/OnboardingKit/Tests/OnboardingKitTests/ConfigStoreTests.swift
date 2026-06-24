@@ -62,6 +62,30 @@ import Testing
     #expect(store.load() == nil)
 }
 
+@Test func userDefaultsConfigStoreSaveBaseURLPersistsBaseURLWithoutSelectedAlbum() throws {
+    let defaults = makeDefaults()
+    let store = UserDefaultsConfigStore(defaults: defaults)
+
+    store.saveBaseURL(try #require(URL(string: "https://photos.example.test")))
+
+    // baseURL is readable on its own (a shared-link-first install has no album),
+    // while load() stays nil until a selected album exists (120).
+    #expect(store.loadBaseURL() == URL(string: "https://photos.example.test"))
+    #expect(store.load() == nil)
+}
+
+@Test func userDefaultsConfigStoreSaveBaseURLLeavesExistingSelectedAlbumIntact() throws {
+    let defaults = makeDefaults()
+    let store = UserDefaultsConfigStore(defaults: defaults)
+    let url = try #require(URL(string: "https://photos.example.test"))
+    store.save(AppConfiguration(baseURL: url, selectedAlbumID: "album-1"))
+
+    store.saveBaseURL(try #require(URL(string: "https://new.example.test")))
+
+    #expect(store.loadBaseURL() == URL(string: "https://new.example.test"))
+    #expect(store.load()?.selectedAlbumID == "album-1")
+}
+
 @Test func userDefaultsConfigStoreLoadReturnsNilForHTTPSURLWithoutHost() {
     let defaults = makeDefaults()
     defaults.set("https:photos.example.test", forKey: "immich.baseURL")

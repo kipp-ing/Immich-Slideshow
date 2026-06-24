@@ -30,6 +30,11 @@ struct SlideshowView: View {
     // report a successful change so the app can reconnect the running slideshow.
     var makeConnectionViewModel: () -> ConnectionSettingsViewModel? = { nil }
     var onConnectionChanged: (ConnectionValidationOutcome) -> Void = { _ in }
+    // Source manager seams (120, US2): build the Settings source-library view model
+    // (its set-active already restarts the running slideshow), and a server API-key
+    // client for the add-source album picker.
+    var makeSourceLibraryViewModel: () -> SourceLibraryViewModel? = { nil }
+    var makeServerAPI: () async -> (any ImmichAPI)? = { nil }
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showResetDialog = false
@@ -50,6 +55,9 @@ struct SlideshowView: View {
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("--uitest-settings")
         || ProcessInfo.processInfo.arguments.contains("--uitest-broker")
     @State private var showAlbumBrowser = ProcessInfo.processInfo.arguments.contains("--uitest-albums")
+    // Auto-open the source manager for screenshots/visual verification (120, US2),
+    // mirroring the other --uitest-* auto-open seams.
+    @State private var showSources = ProcessInfo.processInfo.arguments.contains("--uitest-sources")
     @State private var showInfo = ProcessInfo.processInfo.arguments.contains("--uitest-info")
     // Connection editor reached from the error state (009, US2), separate from the
     // one in the settings sheet so a broken connection is fixable without chrome.
@@ -142,7 +150,9 @@ struct SlideshowView: View {
                 powerManager: powerManager,
                 themeStore: themeStore,
                 makeConnectionViewModel: makeConnectionViewModel,
-                onConnectionChanged: onConnectionChanged
+                onConnectionChanged: onConnectionChanged,
+                makeSourceLibraryViewModel: makeSourceLibraryViewModel,
+                makeServerAPI: makeServerAPI
             )
             // Present the settings as a larger page-sized sheet on iPad so the folded-in
             // Connection/MQTT sections aren't cut off behind a cramped form-sheet card
@@ -154,6 +164,13 @@ struct SlideshowView: View {
                 ConnectionSettingsView(viewModel: errorConnectionViewModel) { outcome in
                     showErrorConnection = false
                     onConnectionChanged(outcome)
+                }
+            }
+        }
+        .sheet(isPresented: $showSources) {
+            if let sourceLibraryViewModel = makeSourceLibraryViewModel() {
+                NavigationStack {
+                    SourceLibraryView(viewModel: sourceLibraryViewModel, makeServerAPI: makeServerAPI)
                 }
             }
         }
@@ -174,6 +191,9 @@ struct SlideshowView: View {
                 currentImage
                     .accessibilityElement()
                     .accessibilityLabel("Slideshow image")
+                    // The current asset id is exposed as the accessibility value so UI
+                    // tests can assert the photo actually swapped on a source switch (120).
+                    .accessibilityValue(viewModel.currentAssetID ?? "")
                     .accessibilityIdentifier("slideshow.image")
 
             case .empty:

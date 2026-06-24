@@ -10,6 +10,14 @@ public enum ConnectionError {
             String(localized: "Server not reachable.", bundle: .module)
         case .invalidResponse:
             String(localized: "Unexpected response from the server.", bundle: .module)
+        case .invalidShareLink:
+            String(localized: "This shared link is invalid or has been removed.", bundle: .module)
+        case .shareLinkExpired:
+            String(localized: "This shared link has expired.", bundle: .module)
+        case .wrongPassword:
+            String(localized: "Incorrect password for this shared link.", bundle: .module)
+        case .passwordRequired:
+            String(localized: "This shared link requires a password.", bundle: .module)
         }
     }
 }

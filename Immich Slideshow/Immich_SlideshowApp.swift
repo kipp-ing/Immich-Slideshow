@@ -29,15 +29,28 @@ struct Immich_SlideshowApp: App {
     private let factories: Factories
 
     struct Factories: Sendable {
-        // Built lazily at the `.done` route: reads the saved config + Keychain key and
-        // constructs an authenticated slideshow. Returns nil only if state is somehow
-        // incomplete (the StartupGate normally prevents reaching `.done` without it).
-        // The shared ThemeSettingsStore is injected so the engine reads live display
-        // preferences (008); the same instance backs the settings UI.
-        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel?
+        // Built lazily at the `.done` route: reads the saved config + Keychain key,
+        // resolves the **active source** (album or shared link) into a ServerConfig +
+        // album, and constructs an authenticated slideshow. `async` because resolving a
+        // shared link hits the network (120). Returns nil only if state is incomplete
+        // or the active source fails to resolve. The shared ThemeSettingsStore is
+        // injected so the engine reads live display preferences (008); the same
+        // instance backs the settings UI.
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) async -> SlideshowViewModel?
         // The authenticated Immich client for UI that browses beyond the active
-        // album (the album-browser sheet). Same config/key as the slideshow.
-        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)?
+        // album (the album-browser sheet). Built from the active source (120).
+        let makeAPI: @MainActor @Sendable () async -> (any ImmichAPI)?
+        // The server API-key client, independent of the active source — used by the
+        // Settings source manager's album picker, which always lists the server's
+        // albums even when the active source is a shared link (120, US2).
+        let makeServerAPI: @MainActor @Sendable () async -> (any ImmichAPI)?
+        // Persist a new active source and report how the running slideshow should
+        // restart: album→album swaps the album on the same client; anything involving a
+        // shared link rebuilds (120, US1). nil = no restart (unknown or already active).
+        let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy?
+        // Builds the Settings source manager's view model (120, US2). The caller passes
+        // an `onSwitchActive` that restarts the running slideshow (RootView.switchSource).
+        let makeSourceLibraryViewModel: @MainActor @Sendable (@escaping (String) -> Void) -> SourceLibraryViewModel
         // Keeps the display awake during the slideshow and can control brightness.
         // Backed by the live screen in production, a fake under `--uitest` so the
         // hermetic test never touches real device brightness.
@@ -58,18 +71,54 @@ struct Immich_SlideshowApp: App {
         // real keychain — so the UI walkthrough is deterministic and CI-safe. The
         // production path below is untouched.
         if UITestSupport.isActive {
-            let uitestViewModel = UITestSupport.makeViewModel()
-            // Optional fast path for manual/visual verification: skip onboarding and
-            // launch straight into the stubbed slideshow (used to screenshot the
-            // running show, incl. landscape centering). Additive — the default
-            // `--uitest` path still starts at onboarding step 1.
+            // One shared set of in-memory stores backs both onboarding and the slideshow,
+            // so a source added during onboarding flows into the running show (120, US2).
+            let config = InMemoryConfigStore()
+            let keychain = InMemoryKeychainStore()
+            let sourceStore = InMemorySourceLibraryStore()
+            let secretStore = InMemorySharedLinkSecretStore()
+            let resolver = UITestSharedLinkResolver()
+
+            let uitestViewModel = OnboardingViewModel(
+                api: { _ in StubImmichAPI() },
+                config: config,
+                keychain: keychain,
+                sourceStore: sourceStore
+            )
+            // Optional fast path for manual/visual verification and the Settings/chrome
+            // tests: seed a complete state (key + base URL + one active album source) and
+            // jump straight into the stubbed slideshow. The default `--uitest` path leaves
+            // the stores empty so onboarding drives the first source itself.
             if ProcessInfo.processInfo.arguments.contains("--uitest-slideshow") {
+                config.save(AppConfiguration(baseURL: URL(string: "https://photos.example.test")!, selectedAlbumID: "a1"))
+                try? keychain.save("uitest-key")
+                sourceStore.save(UITestSupport.seededLibrary())
                 uitestViewModel.step = .done
+            } else if ProcessInfo.processInfo.arguments.contains("--uitest-onboarding-source") {
+                // Visual-verification seam: jump straight to the add-source step with the
+                // connection already validated (the step loads the stub albums itself).
+                config.saveBaseURL(URL(string: "https://photos.example.test")!)
+                try? keychain.save("uitest-key")
+                uitestViewModel.step = .source
             }
             _viewModel = State(initialValue: uitestViewModel)
+            let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
+                var library = sourceStore.load()
+                let previous = library.active
+                guard previous?.id != id, library.sources.contains(where: { $0.id == id }) else { return nil }
+                library.setActive(id: id)
+                sourceStore.save(library)
+                guard let next = library.active else { return nil }
+                return SourceLibrary.restartStrategy(from: previous, to: next)
+            }
             factories = Factories(
-                makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store) },
+                makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store, library: sourceStore.load()) },
                 makeAPI: { @MainActor @Sendable in StubImmichAPI() },
+                makeServerAPI: { @MainActor @Sendable in StubImmichAPI() },
+                switchActiveSource: switchActiveSource,
+                makeSourceLibraryViewModel: { @MainActor @Sendable onSwitchActive in
+                    SourceLibraryViewModel(store: sourceStore, secretStore: secretStore, resolver: resolver, onSwitchActive: onSwitchActive)
+                },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
                 makeCoordinator: { @MainActor @Sendable _, _ in nil },
                 makeConnectionSettingsViewModel: { @MainActor @Sendable in UITestSupport.makeConnectionSettingsViewModel() },
@@ -81,41 +130,88 @@ struct Immich_SlideshowApp: App {
 
         let config = UserDefaultsConfigStore()
         let keychain = KeychainAPIKeyStore()
+        // Source library (120): the persisted list of slideshow sources and the active
+        // one. `load()` migrates a legacy `selectedAlbumID` into a one-entry album
+        // library on first read, so existing installs keep working unchanged.
+        let sourceStore = UserDefaultsSourceLibraryStore()
+        let secretStore = KeychainSharedLinkSecretStore()
+        let sharedLinkResolver = SharedLinkResolver()
         let brokerStore = KeychainBrokerSettingsStore()
         let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "immich-slideshow-device"
         let brokerProvider = BrokerConfigProvider(settingsStore: brokerStore, deviceID: deviceID)
         let viewModel = OnboardingViewModel(
             api: { serverConfig in ImmichClient(config: serverConfig) },
             config: config,
-            keychain: keychain
+            keychain: keychain,
+            sourceStore: sourceStore
         )
 
-        // Resume at the first missing step on launch; only a complete state
-        // (config + key) routes straight to the slideshow (FR-001/FR-011).
-        viewModel.step = StartupGate(config: config, keychain: keychain).initialStep()
+        // Resume at the first missing step on launch; a complete state (key + base URL +
+        // an active source) routes straight to the slideshow (FR-001/FR-011, 120).
+        viewModel.step = StartupGate(config: config, keychain: keychain, sourceStore: sourceStore).initialStep()
 
         _viewModel = State(initialValue: viewModel)
 
-        // The API key stays in the Keychain and is only handed to the client here;
-        // it is never logged or persisted elsewhere (Konstitution III).
-        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) -> SlideshowViewModel? = { settingsStore in
-            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
-            let client = ImmichClient(
-                config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey)
+        // Resolve the active source into a ServerConfig (auth) + album. The API key and
+        // any shared-link password stay in the Keychain and are only handed to the
+        // client here; they are never logged or persisted elsewhere (Konstitution III).
+        // nil when state is incomplete or the active source fails to resolve.
+        let resolveActiveSource: @MainActor @Sendable () async -> ResolvedSource? = {
+            guard let baseURL = config.loadBaseURL(), let apiKey = keychain.read(),
+                  let active = sourceStore.load().active else { return nil }
+            let resolver = ActiveSourceResolver(
+                albumBaseURL: baseURL,
+                apiKey: apiKey,
+                secretStore: secretStore,
+                sharedLinkResolver: sharedLinkResolver
             )
+            return try? await resolver.resolve(active)
+        }
+
+        let makeSlideshow: @MainActor @Sendable (any ThemeSettingsStore) async -> SlideshowViewModel? = { settingsStore in
+            guard let resolved = await resolveActiveSource() else { return nil }
             return SlideshowViewModel(
-                api: client,
-                albumID: appConfig.selectedAlbumID,
+                api: ImmichClient(config: resolved.serverConfig),
+                albumID: resolved.albumID,
                 ticker: RealTicker(),
                 settingsStore: settingsStore
             )
         }
 
-        // Authenticated client for the album browser; nil only if state is somehow
-        // incomplete (same guard as the slideshow factory).
-        let makeAPI: @MainActor @Sendable () -> (any ImmichAPI)? = {
-            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
-            return ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+        // Authenticated client for the album browser, built from the active source;
+        // nil only if state is incomplete or resolve fails (same guard as the slideshow).
+        let makeAPI: @MainActor @Sendable () async -> (any ImmichAPI)? = {
+            guard let resolved = await resolveActiveSource() else { return nil }
+            return ImmichClient(config: resolved.serverConfig)
+        }
+
+        // Server API-key client, independent of the active source — the Settings source
+        // manager lists the server's albums even when the active source is a shared link.
+        let makeServerAPI: @MainActor @Sendable () async -> (any ImmichAPI)? = {
+            guard let baseURL = config.loadBaseURL(), let apiKey = keychain.read() else { return nil }
+            return ImmichClient(config: ServerConfig(baseURL: baseURL, apiKey: apiKey))
+        }
+
+        // Switch the active source and persist it; report how the running slideshow
+        // should restart (120, US1). Returns nil when the id is unknown or already
+        // active, so callers skip an unnecessary restart.
+        let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
+            var library = sourceStore.load()
+            let previous = library.active
+            guard previous?.id != id, library.sources.contains(where: { $0.id == id }) else { return nil }
+            library.setActive(id: id)
+            sourceStore.save(library)
+            guard let next = library.active else { return nil }
+            return SourceLibrary.restartStrategy(from: previous, to: next)
+        }
+
+        let makeSourceLibraryViewModel: @MainActor @Sendable (@escaping (String) -> Void) -> SourceLibraryViewModel = { onSwitchActive in
+            SourceLibraryViewModel(
+                store: sourceStore,
+                secretStore: secretStore,
+                resolver: sharedLinkResolver,
+                onSwitchActive: onSwitchActive
+            )
         }
 
         // Production: drive the real device screen. The PowerManager gates all
@@ -162,11 +258,19 @@ struct Immich_SlideshowApp: App {
         let saveSelectedAlbum: @MainActor @Sendable (String) -> Void = { albumID in
             guard let appConfig = config.load() else { return }
             config.save(AppConfiguration(baseURL: appConfig.baseURL, selectedAlbumID: albumID))
+            // Keep the source library in sync: the 009 album re-selection repoints the
+            // active album source so the resolved slideshow picks up the new album.
+            var library = sourceStore.load()
+            library.updateActiveAlbumID(albumID)
+            sourceStore.save(library)
         }
 
         factories = Factories(
             makeSlideshow: makeSlideshow,
             makeAPI: makeAPI,
+            makeServerAPI: makeServerAPI,
+            switchActiveSource: switchActiveSource,
+            makeSourceLibraryViewModel: makeSourceLibraryViewModel,
             makePowerManager: makePowerManager,
             makeCoordinator: makeCoordinator,
             makeConnectionSettingsViewModel: makeConnectionSettingsViewModel,
@@ -219,7 +323,9 @@ private struct RootView: View {
                     onboarding.reset()
                 },
                               makeConnectionViewModel: { factories.makeConnectionSettingsViewModel() },
-                              onConnectionChanged: handleConnectionChange)
+                              onConnectionChanged: handleConnectionChange,
+                              makeSourceLibraryViewModel: { factories.makeSourceLibraryViewModel { id in switchSource(id: id) } },
+                              makeServerAPI: { await factories.makeServerAPI() })
                 .id(connectionGeneration)
                 .sheet(isPresented: $showAlbumReselect) {
                     AlbumBrowserView(api: api, currentAlbumID: nil) { albumID, _ in
@@ -232,13 +338,19 @@ private struct RootView: View {
                 Color.black
                     .ignoresSafeArea()
                     .task {
-                        slideshow = factories.makeSlideshow(themeStore)
+                        slideshow = await factories.makeSlideshow(themeStore)
                         powerManager = factories.makePowerManager()
-                        api = factories.makeAPI()
+                        api = await factories.makeAPI()
                     }
             }
         } else {
-            OnboardingFlowView(viewModel: onboarding)
+            // Onboarding's source/confirm steps write the same persisted library the app
+            // resolves the active source from. No running slideshow yet, so the switch
+            // callback is a no-op (120, US2).
+            OnboardingFlowView(
+                viewModel: onboarding,
+                makeSourceLibrary: { factories.makeSourceLibraryViewModel { _ in } }
+            )
         }
     }
 
@@ -247,20 +359,36 @@ private struct RootView: View {
     /// first prompts for a new album (the old selection no longer exists), then rebuilds;
     /// `.success` rebuilds straight away. Failure outcomes never reach here.
     private func handleConnectionChange(_ outcome: ConnectionValidationOutcome) {
-        api = factories.makeAPI()
         if case .albumMissing = outcome {
+            Task { api = await factories.makeAPI() }
             showAlbumReselect = true
         } else {
             rebuildSlideshow()
         }
     }
 
-    /// Rebuild the slideshow view model from the updated stores and bump the generation
-    /// so SlideshowView is recreated and its `.task` re-runs `start()` against the new
-    /// connection — no return to onboarding.
+    /// Switch the active source (120, US1): persist it and restart the running show —
+    /// `switchAlbum` when only the album changes, a full rebuild when the client/auth
+    /// changes (album↔shared link). No-op when the id is unknown or already active.
+    func switchSource(id: String) {
+        guard let strategy = factories.switchActiveSource(id) else { return }
+        switch strategy {
+        case let .switchAlbum(albumID):
+            Task { await slideshow?.switchAlbum(albumID) }
+        case .rebuild:
+            rebuildSlideshow()
+        }
+    }
+
+    /// Rebuild the slideshow view model (and the API client) from the updated stores and
+    /// bump the generation so SlideshowView is recreated and its `.task` re-runs `start()`
+    /// against the new connection/source — no return to onboarding.
     private func rebuildSlideshow() {
-        slideshow = factories.makeSlideshow(themeStore)
-        connectionGeneration += 1
+        Task {
+            slideshow = await factories.makeSlideshow(themeStore)
+            api = await factories.makeAPI()
+            connectionGeneration += 1
+        }
     }
 
     private static func makeThemeStore() -> UserDefaultsThemeStore {
@@ -274,7 +402,11 @@ private struct RootView: View {
             if ProcessInfo.processInfo.arguments.contains("--uitest-reset-theme") {
                 defaults.removePersistentDomain(forName: suite)
             }
-            return UserDefaultsThemeStore(defaults: defaults)
+            let store = UserDefaultsThemeStore(defaults: defaults)
+            if ProcessInfo.processInfo.arguments.contains("--uitest-kenburns") {
+                store.settings.kenBurns = true
+            }
+            return store
         }
         #endif
         return UserDefaultsThemeStore()
@@ -294,18 +426,29 @@ enum UITestSupport {
         ProcessInfo.processInfo.arguments.contains("--uitest")
     }
 
-    static func makeViewModel() -> OnboardingViewModel {
-        OnboardingViewModel(
-            api: { _ in StubImmichAPI() },
-            config: InMemoryConfigStore(),
-            keychain: InMemoryKeychainStore()
-        )
+    /// One album source ("Wohnzimmer" → album a1), active. The Sources-manager UITest
+    /// mutates this; the stub `albums()` also offers album a2 ("Urlaub 2026") to add.
+    static func seededLibrary() -> SourceLibrary {
+        var library = SourceLibrary()
+        library.add(Source(id: "src-a1", label: "Wohnzimmer", kind: .album(albumID: "a1")))
+        return library
     }
 
-    static func makeSlideshowViewModel(settingsStore: any ThemeSettingsStore) -> SlideshowViewModel {
-        SlideshowViewModel(
+    static func makeSlideshowViewModel(
+        settingsStore: any ThemeSettingsStore,
+        library: SourceLibrary = UITestSupport.seededLibrary()
+    ) -> SlideshowViewModel {
+        // Resolve the active source to a stub album id (shared links → a2 like the stub
+        // resolver) so switching the active source visibly changes the photos.
+        let albumID: String
+        switch library.active?.kind {
+        case let .album(id): albumID = id
+        case .sharedLink: albumID = "a2"
+        case nil: albumID = "a1"
+        }
+        return SlideshowViewModel(
             api: StubImmichAPI(),
-            albumID: "a1",
+            albumID: albumID,
             ticker: RealTicker(),
             settingsStore: settingsStore
         )
@@ -348,11 +491,22 @@ private struct StubImmichAPI: ImmichAPI {
     }
 
     func assets(albumID: String) async throws -> [Asset] {
-        [
-            Asset(id: "asset-1", type: "IMAGE"),
-            Asset(id: "asset-2", type: "IMAGE"),
-            Asset(id: "asset-3", type: "IMAGE"),
-        ]
+        // Per-album assets so switching the active source (a1 → a2) visibly changes the
+        // photos in the running slideshow (120, US2 source switch).
+        switch albumID {
+        case "a2":
+            return [
+                Asset(id: "asset-4", type: "IMAGE"),
+                Asset(id: "asset-5", type: "IMAGE"),
+                Asset(id: "asset-6", type: "IMAGE"),
+            ]
+        default:
+            return [
+                Asset(id: "asset-1", type: "IMAGE"),
+                Asset(id: "asset-2", type: "IMAGE"),
+                Asset(id: "asset-3", type: "IMAGE"),
+            ]
+        }
     }
 
     func preview(assetID: String) async throws -> Data { Self.renderPortrait(for: assetID) }
@@ -377,6 +531,9 @@ private struct StubImmichAPI: ImmichAPI {
             "asset-1": .systemRed,
             "asset-2": .systemGreen,
             "asset-3": .systemBlue,
+            "asset-4": .systemOrange,
+            "asset-5": .systemTeal,
+            "asset-6": .systemPink,
         ]
         let color = colors[assetID] ?? .systemPurple
         let renderer = UIGraphicsImageRenderer(size: size)
@@ -396,11 +553,21 @@ private struct StubImmichAPI: ImmichAPI {
 
 private final class InMemoryConfigStore: ConfigStore, @unchecked Sendable {
     private let lock = NSLock()
-    private var stored: AppConfiguration?
+    private var baseURL: URL?
+    private var selectedAlbumID: String?
 
-    func load() -> AppConfiguration? { lock.withLock { stored } }
-    func save(_ configuration: AppConfiguration) { lock.withLock { stored = configuration } }
-    func clear() { lock.withLock { stored = nil } }
+    func load() -> AppConfiguration? {
+        lock.withLock {
+            guard let baseURL, let selectedAlbumID, !selectedAlbumID.isEmpty else { return nil }
+            return AppConfiguration(baseURL: baseURL, selectedAlbumID: selectedAlbumID)
+        }
+    }
+    func loadBaseURL() -> URL? { lock.withLock { baseURL } }
+    func save(_ configuration: AppConfiguration) {
+        lock.withLock { baseURL = configuration.baseURL; selectedAlbumID = configuration.selectedAlbumID }
+    }
+    func saveBaseURL(_ baseURL: URL) { lock.withLock { self.baseURL = baseURL } }
+    func clear() { lock.withLock { baseURL = nil; selectedAlbumID = nil } }
 }
 
 private final class InMemoryKeychainStore: KeychainStore, @unchecked Sendable {
@@ -410,5 +577,13 @@ private final class InMemoryKeychainStore: KeychainStore, @unchecked Sendable {
     func save(_ apiKey: String) throws { lock.withLock { stored = apiKey } }
     func read() -> String? { lock.withLock { stored } }
     func delete() { lock.withLock { stored = nil } }
+}
+
+// Resolves any shared link to album a2 so the hermetic Sources-manager test can add a
+// shared-link source and see the stub slideshow switch to a different album's photos.
+private struct UITestSharedLinkResolver: SharedLinkResolving {
+    func resolve(baseURL: URL, slug: String, password: String?) async throws -> SharedLinkResolution {
+        SharedLinkResolution(key: "uitest-key", albumID: "a2", expiresAt: nil)
+    }
 }
 #endif

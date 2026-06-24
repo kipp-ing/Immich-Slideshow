@@ -43,17 +43,17 @@ Status values: `covered` means existing tests exercise the requirement directly 
 
 | FR | Requirement (short) | Covering test(s) | Status | Testability |
 |---|---|---|---|---|
-| FR-200-01 | Startup detects complete config before skipping onboarding | `Packages/OnboardingKit/Tests/OnboardingKitTests/StartupGateTests.swift` `startupGateReturnsDoneForCompleteConfigAndAPIKey`, `startupGateReturnsConnectionForCompleteConfigWithoutAPIKey`; `ConfigStoreTests.swift` load/partial URL tests | covered | host-unit |
-| FR-200-02 | Resume first missing step; do not unlock partial setup | `StartupGateTests.swift` `startupGateReturnsConnectionWithoutConfigAndWithoutAPIKey`, `startupGateReturnsConnectionWithoutConfigEvenWithAPIKey` | partial | host-unit |
+| FR-200-01 | Startup detects complete config before skipping onboarding | `Packages/OnboardingKit/Tests/OnboardingKitTests/StartupGateTests.swift` `startupGateReturnsDoneForConnectionAndActiveSource`, `startupGateReturnsConnectionWithoutAPIKey`, `startupGateMigratesLegacySelectedAlbumIDToDone`; `ConfigStoreTests.swift` load/partial URL tests | covered | host-unit |
+| FR-200-02 | Resume first missing step; do not unlock partial setup | `StartupGateTests.swift` `startupGateReturnsConnectionWithoutConfigAndWithoutAPIKey`, `startupGateReturnsConnectionWithoutBaseURL`, `startupGateReturnsSourceWhenConnectedButLibraryEmpty` | covered | host-unit |
 | FR-200-03 | Combined URL/API-key screen with one Continue | `Immich SlideshowUITests/Immich_SlideshowUITests.swift` `testFreshLaunchShowsConnectionStep`, `testOnboardingHappyPathReachesSlideshow` | covered | ui-sim |
 | FR-200-04 | Continue disabled until URL and key non-empty | — | missing | ui-sim |
 | FR-200-05 | Validate well-formed HTTPS before network | `OnboardingViewModelTests.swift` `rejectsNonHTTPSURL`; `ConnectionSettingsViewModelTests.swift` `connectionSettingsRejectsMalformedURL` | covered | host-unit |
-| FR-200-06 | Validate reachability/auth in one action | `OnboardingViewModelTests.swift` `advancesToAlbumWhenReachableAndAuthorized` | covered | host-unit |
+| FR-200-06 | Validate reachability/auth in one action | `OnboardingViewModelTests.swift` `advancesToSourceWhenReachableAndAuthorized` | covered | host-unit |
 | FR-200-07 | Preserve values and classify validation failures | `OnboardingViewModelTests.swift` `staysWhenServerUnreachable`, `staysWhenUnauthorized`, `staysWhenKeychainSaveFails`; invalid-response classification not directly covered | partial | host-unit |
 | FR-200-08 | API key only in Keychain, never plaintext | `Immich SlideshowTests/OnboardingKeychainTests.swift` `keychainStoreRoundTripsSaveReadDelete`; `ConnectionSettingsViewModelTests.swift` `connectionSettingsPrefillsStoredConnectionWithoutExposingStoredKey` | partial | manual |
-| FR-200-09 | Persist server URL and selected album in non-secret storage | `ConfigStoreTests.swift` `userDefaultsConfigStoreLoadsSavedConfiguration`; `OnboardingViewModelTests.swift` `selectAlbumPersistsConfigurationAndFinishes` | covered | host-unit |
-| FR-200-10 | Load live albums and require one album | `OnboardingViewModelTests.swift` `advancesToAlbumWhenReachableAndAuthorized`, `selectAlbumPersistsConfigurationAndFinishes`; `Immich_SlideshowUITests.swift` `testOnboardingHappyPathReachesSlideshow` | covered | host-unit |
-| FR-200-11 | Empty album list is clear, not dead end | `OnboardingViewModelTests.swift` `staysWhenAlbumListEmpty` | covered | host-unit |
+| FR-200-09 | Persist server URL (and album source) in non-secret storage | `ConfigStoreTests.swift` `userDefaultsConfigStoreLoadsSavedConfiguration`, `userDefaultsConfigStoreSaveBaseURLPersistsBaseURLWithoutSelectedAlbum`; `OnboardingViewModelTests.swift` `finishWithActiveAlbumSourcePersistsConfigurationAndCompletes` | covered | host-unit |
+| FR-200-10 | Load live albums; require one source (album or shared link, 120) | `OnboardingViewModelTests.swift` `advancesToSourceWhenReachableAndAuthorized`, `finishWithActiveAlbumSourcePersistsConfigurationAndCompletes`; `Immich_SlideshowUITests.swift` `testOnboardingHappyPathReachesSlideshow` | covered | host-unit |
+| FR-200-11 | Empty album list is clear, not dead end (now advances to add-source, 120) | `OnboardingViewModelTests.swift` `advancesToSourceEvenWhenAlbumListEmpty` | covered | host-unit |
 | FR-200-12 | Settings shows URL and key-set indicator without key | `ConnectionSettingsViewModelTests.swift` `connectionSettingsPrefillsStoredConnectionWithoutExposingStoredKey` | covered | ui-sim |
 | FR-200-13 | Settings edits URL/key independently with secure key entry | `ConnectionSettingsViewModelTests.swift` `connectionSettingsURLOnlyChangeUsesStoredKeyAndDoesNotWriteKeychain`, `connectionSettingsPersistsNewURLAndKeyWhenSelectedAlbumStillExists` | partial | ui-sim |
 | FR-200-14 | Save validates before persistence; malformed URL client-side | `ConnectionSettingsViewModelTests.swift` `connectionSettingsRejectsMalformedURL`, `connectionSettingsDoesNotPersistUnauthorizedConnection`, `connectionSettingsDoesNotPersistUnreachableConnection` | covered | host-unit |
@@ -66,8 +66,8 @@ Status values: `covered` means existing tests exercise the requirement directly 
 | FR-200-21 | Connection/Broker collapsed by default; display/brightness remain owned elsewhere | `SettingsUITests.swift` `testConnectionAndMqttAppearAsCollapsedSections`, `testSettingsShowsBrightnessAndPlannedOptionsAndDismisses`; `SettingsDisplayOptionsUITests.swift` display option tests | covered | ui-sim |
 | FR-200-22 | All Settings sections reachable by scrolling | `SettingsUITests.swift` `testBottomSettingsSectionReachableInBothOrientations`; missing reduced-width and keyboard-open variants | partial | ui-sim |
 | FR-200-23 | Reset dialog only reset/cancel, no broker setup | — | missing | ui-sim |
-| FR-200-24 | Reset clears URL, album, key and returns connection step | `OnboardingViewModelTests.swift` `resetReturnsToConnection`; app-hosted `OnboardingResetTests.swift` `resetClearsRealConfigAndKeychainAndReturnsToConnection` | covered | host-unit |
-| FR-200-25 | Shared-link placeholder in onboarding and Settings | Onboarding view contains a placeholder, but no test; Settings placeholder not found | missing | ui-sim |
+| FR-200-24 | Reset clears URL, album, key and returns connection step | `OnboardingViewModelTests.swift` `resetReturnsToConnectionAndClearsLibrary`; app-hosted `OnboardingResetTests.swift` `resetClearsRealConfigAndKeychainAndReturnsToConnection` | covered | host-unit |
+| FR-200-25 | Shared-link source in onboarding and Settings (placeholder replaced by the real feature in 120) | `Immich SlideshowUITests/SourceOnboardingUITests.swift` `testOnboardingAddSharedLinkSourceReachesSlideshow`; Settings via `SourceLibraryUITests.swift` | covered | ui-sim |
 | FR-200-26 | No new Immich backend behavior/endpoints | — | missing | manual |
 | FR-200-27 | Dependencies injected behind protocols | `OnboardingViewModelTests.swift`, `ConnectionSettingsViewModelTests.swift`, `StartupGateTests.swift`, and `ConfigStoreTests.swift` all use fakes/injected stores | covered | host-unit |
 
@@ -202,13 +202,12 @@ Status values: `covered` means existing tests exercise the requirement directly 
 
 ## UI-sim / manual - orchestrator-owned
 
-- UI-sim partial/missing: FR-200-04, FR-200-13, FR-200-16, FR-200-17, FR-200-18, FR-200-22, FR-200-23, FR-200-25, FR-300-10, FR-300-14, FR-300-15, FR-300-16, FR-300-21, FR-300-24, FR-300-25, FR-300-27, FR-300-28, FR-300-29, FR-300-30, FR-500-10, FR-500-12, FR-500-13, FR-600-03.
+- UI-sim partial/missing: FR-200-04, FR-200-13, FR-200-16, FR-200-17, FR-200-18, FR-200-22, FR-200-23, FR-300-10, FR-300-14, FR-300-15, FR-300-16, FR-300-21, FR-300-24, FR-300-25, FR-300-27, FR-300-28, FR-300-29, FR-300-30, FR-500-10, FR-500-12, FR-500-13, FR-600-03.
 - Manual/static audit gaps: FR-100-12, FR-200-08, FR-200-26, FR-300-32, FR-400-08, FR-400-14, FR-500-02, FR-600-04, FR-700-01, FR-700-02.
 
 ## Drift
 
-- FR-200-02: the spec says startup with server URL and API key but no selected album resumes at album selection. `StartupGate.initialStep()` only checks `config.load() != nil` and `keychain.read() != nil`; `UserDefaultsConfigStore.load()` returns `nil` when the selected album is missing, so this state resumes at `.connection`.
-- FR-200-25: the spec says the shared-link placeholder is visible in both combined onboarding and Settings. `ConnectionStepView` has an inert placeholder, but no Settings shared-link placeholder was found.
+- FR-200-25 (200 spec FR text): superseded by 120 — the inert shared-link *placeholder* was replaced by a real add-source step (album or shared link) in onboarding and the Settings Sources manager. Spec 200 FR text still to be reconciled Roadmap→Active under task 120/T030.
 - FR-300-08 / FR-300-27: the spec requires a disk image cache with size limit and Clear cache action surfaced in Settings. Current `ImageCache` is memory-only, and Settings does not expose disk-cache size or clear controls.
 - FR-300-11 / FR-300-12: the spec requires auto-retry with backoff and periodic source refresh. `SlideshowViewModel` exposes manual `retry()` and `start()`, but no backoff loop or periodic refresh path was found.
 - FR-300-29 / FR-500-12: the spec requires a rendered optional clock overlay. Theme settings store clock fields exist, but Settings still labels the clock overlay as a planned/placeholder row and no renderer was found.

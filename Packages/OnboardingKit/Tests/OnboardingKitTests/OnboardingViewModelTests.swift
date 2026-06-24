@@ -16,20 +16,76 @@ import ImmichClient
     #expect(await api.albumsCallCount == 0)
 }
 
-@Test func advancesToAlbumWhenReachableAndAuthorized() async throws {
+@Test func advancesToSourceWhenReachableAndAuthorized() async throws {
     let keychain = InMemoryKeychainStore()
+    let config = InMemoryConfigStore()
     let api = AlbumsAPI(result: .success([Album(id: "a1", name: "Fam")]))
-    let vm = makeVM(api: api, keychain: keychain)
+    let vm = makeVM(api: api, config: config, keychain: keychain)
     vm.serverURLInput = "https://photos.example.test"
     vm.apiKeyInput = "key"
 
     await vm.submitConnection()
 
-    #expect(vm.step == .album)
+    #expect(vm.step == .source)
     #expect(keychain.read() == "key")
+    // The base URL is persisted at connection so a shared-link-first source still resolves.
+    #expect(config.loadBaseURL()?.host == "photos.example.test")
     #expect(vm.albums.map(\.id) == ["a1"])
     #expect(vm.errorMessage == nil)
     #expect(await api.albumsCallCount == 1)
+}
+
+@Test func advancesToSourceEvenWhenAlbumListEmpty() async throws {
+    // An empty album list still proves the connection works; the user can add a shared
+    // link on the source step, so onboarding advances instead of erroring (120, US2).
+    let keychain = InMemoryKeychainStore()
+    let config = InMemoryConfigStore()
+    let api = AlbumsAPI(result: .success([]))
+    let vm = makeVM(api: api, config: config, keychain: keychain)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    #expect(vm.step == .source)
+    #expect(keychain.read() == "key")
+    #expect(config.loadBaseURL()?.host == "photos.example.test")
+    #expect(vm.albums.isEmpty)
+    #expect(vm.errorMessage == nil)
+}
+
+@Test func finishWithActiveAlbumSourcePersistsConfigurationAndCompletes() async throws {
+    let config = InMemoryConfigStore()
+    var library = SourceLibrary()
+    library.add(Source(label: "Fam", kind: .album(albumID: "a1")))
+    let sourceStore = InMemorySourceLibraryStore(library: library)
+    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, sourceStore: sourceStore)
+    config.saveBaseURL(URL(string: "https://photos.example.test")!)
+    vm.step = .confirm
+
+    vm.finish()
+
+    #expect(vm.step == .done)
+    let saved = config.load()
+    #expect(saved?.selectedAlbumID == "a1")
+    #expect(saved?.baseURL.host == "photos.example.test")
+}
+
+@Test func finishWithActiveSharedLinkSourceCompletesWithoutSelectedAlbum() async throws {
+    let config = InMemoryConfigStore()
+    var library = SourceLibrary()
+    library.add(Source(label: "Korsika", kind: .sharedLink(baseURL: URL(string: "https://bilder.example.test")!, slug: "korsika")))
+    let sourceStore = InMemorySourceLibraryStore(library: library)
+    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, sourceStore: sourceStore)
+    config.saveBaseURL(URL(string: "https://photos.example.test")!)
+    vm.step = .confirm
+
+    vm.finish()
+
+    #expect(vm.step == .done)
+    // No album was chosen, so there is no AppConfiguration — only the saved base URL.
+    #expect(config.load() == nil)
+    #expect(config.loadBaseURL()?.host == "photos.example.test")
 }
 
 @Test func staysWhenServerUnreachable() async {
@@ -99,70 +155,45 @@ import ImmichClient
     #expect(await api.albumsCallCount == 1)
 }
 
-@Test func staysWhenAlbumListEmpty() async {
-    let api = AlbumsAPI(result: .success([]))
-    let vm = makeVM(api: api)
-    vm.serverURLInput = "https://photos.example.test"
-    vm.apiKeyInput = "key"
-
-    await vm.submitConnection()
-
-    #expect(vm.step == .connection)
-    #expect(vm.errorMessage == String(localized: "No albums found. Create an album in Immich.", bundle: .module))
-    #expect(vm.albums.isEmpty)
-    #expect(await api.albumsCallCount == 1)
-}
-
-@Test func resetReturnsToConnection() {
+@Test func resetReturnsToConnectionAndClearsLibrary() {
     let config = InMemoryConfigStore(configuration: AppConfiguration(
         baseURL: URL(string: "https://photos.example.test")!,
         selectedAlbumID: "a1"
     ))
     let keychain = InMemoryKeychainStore(apiKey: "key")
-    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, keychain: keychain)
-    vm.step = .album
+    var library = SourceLibrary()
+    library.add(Source(label: "Fam", kind: .album(albumID: "a1")))
+    let sourceStore = InMemorySourceLibraryStore(library: library)
+    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, keychain: keychain, sourceStore: sourceStore)
+    vm.step = .confirm
     vm.serverURLInput = "https://photos.example.test"
     vm.apiKeyInput = "key"
     vm.albums = [Album(id: "a1", name: "Fam")]
-    vm.selectedAlbumID = "a1"
-    vm.errorMessage = "irgendwas"
+    vm.errorMessage = "etwas"
 
     vm.reset()
 
     #expect(config.load() == nil)
     #expect(keychain.read() == nil)
+    #expect(sourceStore.load().sources.isEmpty)
     #expect(vm.step == .connection)
     #expect(vm.serverURLInput == "")
     #expect(vm.apiKeyInput == "")
     #expect(vm.albums.isEmpty)
-    #expect(vm.selectedAlbumID == nil)
     #expect(vm.errorMessage == nil)
-}
-
-@Test func selectAlbumPersistsConfigurationAndFinishes() async {
-    let config = InMemoryConfigStore()
-    let vm = makeVM(api: AlbumsAPI(result: .failure(ImmichError.unreachable)), config: config)
-    vm.serverURLInput = "https://photos.example.test"
-    vm.step = .album
-    vm.albums = [Album(id: "a1", name: "Fam")]
-
-    await vm.selectAlbum(id: "a1")
-
-    let saved = config.load()
-    #expect(saved?.selectedAlbumID == "a1")
-    #expect(saved?.baseURL.host == "photos.example.test")
-    #expect(vm.step == .done)
 }
 
 private func makeVM(
     api: AlbumsAPI,
     config: InMemoryConfigStore = .init(),
-    keychain: InMemoryKeychainStore = .init()
+    keychain: InMemoryKeychainStore = .init(),
+    sourceStore: InMemorySourceLibraryStore = .init()
 ) -> OnboardingViewModel {
     OnboardingViewModel(
         api: { _ in api },
         config: config,
-        keychain: keychain
+        keychain: keychain,
+        sourceStore: sourceStore
     )
 }
 
