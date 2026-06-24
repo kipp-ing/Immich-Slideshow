@@ -27,7 +27,8 @@ existing module becomes a sub-spec (`N10`, `N20`, …) or amends the module spec
 | #   | Spec                                                              | Package          | Purpose                                                                                  | Status   |
 |-----|-------------------------------------------------------------------|------------------|------------------------------------------------------------------------------------------|----------|
 | 100 | [immich-client](../specs/100-immich-client/spec.md)               | ImmichClient     | REST data access: albums, album assets, preview/original/thumbnail image data, errors.   | Active   |
-| 110 | [shared-album-link](../specs/110-shared-album-link/spec.md)       | ImmichClient     | *(sub-spec of 100)* Play a shared/public Immich link (+ optional password) as a source.  | Deferred |
+| 110 | [shared-album-link](../specs/110-shared-album-link/spec.md)       | ImmichClient     | *(sub-spec of 100)* Play a shared/public Immich link (+ optional password) as a source.  | Scheduled |
+| 120 | [source-library](../specs/120-source-library/spec.md)             | ImmichClient     | *(sub-spec of 100)* Save several switchable sources (albums + shared links); one active. | Scheduled |
 | 200 | [connection-onboarding](../specs/200-connection-onboarding/spec.md) | OnboardingKit  | First-run setup, in-place connection editing, and the Settings-screen structure.         | Active   |
 | 300 | [slideshow](../specs/300-slideshow/spec.md)                       | SlideshowKit     | Fullscreen playback engine + Liquid Glass UI: chrome, gestures, album browser, info.     | Active   |
 | 400 | [power-manager](../specs/400-power-manager/spec.md)               | PowerKit         | Keep the display awake and dim brightness while the slideshow runs in the foreground.     | Active   |
@@ -43,10 +44,11 @@ existing module becomes a sub-spec (`N10`, `N20`, …) or amends the module spec
         │                          400 PowerManager <──────┤  (foreground brightness / idle)
         │                          500 Display Options <───┘  (order/duration/transition/clock)
         │
-       110 Shared Album Link (deferred source) ── reserved seam in 200
+       110 Shared Album Link (source kind) ──┐
+       120 Source Library (switchable list) ─┴─> surfaced in 200 (onboarding/Settings) + 700 (select)
 
 600 Broker Setup ──> 700 HA Control (MQTT remote control)
-                              ├─ active: pause/play, brightness, album-select
+                              ├─ active: pause/play, brightness, source-select (120)
                               └─ reserved: 730 sleep/wake
 ```
 
@@ -63,12 +65,19 @@ read it only to understand the reserved shared-link seam in `100`/`200`.
 
 ## Reserved / deferred (roadmap)
 
-Recorded in each owning topic's `Roadmap / Deferred` section; none are scheduled.
+Recorded in each owning topic's `Roadmap / Deferred` section. `110`/`120` are now scheduled (see
+below); the rest remain unscheduled.
+
+**Scheduled (not deferred):**
+- `120` Source library — save several switchable sources (albums + shared links), one active at a
+  time; surfaced in `200` and `700`. Unprotected shared-link mechanics verified against Immich 2.7.5.
+- `110` Shared album link source (+ optional password) — a source kind feeding `120`; unprotected
+  path verified, protected-password mechanism still to clarify.
 
 **Reserved sub-specs / future sources:**
-- `110` Shared album link source (+ password) — outline only, open questions unresolved.
 - `730` HA sleep/wake driven by an HA presence signal (pairs with the 400 sleep/wake roadmap item).
-- Multi-album pooling and Memories as sources (topic 100 roadmap).
+- Multi-source **pooling** (merge into one stream) and Memories as sources (topic 100 roadmap) —
+  `120` covers switching between sources, not pooling.
 
 **Specified but not yet built** (carried over from old "extended/added" notes, deferred during the
 overhaul so every Active requirement maps to real, tested code):
@@ -76,4 +85,5 @@ overhaul so every Active requirement maps to real, tested code):
 - Auto-retry with backoff (topic 300).
 - Periodic source refresh (topic 300).
 - Rendered clock overlay — settings are stored (500), renderer deferred (topic 300).
-- Settings shared-link placeholder — onboarding placeholder exists; Settings one deferred (topic 200).
+- Settings/onboarding source management — onboarding placeholder exists; the full add/manage/switch
+  surface is now owned by `120` (topic 200 amended there).

@@ -1,12 +1,40 @@
-# Feature Specification: Shared Album Link (DEFERRED)
+# Feature Specification: Shared Album Link
 
 **Feature Branch**: `110-shared-album-link`
 
 **Created**: 2026-06-23
 
-**Status**: Deferred — backlog, not scheduled
+**Updated**: 2026-06-24
 
-**Input**: Reserved sub-spec distilled from `specs/011-shared-album-link/spec.md`: future Immich shared/public album link support as an alternative slideshow source, with optional password and verified API paths.
+**Status**: Scheduled — a source kind feeding `120` (source library). The unprotected path is
+verified against the running server (Immich 2.7.5); the password-protected path remains unverified.
+
+**Input**: Reserved sub-spec distilled from `specs/011-shared-album-link/spec.md`: Immich
+shared/public album link support as an alternative slideshow source, with optional password and
+verified API paths. Now consumed by `120-source-library` as one source kind among several.
+
+## Verified mechanics (Immich 2.7.5)
+
+Verified live against a real unprotected shared link (`/api/server/version` → `2.7.5`). A shared
+link maps onto the existing albums → assets → preview/original contract using `?key=` query auth
+instead of the `x-api-key` header:
+
+1. **Parse** the pasted URL `https://<host>/s/<slug>` into base URL + slug (e.g. slug `geo2026`).
+2. **Resolve** `GET /api/shared-links/me?slug=<slug>` → 200 with the shared-link object:
+   the real `key` token, `type` (`ALBUM`), `album.id`, `album.albumName`, `album.assetCount`,
+   `password` (null when unprotected), `expiresAt` (null = no expiry), `allowDownload`, `showMetadata`,
+   `slug`. The `me` response does **not** inline the album's asset list for an ALBUM link.
+   (`?key=<slug>` is rejected with 401 "Invalid share key" — `geo2026` is a slug, not a key.)
+3. **Enumerate** `GET /api/albums/{album.id}?key=<key>` → 200 with the full `assets[]`
+   (id, type IMAGE/VIDEO, originalFileName).
+4. **Images** `GET /api/assets/{id}/thumbnail?key=<key>&size=preview` → `image/jpeg`;
+   `GET /api/assets/{id}/original?key=<key>` → original bytes (HEIC in the sample). The same requests
+   **without** `?key=` return 401, confirming the key is the bearer for unauthenticated shared access.
+
+Implications for the source/transport abstraction (topic 100): `ImmichClient` needs a share-key auth
+mode (`?key=` query) alongside the existing API-key header mode; the shared-link source stores the
+base URL + slug (non-secret, from the pasted URL) and re-resolves to the key, and any password is a
+Keychain secret. Originals can be HEIC, so prefer the `preview` (JPEG) path for display.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -75,10 +103,17 @@ The future shared-link entry becomes functional from both the combined onboardin
 
 ## Open Questions
 
-1. **Immich mechanism**: Which exact Immich endpoint or endpoints back shared/public links in the running server version, and how is the password supplied? Verify against `/api/server/version` and OpenAPI.
-2. **Secret classification**: Is the shared-link password a true secret requiring Keychain storage, or a shareable token? This outline assumes Keychain.
-3. **Coexistence**: Can a shared-link source and an API-key album source both be configured, or is exactly one source configured at a time?
-4. **Onboarding path**: Is shared-link mode a full alternative that skips API key and album selection, or an additional source option alongside the API-key path?
+1. **Immich mechanism**: RESOLVED for unprotected links (see Verified mechanics — slug resolves via
+   `me?slug=`, assets via `albums/{id}?key=`, images via `?key=`). REMAINING: how the password is
+   supplied for *protected* links (`me?slug=<slug>&password=<pw>` returning the key vs. a separate
+   validation/auth call) — not yet verified against a protected test link.
+2. **Secret classification**: RESOLVED — when present, the shared-link password is a true secret and
+   is stored in the Keychain. The slug is non-secret (it is in the pasted URL); the resolved key token
+   is a sensitive bearer and MUST never be logged.
+3. **Coexistence**: RESOLVED via `120` — a shared-link source and API-key album sources coexist in one
+   library; exactly one source is active at a time.
+4. **Onboarding path**: RESOLVED via `120` — a shared link is an additional source kind added to the
+   library alongside albums, not a separate mode that skips the API-key path.
 
 ## Assumptions
 

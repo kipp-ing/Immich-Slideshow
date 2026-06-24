@@ -108,8 +108,15 @@ When Immich cannot be reached, rejects credentials, or returns malformed data, c
 
 ### Roadmap / Deferred (not yet built)
 
-- Reserved sub-spec `110-shared-album-link`: Auth should be abstracted behind the transport so a future shared-link token and password can replace `x-api-key` without changing call sites; the shared-link fetch itself is deferred, and secrets must never leak to code, storage, or logs.
-- Pool assets across multiple albums into one list. Acceptance preserved from the source: given multiple album IDs, when their assets are requested, then a single pooled asset list is returned.
+- Sub-spec `110-shared-album-link` (now **scheduled**, feeding `120`): auth is abstracted behind the
+  transport so a shared-link key (`?key=` query) and optional password replace `x-api-key` without
+  changing call sites; unprotected mechanics are verified against Immich 2.7.5 (see `110`), and
+  secrets must never leak to code, storage, or logs.
+- Sub-spec `120-source-library` (**scheduled**): persist several switchable sources (albums + shared
+  links) with exactly one active at a time; generalizes the single `selectedAlbumID`.
+- Pool assets across multiple albums into one list (still deferred — `120` switches between sources,
+  it does not pool). Acceptance preserved from the source: given multiple album IDs, when their assets
+  are requested, then a single pooled asset list is returned.
 - Fetch Memories as an asset source. Acceptance preserved from the source: given a Memories request, when it is made, then a valid list of memory assets is returned, or an empty list if none exist.
 
 ## Success Criteria *(mandatory)*
