@@ -16,3 +16,12 @@ public enum SourceKind: Codable, Sendable, Equatable {
     case album(albumID: String)
     case sharedLink(baseURL: URL, slug: String)
 }
+
+/// How the running slideshow restarts after the active source changes (see
+/// `SourceLibrary.restartStrategy(from:to:)`).
+public enum SourceRestartStrategy: Sendable, Equatable {
+    /// Same authenticated client; only the album changes (`SlideshowViewModel.switchAlbum`).
+    case switchAlbum(albumID: String)
+    /// Auth/client changed (a shared link is involved) — rebuild the slideshow.
+    case rebuild
+}
