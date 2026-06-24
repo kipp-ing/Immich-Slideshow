@@ -62,3 +62,6 @@ fastlane/test_output
 
 # Auto-generated lean codebase map (regenerated each session by build-map.sh)
 docs/CODEBASE_MAP.md
+
+# Apple Design Resources (licensed bezel mockups, not ours to redistribute)
+Design/Frames/AppleReference/
