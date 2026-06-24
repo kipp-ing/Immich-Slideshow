@@ -10,6 +10,7 @@
 //
 
 import BrokerSetupKit
+import ImmichClient
 import OnboardingKit
 import PowerKit
 import SwiftUI
@@ -24,12 +25,17 @@ struct SlideshowSettingsView: View {
     // change reconnects the running slideshow without re-onboarding.
     var makeConnectionViewModel: () -> ConnectionSettingsViewModel? = { nil }
     var onConnectionChanged: (ConnectionValidationOutcome) -> Void = { _ in }
+    // Source manager seams (120, US2): the source-library view model and a server
+    // API-key client for the add-source album picker.
+    var makeSourceLibraryViewModel: () -> SourceLibraryViewModel? = { nil }
+    var makeServerAPI: () async -> (any ImmichAPI)? = { nil }
 
     @Environment(\.dismiss) private var dismiss
     @State private var brightness: Double
     // Both editors are owned here as @State (not inside the disclosure content) so
     // collapsing/re-expanding a section keeps typed-but-unsaved edits.
     @State private var connectionViewModel: ConnectionSettingsViewModel?
+    @State private var sourceLibraryViewModel: SourceLibraryViewModel?
     @State private var brokerViewModel: BrokerSetupViewModel
     // Advanced sections collapse by default (Constitution VII). UI tests pre-expand a
     // section via a launch argument so its fields are reachable without a tap.
@@ -40,14 +46,19 @@ struct SlideshowSettingsView: View {
         powerManager: PowerManager,
         themeStore: UserDefaultsThemeStore,
         makeConnectionViewModel: @escaping () -> ConnectionSettingsViewModel? = { nil },
-        onConnectionChanged: @escaping (ConnectionValidationOutcome) -> Void = { _ in }
+        onConnectionChanged: @escaping (ConnectionValidationOutcome) -> Void = { _ in },
+        makeSourceLibraryViewModel: @escaping () -> SourceLibraryViewModel? = { nil },
+        makeServerAPI: @escaping () async -> (any ImmichAPI)? = { nil }
     ) {
         self.powerManager = powerManager
         self.themeStore = themeStore
         self.makeConnectionViewModel = makeConnectionViewModel
         self.onConnectionChanged = onConnectionChanged
+        self.makeSourceLibraryViewModel = makeSourceLibraryViewModel
+        self.makeServerAPI = makeServerAPI
         _brightness = State(initialValue: Self.currentScreenBrightness())
         _connectionViewModel = State(initialValue: makeConnectionViewModel())
+        _sourceLibraryViewModel = State(initialValue: makeSourceLibraryViewModel())
         let broker = BrokerSetupViewModel(store: BrokerSettingsStoreFactory.make())
         broker.load()
         _brokerViewModel = State(initialValue: broker)
@@ -126,6 +137,21 @@ struct SlideshowSettingsView: View {
                     Text("Anzeige")
                 } footer: {
                     Text("Reihenfolge und Anzeigedauer wirken sofort. Weitere Optionen folgen.")
+                }
+
+                if let sourceLibraryViewModel {
+                    Section {
+                        NavigationLink {
+                            SourceLibraryView(viewModel: sourceLibraryViewModel, makeServerAPI: makeServerAPI)
+                        } label: {
+                            Label("Quellen", systemImage: "photo.stack")
+                                .accessibilityIdentifier("settings.sources")
+                        }
+                    } header: {
+                        Text("Diashow")
+                    } footer: {
+                        Text("Alben und geteilte Links verwalten und die aktive Quelle wählen.")
+                    }
                 }
 
                 Section {

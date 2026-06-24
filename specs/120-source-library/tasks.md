@@ -31,12 +31,21 @@ preceded by a red Swift Testing (host) or XCUITest task; no code before a demons
   `SourceLibraryViewModel` (load/add-album/add-shared-link[validate+secret]/remove[delete secret]/
   rename/move/setActive→delegates to US1 `switchActiveSource`) in OnboardingKit. OnboardingKit now 72
   tests green; ImmichClient 34 green.
-- **Resume here → T020 UI**: build SwiftUI `SourceLibraryView` (app) + surface in `SlideshowSettingsView`
-  (NavigationLink); add a `makeSourceLibraryViewModel` factory wiring `onSwitchActive` →
-  `RootView.switchSource`; thread it RootView→SlideshowView→Settings. Then T018 red XCUITest + T022.
-- Remaining: T020 UI + T018/T022 (Settings), T017/T019/T021 (onboarding UI), T023–T026 (US3 HA,
-  Codex+wiring), T027–T029 (US4 persistence/secret gate, Codex), T030–T033 (polish). Then the
-  carried-over 300/500 items (clock-overlay renderer, disk cache, auto-retry, periodic refresh).
+- **US2 Settings manager done & verified** (T018, T020, T022-partial): `SourceLibraryView` (list +
+  set-active + swipe rename/delete + reorder + add album/shared-link) surfaced via a NavigationLink in
+  `SlideshowSettingsView`; `makeServerAPI` + `makeSourceLibraryViewModel` factories wired
+  RootView→SlideshowView→Settings (`onSwitchActive` → `RootView.switchSource`). UITest seam reworked to
+  a hermetic in-memory source library (per-album stub photos a1→asset-1..3 / a2→asset-4..6);
+  `slideshow.image` now exposes the current asset id as its a11y value. `SourceLibraryUITests` (add /
+  switch-swaps-slideshow / remove) green; **full UITest suite 19 green** (fixed a scroll-fragility in
+  `BrokerSetupUITests` exposed by the new Settings section — now scrolls to the password hint).
+  Sources manager screenshotted portrait + landscape. New `--uitest-sources` auto-open seam.
+- **Resume here → T017/T019/T021** (US2 onboarding redesign, inline SwiftUI): onboarding add-source step
+  (album picker / shared-link form) + confirmation listing the library; then T017 red XCUITest closes
+  out T022.
+- Remaining: T017/T019/T021 (onboarding UI), T023–T026 (US3 HA, Codex+wiring), T027–T029 (US4
+  persistence/secret gate, Codex), T030–T033 (polish). Then the carried-over 300/500 items
+  (clock-overlay renderer, disk cache, auto-retry, periodic refresh).
 
 ## Format: `[ID] [P?] [Story] Description with file path`
 
@@ -124,16 +133,18 @@ removes; confirmation lists the library with the active one marked.
 
 - [ ] T017 [P] [US2] Red XCUITest: onboarding "add source" (album pick or shared-link form) → confirm
   → slideshow runs the chosen source, in `Immich SlideshowUITests/SourceOnboardingUITests.swift`
-- [ ] T018 [P] [US2] Red XCUITest: Settings → Sources manager adds a second source, switches active,
+- [X] T018 [P] [US2] Red XCUITest: Settings → Sources manager adds a second source, switches active,
   removes one; running slideshow swaps on switch, in `Immich SlideshowUITests/SourceLibraryUITests.swift`
 - [ ] T019 [US2] Build the onboarding add-source step (album picker reusing `AlbumBrowserView`, or a
   shared-link URL+password form) in `Immich Slideshow/Onboarding/SourceStepView.swift` (+ wire into
   `OnboardingFlowView`)
-- [ ] T020 [US2] Build the Settings **Sources** manager (list + add/remove/reorder/rename/set-active,
+- [X] T020 [US2] Build the Settings **Sources** manager (list + add/remove/reorder/rename/set-active,
   unique-label enforced) in `Immich Slideshow/Slideshow/SourceLibraryView.swift` and surface it in
   `Immich Slideshow/Slideshow/SlideshowSettingsView.swift`
 - [ ] T021 [US2] Make the onboarding confirmation list the library and mark the active source
-- [ ] T022 [US2] Green T017/T018 via XcodeBuildMCP/XCUITest; screenshot portrait + landscape
+- [~] T022 [US2] Green T017/T018 via XcodeBuildMCP/XCUITest; screenshot portrait + landscape
+  — T018 green + full UITest suite (19) green; Sources manager screenshotted portrait + landscape.
+  T017 (onboarding XCUITest) still pending with the onboarding redesign.
 
 **Checkpoint**: full source management from onboarding + Settings.
 
