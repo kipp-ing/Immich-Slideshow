@@ -402,7 +402,11 @@ private struct RootView: View {
             if ProcessInfo.processInfo.arguments.contains("--uitest-reset-theme") {
                 defaults.removePersistentDomain(forName: suite)
             }
-            return UserDefaultsThemeStore(defaults: defaults)
+            let store = UserDefaultsThemeStore(defaults: defaults)
+            if ProcessInfo.processInfo.arguments.contains("--uitest-kenburns") {
+                store.settings.kenBurns = true
+            }
+            return store
         }
         #endif
         return UserDefaultsThemeStore()
