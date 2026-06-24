@@ -12,6 +12,16 @@ preceded by a red Swift Testing (host) or XCUITest task; no code before a demons
 
 **Organization**: by user story (US1–US4 from spec.md). Setup + Foundational are shared prerequisites.
 
+## Progress (2026-06-24) — branch `feat/120-source-library`
+
+- **Done & verified**: T001–T013 (Setup + all Foundational + US1 ActiveSourceResolver). OnboardingKit
+  49 tests + ImmichClient 34 tests green on host; app builds via XcodeBuildMCP. Plus an off-task
+  integration fix: new shared-link `ImmichError` cases mapped in OnboardingKit (`2ec4365`).
+- **Resume here → T014** (US1 app wiring in `Immich_SlideshowApp`, inline/SwiftUI + simulator).
+- Remaining: T014–T016 (US1 wiring), T017–T022 (US2 UI, inline), T023–T026 (US3 HA, Codex+wiring),
+  T027–T029 (US4 persistence/secret gate, Codex), T030–T033 (polish). Then the carried-over 300/500
+  items (clock-overlay renderer, disk cache, auto-retry, periodic refresh).
+
 ## Format: `[ID] [P?] [Story] Description with file path`
 
 - **[P]**: parallelizable (different files, no dependency on an incomplete task)
