@@ -40,10 +40,17 @@ struct Immich_SlideshowApp: App {
         // The authenticated Immich client for UI that browses beyond the active
         // album (the album-browser sheet). Built from the active source (120).
         let makeAPI: @MainActor @Sendable () async -> (any ImmichAPI)?
+        // The server API-key client, independent of the active source — used by the
+        // Settings source manager's album picker, which always lists the server's
+        // albums even when the active source is a shared link (120, US2).
+        let makeServerAPI: @MainActor @Sendable () async -> (any ImmichAPI)?
         // Persist a new active source and report how the running slideshow should
         // restart: album→album swaps the album on the same client; anything involving a
         // shared link rebuilds (120, US1). nil = no restart (unknown or already active).
         let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy?
+        // Builds the Settings source manager's view model (120, US2). The caller passes
+        // an `onSwitchActive` that restarts the running slideshow (RootView.switchSource).
+        let makeSourceLibraryViewModel: @MainActor @Sendable (@escaping (String) -> Void) -> SourceLibraryViewModel
         // Keeps the display awake during the slideshow and can control brightness.
         // Backed by the live screen in production, a fake under `--uitest` so the
         // hermetic test never touches real device brightness.
@@ -73,10 +80,30 @@ struct Immich_SlideshowApp: App {
                 uitestViewModel.step = .done
             }
             _viewModel = State(initialValue: uitestViewModel)
+            // Hermetic source library (120): one album source active by default. The
+            // Sources-manager UITest adds/switches/removes against this in-memory store,
+            // and switching swaps the running stub slideshow's album (a1 → a2) so the
+            // photo visibly changes. Stub resolver maps any shared link to album a2.
+            let sourceStore = InMemorySourceLibraryStore(library: UITestSupport.seededLibrary())
+            let secretStore = InMemorySharedLinkSecretStore()
+            let resolver = UITestSharedLinkResolver()
+            let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
+                var library = sourceStore.load()
+                let previous = library.active
+                guard previous?.id != id, library.sources.contains(where: { $0.id == id }) else { return nil }
+                library.setActive(id: id)
+                sourceStore.save(library)
+                guard let next = library.active else { return nil }
+                return SourceLibrary.restartStrategy(from: previous, to: next)
+            }
             factories = Factories(
-                makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store) },
+                makeSlideshow: { @MainActor @Sendable store in UITestSupport.makeSlideshowViewModel(settingsStore: store, library: sourceStore.load()) },
                 makeAPI: { @MainActor @Sendable in StubImmichAPI() },
-                switchActiveSource: { @MainActor @Sendable _ in nil },
+                makeServerAPI: { @MainActor @Sendable in StubImmichAPI() },
+                switchActiveSource: switchActiveSource,
+                makeSourceLibraryViewModel: { @MainActor @Sendable onSwitchActive in
+                    SourceLibraryViewModel(store: sourceStore, secretStore: secretStore, resolver: resolver, onSwitchActive: onSwitchActive)
+                },
                 makePowerManager: { @MainActor @Sendable in UITestSupport.makePowerManager() },
                 makeCoordinator: { @MainActor @Sendable _, _ in nil },
                 makeConnectionSettingsViewModel: { @MainActor @Sendable in UITestSupport.makeConnectionSettingsViewModel() },
@@ -142,6 +169,13 @@ struct Immich_SlideshowApp: App {
             return ImmichClient(config: resolved.serverConfig)
         }
 
+        // Server API-key client, independent of the active source — the Settings source
+        // manager lists the server's albums even when the active source is a shared link.
+        let makeServerAPI: @MainActor @Sendable () async -> (any ImmichAPI)? = {
+            guard let appConfig = config.load(), let apiKey = keychain.read() else { return nil }
+            return ImmichClient(config: ServerConfig(baseURL: appConfig.baseURL, apiKey: apiKey))
+        }
+
         // Switch the active source and persist it; report how the running slideshow
         // should restart (120, US1). Returns nil when the id is unknown or already
         // active, so callers skip an unnecessary restart.
@@ -153,6 +187,15 @@ struct Immich_SlideshowApp: App {
             sourceStore.save(library)
             guard let next = library.active else { return nil }
             return SourceLibrary.restartStrategy(from: previous, to: next)
+        }
+
+        let makeSourceLibraryViewModel: @MainActor @Sendable (@escaping (String) -> Void) -> SourceLibraryViewModel = { onSwitchActive in
+            SourceLibraryViewModel(
+                store: sourceStore,
+                secretStore: secretStore,
+                resolver: sharedLinkResolver,
+                onSwitchActive: onSwitchActive
+            )
         }
 
         // Production: drive the real device screen. The PowerManager gates all
@@ -209,7 +252,9 @@ struct Immich_SlideshowApp: App {
         factories = Factories(
             makeSlideshow: makeSlideshow,
             makeAPI: makeAPI,
+            makeServerAPI: makeServerAPI,
             switchActiveSource: switchActiveSource,
+            makeSourceLibraryViewModel: makeSourceLibraryViewModel,
             makePowerManager: makePowerManager,
             makeCoordinator: makeCoordinator,
             makeConnectionSettingsViewModel: makeConnectionSettingsViewModel,
@@ -262,7 +307,9 @@ private struct RootView: View {
                     onboarding.reset()
                 },
                               makeConnectionViewModel: { factories.makeConnectionSettingsViewModel() },
-                              onConnectionChanged: handleConnectionChange)
+                              onConnectionChanged: handleConnectionChange,
+                              makeSourceLibraryViewModel: { factories.makeSourceLibraryViewModel { id in switchSource(id: id) } },
+                              makeServerAPI: { await factories.makeServerAPI() })
                 .id(connectionGeneration)
                 .sheet(isPresented: $showAlbumReselect) {
                     AlbumBrowserView(api: api, currentAlbumID: nil) { albumID, _ in
@@ -361,10 +408,29 @@ enum UITestSupport {
         )
     }
 
-    static func makeSlideshowViewModel(settingsStore: any ThemeSettingsStore) -> SlideshowViewModel {
-        SlideshowViewModel(
+    /// One album source ("Wohnzimmer" → album a1), active. The Sources-manager UITest
+    /// mutates this; the stub `albums()` also offers album a2 ("Urlaub 2026") to add.
+    static func seededLibrary() -> SourceLibrary {
+        var library = SourceLibrary()
+        library.add(Source(id: "src-a1", label: "Wohnzimmer", kind: .album(albumID: "a1")))
+        return library
+    }
+
+    static func makeSlideshowViewModel(
+        settingsStore: any ThemeSettingsStore,
+        library: SourceLibrary = UITestSupport.seededLibrary()
+    ) -> SlideshowViewModel {
+        // Resolve the active source to a stub album id (shared links → a2 like the stub
+        // resolver) so switching the active source visibly changes the photos.
+        let albumID: String
+        switch library.active?.kind {
+        case let .album(id): albumID = id
+        case .sharedLink: albumID = "a2"
+        case nil: albumID = "a1"
+        }
+        return SlideshowViewModel(
             api: StubImmichAPI(),
-            albumID: "a1",
+            albumID: albumID,
             ticker: RealTicker(),
             settingsStore: settingsStore
         )
@@ -407,11 +473,22 @@ private struct StubImmichAPI: ImmichAPI {
     }
 
     func assets(albumID: String) async throws -> [Asset] {
-        [
-            Asset(id: "asset-1", type: "IMAGE"),
-            Asset(id: "asset-2", type: "IMAGE"),
-            Asset(id: "asset-3", type: "IMAGE"),
-        ]
+        // Per-album assets so switching the active source (a1 → a2) visibly changes the
+        // photos in the running slideshow (120, US2 source switch).
+        switch albumID {
+        case "a2":
+            return [
+                Asset(id: "asset-4", type: "IMAGE"),
+                Asset(id: "asset-5", type: "IMAGE"),
+                Asset(id: "asset-6", type: "IMAGE"),
+            ]
+        default:
+            return [
+                Asset(id: "asset-1", type: "IMAGE"),
+                Asset(id: "asset-2", type: "IMAGE"),
+                Asset(id: "asset-3", type: "IMAGE"),
+            ]
+        }
     }
 
     func preview(assetID: String) async throws -> Data { Self.renderPortrait(for: assetID) }
@@ -436,6 +513,9 @@ private struct StubImmichAPI: ImmichAPI {
             "asset-1": .systemRed,
             "asset-2": .systemGreen,
             "asset-3": .systemBlue,
+            "asset-4": .systemOrange,
+            "asset-5": .systemTeal,
+            "asset-6": .systemPink,
         ]
         let color = colors[assetID] ?? .systemPurple
         let renderer = UIGraphicsImageRenderer(size: size)
@@ -469,5 +549,13 @@ private final class InMemoryKeychainStore: KeychainStore, @unchecked Sendable {
     func save(_ apiKey: String) throws { lock.withLock { stored = apiKey } }
     func read() -> String? { lock.withLock { stored } }
     func delete() { lock.withLock { stored = nil } }
+}
+
+// Resolves any shared link to album a2 so the hermetic Sources-manager test can add a
+// shared-link source and see the stub slideshow switch to a different album's photos.
+private struct UITestSharedLinkResolver: SharedLinkResolving {
+    func resolve(baseURL: URL, slug: String, password: String?) async throws -> SharedLinkResolution {
+        SharedLinkResolution(key: "uitest-key", albumID: "a2", expiresAt: nil)
+    }
 }
 #endif

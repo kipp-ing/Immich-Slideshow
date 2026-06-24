@@ -43,8 +43,10 @@ final class BrokerSetupUITests: XCTestCase {
         let password = app.secureTextFields["broker.password"]
         XCTAssertTrue(scrollToElement(password, in: app), "password field should be reachable")
         XCTAssertNotEqual(password.value as? String, "secret-pass", "password must not be prefilled")
+        // Scroll the hint into view before asserting: the form lazily drops off-screen
+        // rows, so the hint just below the password field needs to be rendered first.
         let passwordHint = app.staticTexts["broker.passwordHint"]
-        XCTAssertTrue(passwordHint.exists, "a 'password is set' hint should replace cleartext prefill")
+        XCTAssertTrue(scrollToElement(passwordHint, in: app), "a 'password is set' hint should replace cleartext prefill")
 
         // Remove clears the stored config; the inline form resets to a pristine state
         // (FR-013) — the remove action and the "set" hint disappear and the host clears.
