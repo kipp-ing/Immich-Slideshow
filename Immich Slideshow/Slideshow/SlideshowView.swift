@@ -75,10 +75,14 @@ struct SlideshowView: View {
             // bars don't collide with the screen edges / home indicator.
             chromeOverlay
         }
-        // Status bar + home indicator follow the chrome: hidden in the calm default
-        // (fixes the always-visible iPad clock/battery), revealed with the controls.
-        .statusBarHidden(!chromeVisible)
-        .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
+        // Status bar + home indicator stay hidden for the whole slideshow — even while the
+        // chrome is revealed. The chrome owns its own exit/transport controls, so there's no
+        // need for the system clock/battery; keeping them tied to the chrome made them pop
+        // back on every tap and, worse, toggled the safe-area insets, which re-laid-out the
+        // photo (a visible jump) and reset the Ken Burns pan/zoom. Pinning both hidden keeps
+        // the calm photo-frame look and a stable frame (300/US4-AS1).
+        .statusBarHidden(true)
+        .persistentSystemOverlays(.hidden)
         // The image swap is animated per the chosen transition; "none" disables the
         // animation entirely so there is no residual fade (008/US2, review R5).
         .animation(swapAnimation, value: viewModel.currentAssetID)
