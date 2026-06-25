@@ -14,17 +14,30 @@ import Observation
     @ObservationIgnored private let config: ConfigStore
     @ObservationIgnored private let keychain: KeychainStore
     @ObservationIgnored private let sourceStore: any SourceLibraryStore
+    // Bounded auto-retry for the connection validation. The first request on a fresh
+    // install fails while the iOS Local Network permission prompt is up; retrying a few
+    // times lets validation complete once the user grants access instead of surfacing a
+    // hard error (Bug 1). Injected so tests run instantly with a no-op sleep.
+    @ObservationIgnored private let connectionRetryLimit: Int
+    @ObservationIgnored private let connectionRetryDelay: Duration
+    @ObservationIgnored private let sleep: (Duration) async -> Void
 
     public init(
         api: @escaping (ServerConfig) -> any ImmichAPI,
         config: ConfigStore,
         keychain: KeychainStore,
-        sourceStore: any SourceLibraryStore = InMemorySourceLibraryStore()
+        sourceStore: any SourceLibraryStore = InMemorySourceLibraryStore(),
+        connectionRetryLimit: Int = 4,
+        connectionRetryDelay: Duration = .seconds(1.2),
+        sleep: @escaping (Duration) async -> Void = { try? await Task.sleep(for: $0) }
     ) {
         self.api = api
         self.config = config
         self.keychain = keychain
         self.sourceStore = sourceStore
+        self.connectionRetryLimit = connectionRetryLimit
+        self.connectionRetryDelay = connectionRetryDelay
+        self.sleep = sleep
     }
 
     public func submitConnection() async {
@@ -41,7 +54,7 @@ import Observation
 
         let list: [Album]
         do {
-            list = try await api(ServerConfig(baseURL: url, apiKey: apiKeyInput)).albums()
+            list = try await validateConnection(url: url)
         } catch let error as ImmichError {
             errorMessage = ConnectionError.message(for: error)
             return
@@ -64,6 +77,25 @@ import Observation
         // An empty album list still proves the connection works; the user can add a shared
         // link on the next step, so advance rather than dead-end at connection (120, US2).
         step = .source
+    }
+
+    /// Validate the connection by fetching the album list, retrying briefly on
+    /// `.unreachable`. On a fresh install the first request fails while the iOS Local
+    /// Network permission prompt is still up; a few bounded retries let validation
+    /// complete once the user taps "Allow", instead of surfacing a hard "server not
+    /// available" the user must dismiss and re-trigger (Bug 1). Deterministic failures
+    /// (auth, invalid response) are not retried — they won't change on a repeat.
+    private func validateConnection(url: URL) async throws -> [Album] {
+        let client = api(ServerConfig(baseURL: url, apiKey: apiKeyInput))
+        var attempt = 0
+        while true {
+            do {
+                return try await client.albums()
+            } catch ImmichError.unreachable where attempt < connectionRetryLimit {
+                attempt += 1
+                await sleep(connectionRetryDelay)
+            }
+        }
     }
 
     /// Load the album list for the source step when it isn't already in memory — e.g. when
