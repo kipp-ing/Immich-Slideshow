@@ -65,3 +65,6 @@ docs/CODEBASE_MAP.md
 
 # Apple Design Resources (licensed bezel mockups, not ours to redistribute)
 Design/Frames/AppleReference/
+
+# Affinity Designer transient lock files
+*~lock~

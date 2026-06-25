@@ -6,6 +6,28 @@
     {
       "layers" : [
         {
+          "image-name" : "play.svg",
+          "name" : "play",
+          "position" : {
+            "scale" : 3.1,
+            "translation-in-points" : [
+              12.858379858285844,
+              5.684341886080802e-14
+            ]
+          }
+        },
+        {
+          "image-name" : "frame 2.svg",
+          "name" : "frame 2",
+          "position" : {
+            "scale" : 4.64,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
           "blend-mode" : "normal",
           "fill-specializations" : [
             {
@@ -21,7 +43,7 @@
             }
           ],
           "glass" : true,
-          "hidden" : false,
+          "hidden" : true,
           "image-name" : "frame.svg",
           "name" : "frame",
           "position" : {
@@ -34,25 +56,12 @@
         },
         {
           "fill" : "automatic",
+          "hidden" : true,
           "image-name" : "immich-logo.svg",
           "name" : "immich-logo",
           "opacity" : 0.79,
           "position" : {
-            "scale" : 2.99,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-          },
-          "image-name" : "frame_inner.svg",
-          "name" : "frame_inner",
-          "position" : {
-            "scale" : 5.13,
+            "scale" : 2.94,
             "translation-in-points" : [
               0,
               0
@@ -67,6 +76,69 @@
       "translucency" : {
         "enabled" : true,
         "value" : 0.2
+      }
+    },
+    {
+      "layers" : [
+        {
+          "image-name" : "bubble 3.svg",
+          "name" : "bubble 3",
+          "position" : {
+            "scale" : 3.77,
+            "translation-in-points" : [
+              -0.004871908460472696,
+              -4.510080469439572
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "frame_inner.svg",
+          "name" : "frame_inner",
+          "position" : {
+            "scale" : 4.65,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
       }
     }
   ],
