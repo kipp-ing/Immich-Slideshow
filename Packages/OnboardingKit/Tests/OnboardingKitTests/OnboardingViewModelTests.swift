@@ -88,6 +88,62 @@ import ImmichClient
     #expect(config.loadBaseURL()?.host == "photos.example.test")
 }
 
+@Test func retriesUnreachableThenAdvancesWhenPermissionGranted() async {
+    // The iOS Local Network prompt makes the first connection fail on a fresh install;
+    // once the user grants access the retry succeeds. A bounded auto-retry rides that
+    // out so onboarding advances instead of dead-ending on "server not available" the
+    // user has to dismiss and re-trigger (Bug 1).
+    let keychain = InMemoryKeychainStore()
+    let config = InMemoryConfigStore()
+    let api = FlakyAlbumsAPI(failuresBeforeSuccess: 1, albums: [Album(id: "a1", name: "Fam")])
+    let vm = makeVM(api: api, config: config, keychain: keychain, retryLimit: 4)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    #expect(vm.step == .source)
+    #expect(keychain.read() == "key")
+    #expect(config.loadBaseURL()?.host == "photos.example.test")
+    #expect(vm.albums.map(\.id) == ["a1"])
+    #expect(vm.errorMessage == nil)
+    // One failed attempt + one successful retry.
+    #expect(await api.albumsCallCount == 2)
+}
+
+@Test func surfacesUnreachableAfterExhaustingRetries() async {
+    // A genuinely unreachable server still errors out — bounded, not an infinite loop.
+    let keychain = InMemoryKeychainStore()
+    let api = AlbumsAPI(result: .failure(ImmichError.unreachable))
+    let vm = makeVM(api: api, keychain: keychain, retryLimit: 2)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    #expect(vm.step == .connection)
+    #expect(keychain.read() == nil)
+    #expect(vm.errorMessage == ConnectionError.message(for: .unreachable))
+    // Initial attempt + retryLimit retries, then it gives up.
+    #expect(await api.albumsCallCount == 3)
+}
+
+@Test func doesNotRetryDeterministicErrors() async {
+    // Auth failures won't change on retry, so they surface immediately without burning
+    // the retry budget (the retry is scoped to `.unreachable`).
+    let keychain = InMemoryKeychainStore()
+    let api = AlbumsAPI(result: .failure(ImmichError.unauthorized))
+    let vm = makeVM(api: api, keychain: keychain, retryLimit: 4)
+    vm.serverURLInput = "https://photos.example.test"
+    vm.apiKeyInput = "key"
+
+    await vm.submitConnection()
+
+    #expect(vm.step == .connection)
+    #expect(vm.errorMessage == ConnectionError.message(for: .unauthorized))
+    #expect(await api.albumsCallCount == 1)
+}
+
 @Test func staysWhenServerUnreachable() async {
     let keychain = InMemoryKeychainStore()
     let api = AlbumsAPI(result: .failure(ImmichError.unreachable))
@@ -184,16 +240,21 @@ import ImmichClient
 }
 
 private func makeVM(
-    api: AlbumsAPI,
+    api: any ImmichAPI,
     config: InMemoryConfigStore = .init(),
     keychain: InMemoryKeychainStore = .init(),
-    sourceStore: InMemorySourceLibraryStore = .init()
+    sourceStore: InMemorySourceLibraryStore = .init(),
+    retryLimit: Int = 0
 ) -> OnboardingViewModel {
     OnboardingViewModel(
         api: { _ in api },
         config: config,
         keychain: keychain,
-        sourceStore: sourceStore
+        sourceStore: sourceStore,
+        connectionRetryLimit: retryLimit,
+        connectionRetryDelay: .zero,
+        // No real waiting in tests — the retry cadence is host behaviour, not under test.
+        sleep: { _ in }
     )
 }
 
@@ -212,6 +273,40 @@ private actor AlbumsAPI: ImmichAPI {
     func albums() async throws -> [Album] {
         albumsCallCount += 1
         return try result.get()
+    }
+
+    func assets(albumID: String) async throws -> [Asset] {
+        []
+    }
+
+    func preview(assetID: String) async throws -> Data {
+        Data()
+    }
+}
+
+/// Fails `.unreachable` for the first `failuresBeforeSuccess` calls, then returns
+/// `albums` — models the Local Network prompt blocking the first request and the
+/// retry succeeding once the user grants access.
+private actor FlakyAlbumsAPI: ImmichAPI {
+    private let failuresBeforeSuccess: Int
+    private let albumsResult: [Album]
+    private(set) var albumsCallCount = 0
+
+    init(failuresBeforeSuccess: Int, albums: [Album]) {
+        self.failuresBeforeSuccess = failuresBeforeSuccess
+        self.albumsResult = albums
+    }
+
+    func serverVersion() async throws -> String {
+        "1.119.0"
+    }
+
+    func albums() async throws -> [Album] {
+        albumsCallCount += 1
+        if albumsCallCount <= failuresBeforeSuccess {
+            throw ImmichError.unreachable
+        }
+        return albumsResult
     }
 
     func assets(albumID: String) async throws -> [Asset] {

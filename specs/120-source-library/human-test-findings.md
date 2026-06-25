@@ -3,6 +3,12 @@
 Bugs/observations from the real-iPad test pass (iPad jk, iPad16,3). To be batch-fixed after testing.
 
 ## Bug 1 — Onboarding: first "Continue" shows "server not available", unchanged retry works
+- **Status: FIXED (2026-06-25).** Declared `INFOPLIST_KEY_NSLocalNetworkUsageDescription`
+  (build setting; verified present in the built `Info.plist`) and added a bounded auto-retry on
+  `ImmichError.unreachable` in `OnboardingViewModel.submitConnection` (default 4 retries ~1.2 s
+  apart, injected sleep; deterministic errors — auth/invalid — are not retried). Host tests cover
+  retry-then-succeed, exhaust-then-error, and no-retry-on-auth. On-device re-test of the
+  fresh-install prompt path still pending.
 - **Repro:** Fresh install → Connection step → enter real server URL + API key → Continue → red
   "server not available" (`ImmichError.unreachable`). Tap Continue again, no field change → green, proceeds.
 - **Root cause (confirmed):** iOS **Local Network privacy** prompt. The self-hosted Immich hostname
@@ -24,6 +30,12 @@ Bugs/observations from the real-iPad test pass (iPad jk, iPad16,3). To be batch-
   - Tests: host test for the retry-then-succeed path (stub transport fails once then returns albums).
 
 ## Bug 2 — Slideshow chrome shifts position when Ken Burns is on
+- **Status: FIXED (2026-06-25).** The chrome now lays out against a stable full-screen,
+  safe-area-respecting frame with the image rendered as its `.background` (a background is sized
+  to the host and never feeds size back up), so switching the image between fit and fill framing
+  no longer drags the chrome's inset. Verified: chrome insets pixel-stable KB on vs off (sim
+  screenshots), `SlideshowChromeUITests` + full UI suite green. `--uitest-kenburns` retained as
+  the regression seam.
 - **Repro:** Running slideshow, reveal chrome. Toggle Ken Burns ON → the chrome buttons (top X,
   top-right info/albums/settings cluster) slide outward toward the screen edges (~10pt/side in
   portrait sim; more pronounced on the device/landscape). Toggle OFF → back to the correct inset.
