@@ -184,9 +184,26 @@ choice screen is to kill the app.
 - [X] T047 [F3] Add a leading Back toolbar affordance in `Immich Slideshow/Onboarding/OnboardingFlowView.swift`, shown when `viewModel.canGoBack`, calling `back()`, with accessibility id `onboarding.back` — built + visually confirmed on the shared-link step (chevron top-left).
 - [X] T048 [F3] XCUITest: choice → shared-link setup → Back → choice; choice → server connection → Back → choice; choice screen has no Back; no app restart, in `Immich SlideshowUITests/OnboardingBackUITests.swift` — 3 tests green.
 
+### Finding 4 — shared-link-only setup is a black screen on device (FR-210-03/04)
+
+Device-only (the `--uitest` slideshow path is stubbed and bypasses real source resolution): the
+app's `resolveActiveSource` guarded on `config.loadBaseURL()` **and** `keychain.read()` (API key)
+before resolving *any* active source — but a shared-link-only setup has neither, so the guard
+returned `nil` → `makeSlideshow` → `nil` → `Color.black`. Affects protected **and** non-protected
+shared-link-only setups. (Asset access itself is fine: verified live that a protected link's
+album/thumbnail/preview/original all return 200 with `?key=` alone — no password/cookie needed.)
+
+- [X] T049 [P] [F4] Red test: `ActiveSourceResolver` resolves a `.sharedLink` source with `nil`
+  albumBaseURL/apiKey; an `.album` source with `nil` creds throws, in `ActiveSourceResolverTests.swift` — 2 tests, **115 OnboardingKit green**.
+- [X] T050 [F4] Make `ActiveSourceResolver` album creds optional (`URL?`/`String?`; album branch
+  throws `.unauthorized` when missing) and drop the API-key/base-URL requirement from
+  `resolveActiveSource` in `Immich Slideshow/Immich_SlideshowApp.swift` (keep-inline; app entry).
+- [ ] T051 [F4] **Device re-test**: real shared-link-only onboarding (protected + non-protected) reaches the running slideshow on the iPad — pending hardware confirmation.
+
 **Checkpoint**: non-protected `/share/<key>` links resolve with no password prompt; the album picker
 is one searchable, subscrollable, pinned-confirm screen in both onboarding and Settings; every
-onboarding step after the choice has a working Back.
+onboarding step after the choice has a working Back; a shared-link-only setup reaches the slideshow
+(no API key) instead of a black screen.
 
 ---
 

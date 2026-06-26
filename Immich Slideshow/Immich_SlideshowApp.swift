@@ -179,11 +179,13 @@ struct Immich_SlideshowApp: App {
         // client here; they are never logged or persisted elsewhere (Konstitution III).
         // nil when state is incomplete or the active source fails to resolve.
         let resolveActiveSource: @MainActor @Sendable () async -> ResolvedSource? = {
-            guard let baseURL = config.loadBaseURL(), let apiKey = keychain.read(),
-                  let active = sourceStore.load().active else { return nil }
+            // A shared-link active source resolves with no API key / album base URL — a
+            // shared-link-only setup has neither (FR-210-03/04). The album credentials are
+            // passed through (optional) and only required for an album active source.
+            guard let active = sourceStore.load().active else { return nil }
             let resolver = ActiveSourceResolver(
-                albumBaseURL: baseURL,
-                apiKey: apiKey,
+                albumBaseURL: config.loadBaseURL(),
+                apiKey: keychain.read(),
                 secretStore: secretStore,
                 sharedLinkResolver: sharedLinkResolver
             )
