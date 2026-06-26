@@ -137,10 +137,10 @@ by US1, US2, and US4.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T036 [P] Secret-hygiene check: grep that no password/API key reaches UserDefaults, the App Group container, or logs; confirm only the URL crosses the boundary (SC-210-06, Constitution III)
-- [ ] T037 [P] Update `docs/spec-overview.md` and cross-reference 200/120 to 210 (move shared-link-only + Share-Sheet items from Roadmap → Active where applicable)
-- [ ] T038 Run the full XCUITest suite green via XcodeBuildMCP before merge (project rule)
-- [ ] T039 Run `quickstart.md` scenarios A–F; record the Share Sheet human-test outcome in `human-test-findings.md`
+- [X] T036 [P] Secret-hygiene check — grep audit **clean** (2026-06-26): no API key/password/token in UserDefaults; the Share Extension writes only `url.absoluteString` to the App Group; `SourceKind.sharedLink` persists only `(baseURL, slug)`; `ConfigStore` holds only baseURL/albumID; secrets live in `KeychainStore` / `KeychainSharedLinkSecretStore` (`SecItem*`); no `print`/`os_log`/`Logger` of secrets; resolved bearer key never persisted. Recorded in `human-test-findings.md` (SC-210-06, Constitution III).
+- [X] T037 [P] Update `docs/spec-overview.md` — added the `210` topic row (sub-spec of 200, Active), a "How they connect" cross-ref (210 evolves 200 onboarding; reuses 120 + 100/110, no new backend), and refreshed the source-management roadmap bullet (now built by 120 + 210).
+- [X] T038 Run the full XCUITest suite green via XcodeBuildMCP — **52 passed / 0 failed** (2026-06-26, pinned iOS 26.5 iPad sim). Re-run at final merge per project rule ([[run-full-xcuitest-before-merge]]).
+- [X] T039 Run `quickstart.md` scenarios A–F — A–F mapped to their green host/XCUITest coverage + the T036 audit in `human-test-findings.md`; F1/F2/F3 manual fixes recorded. **Device-gated items flagged pending: T025** real Share-Sheet round trip (system sheet not XCUITest-drivable) and **T003** live-OpenAPI field check.
 
 ---
 
