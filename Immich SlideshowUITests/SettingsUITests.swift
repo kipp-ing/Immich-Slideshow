@@ -39,11 +39,11 @@ final class SettingsUITests: XCTestCase {
         // transition/Ken Burns/fit/quality are now live (008); the clock overlay is the
         // remaining placeholder until US4.
         let plannedRow = app.descendants(matching: .any)
-            .matching(identifier: "settings.row.Uhr-Overlay").firstMatch
+            .matching(identifier: "settings.row.Clock overlay").firstMatch
         XCTAssertTrue(plannedRow.exists, "the clock-overlay option should be previewed")
 
         // Dismiss back to the slideshow.
-        app.buttons["Fertig"].tap()
+        app.buttons["Done"].tap()
         XCTAssertTrue(image.waitForExistence(timeout: 3))
         let dismissed = NSPredicate(format: "isHittable == false")
         expectation(for: dismissed, evaluatedWith: slider)

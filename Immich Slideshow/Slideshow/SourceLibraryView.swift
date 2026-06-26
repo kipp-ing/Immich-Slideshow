@@ -91,7 +91,7 @@ struct SourceLibraryView: View {
 }
 
 /// One row in the source list: a kind icon, the label, a subtitle locator, and an
-/// "Aktiv" marker on the active source (also surfaced in the accessibility label).
+/// "Active" marker on the active source (also surfaced in the accessibility label).
 private struct SourceRow: View {
     let source: Source
     let isActive: Bool

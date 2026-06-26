@@ -29,24 +29,24 @@ struct ConnectionSettingsView: View {
                         .keyboardType(.URL)
                         .accessibilityIdentifier("connection.url")
                 } header: {
-                    Text("Server-Adresse")
+                    Text("Server address")
                 }
 
                 Section {
-                    SecureField("Neuer API-Schlüssel", text: $viewModel.apiKeyInput)
+                    SecureField("New API Key", text: $viewModel.apiKeyInput)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityIdentifier("connection.apiKey")
                     if viewModel.keyIsSet {
-                        Label("Schlüssel ist gesetzt", systemImage: "key.fill")
+                        Label("Key is set", systemImage: "key.fill")
                             .foregroundStyle(.secondary)
                             .font(.footnote)
                             .accessibilityIdentifier("connection.keySet")
                     }
                 } header: {
-                    Text("API-Schlüssel")
+                    Text("API Key")
                 } footer: {
-                    Text("Leer lassen, um den gespeicherten Schlüssel zu behalten.")
+                    Text("Leave empty to keep the saved key.")
                 }
 
                 if let errorMessage = viewModel.errorMessage {
@@ -57,18 +57,18 @@ struct ConnectionSettingsView: View {
                     }
                 }
             }
-            .navigationTitle("Verbindung")
+            .navigationTitle("Connection")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button("Cancel") { dismiss() }
                         .disabled(viewModel.isBusy)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if viewModel.isBusy {
                         ProgressView()
                     } else {
-                        Button("Speichern", action: save)
+                        Button("Save", action: save)
                             .disabled(isSaveDisabled)
                             .accessibilityIdentifier("connection.save")
                     }

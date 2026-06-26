@@ -43,7 +43,7 @@ final class SourceLibraryUITests: XCTestCase {
 
         // Back out of the manager and close settings to see the running slideshow.
         app.navigationBars["Sources"].buttons.element(boundBy: 0).tap()
-        app.buttons["Fertig"].tap()
+        app.buttons["Done"].tap()
 
         XCTAssertTrue(image.waitForExistence(timeout: 3))
         let swapped = NSPredicate(format: "value IN %@", ["asset-4", "asset-5", "asset-6"])
