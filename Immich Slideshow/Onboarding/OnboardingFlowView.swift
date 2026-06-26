@@ -14,9 +14,17 @@ import SwiftUI
 struct OnboardingFlowView: View {
     let viewModel: OnboardingViewModel
     @State private var sourceLibrary: SourceLibraryViewModel
+    /// A shared link handed in while the app is still unconfigured (210, US2):
+    /// pre-fills the shared-link setup field.
+    let sharedLinkPrefill: String
 
-    init(viewModel: OnboardingViewModel, makeSourceLibrary: () -> SourceLibraryViewModel) {
+    init(
+        viewModel: OnboardingViewModel,
+        sharedLinkPrefill: String = "",
+        makeSourceLibrary: () -> SourceLibraryViewModel
+    ) {
         self.viewModel = viewModel
+        self.sharedLinkPrefill = sharedLinkPrefill
         _sourceLibrary = State(initialValue: makeSourceLibrary())
     }
 
@@ -27,7 +35,7 @@ struct OnboardingFlowView: View {
                 case .choice:
                     OnboardingChoiceView(viewModel: viewModel)
                 case .sharedLinkSetup:
-                    SharedLinkSetupView(onboarding: viewModel, sourceLibrary: sourceLibrary)
+                    SharedLinkSetupView(onboarding: viewModel, sourceLibrary: sourceLibrary, prefill: sharedLinkPrefill)
                 case .connection:
                     ConnectionStepView(viewModel: viewModel)
                 case .source:

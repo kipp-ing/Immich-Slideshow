@@ -16,9 +16,17 @@ struct SharedLinkSetupView: View {
     let onboarding: OnboardingViewModel
     @Bindable var sourceLibrary: SourceLibraryViewModel
 
-    @State private var urlText = ""
+    @State private var urlText: String
     @State private var passwordText = ""
     @State private var showPasswordPrompt = false
+
+    /// `prefill` seeds the link field — used when a link is shared into the app while it
+    /// is still unconfigured (210, US2 → `IncomingSharedLink.prefillOnboarding`).
+    init(onboarding: OnboardingViewModel, sourceLibrary: SourceLibraryViewModel, prefill: String = "") {
+        self.onboarding = onboarding
+        self.sourceLibrary = sourceLibrary
+        _urlText = State(initialValue: prefill)
+    }
 
     var body: some View {
         Form {
