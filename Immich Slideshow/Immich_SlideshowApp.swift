@@ -100,6 +100,13 @@ struct Immich_SlideshowApp: App {
                 config.saveBaseURL(URL(string: "https://photos.example.test")!)
                 try? keychain.save("uitest-key")
                 uitestViewModel.step = .source
+            } else if ProcessInfo.processInfo.arguments.contains("--uitest-onboarding-choice") {
+                // 210 US1: a blank install opens on the first-run choice screen. Stores
+                // stay empty so the shared-link path drives the first (and only) source.
+                uitestViewModel.step = .choice
+            } else if ProcessInfo.processInfo.arguments.contains("--uitest-shared-link-only") {
+                // 210 US1: jump straight to the shared-link-only entry screen (no API key).
+                uitestViewModel.step = .sharedLinkSetup
             }
             _viewModel = State(initialValue: uitestViewModel)
             let switchActiveSource: @MainActor @Sendable (String) -> SourceRestartStrategy? = { id in
@@ -581,9 +588,21 @@ private final class InMemoryKeychainStore: KeychainStore, @unchecked Sendable {
 
 // Resolves any shared link to album a2 so the hermetic Sources-manager test can add a
 // shared-link source and see the stub slideshow switch to a different album's photos.
+// Two reserved slugs drive the 210 shared-link onboarding paths deterministically:
+// `protected` requires the password "letmein" (otherwise `passwordRequired`/`wrongPassword`)
+// and `missing` is an invalid link.
 private struct UITestSharedLinkResolver: SharedLinkResolving {
     func resolve(baseURL: URL, slug: String, password: String?) async throws -> SharedLinkResolution {
-        SharedLinkResolution(key: "uitest-key", albumID: "a2", expiresAt: nil)
+        switch slug {
+        case "protected":
+            guard let password else { throw ImmichError.passwordRequired }
+            guard password == "letmein" else { throw ImmichError.wrongPassword }
+        case "missing":
+            throw ImmichError.invalidShareLink
+        default:
+            break
+        }
+        return SharedLinkResolution(key: "uitest-key", albumID: "a2", expiresAt: nil)
     }
 }
 #endif

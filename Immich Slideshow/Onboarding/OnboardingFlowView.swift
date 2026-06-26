@@ -24,6 +24,10 @@ struct OnboardingFlowView: View {
         NavigationStack {
             Group {
                 switch viewModel.step {
+                case .choice:
+                    OnboardingChoiceView(viewModel: viewModel)
+                case .sharedLinkSetup:
+                    SharedLinkSetupView(onboarding: viewModel, sourceLibrary: sourceLibrary)
                 case .connection:
                     ConnectionStepView(viewModel: viewModel)
                 case .source:

@@ -3,6 +3,43 @@ import Testing
 @testable import OnboardingKit
 import ImmichClient
 
+@Test func choosePathRoutesSharedLinkToSetup() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .choice
+
+    vm.choosePath(.sharedLink)
+
+    #expect(vm.step == .sharedLinkSetup)
+    #expect(vm.errorMessage == nil)
+}
+
+@Test func choosePathRoutesServerToConnection() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .choice
+
+    vm.choosePath(.server)
+
+    #expect(vm.step == .connection)
+}
+
+@Test func finishFromSharedLinkOnlyPathCompletesWithoutAPIKeyOrConfig() {
+    // The low-friction path: the resolve engine has already made a shared link the active
+    // source. Finishing routes to the slideshow with no API key and no AppConfiguration.
+    let config = InMemoryConfigStore()
+    let keychain = InMemoryKeychainStore()
+    var library = SourceLibrary()
+    library.add(Source(label: "Korsika", kind: .sharedLink(baseURL: URL(string: "https://bilder.example.test")!, slug: "korsika")))
+    let sourceStore = InMemorySourceLibraryStore(library: library)
+    let vm = makeVM(api: AlbumsAPI(result: .success([])), config: config, keychain: keychain, sourceStore: sourceStore)
+    vm.step = .sharedLinkSetup
+
+    vm.finish()
+
+    #expect(vm.step == .done)
+    #expect(keychain.read() == nil)
+    #expect(config.load() == nil)
+}
+
 @Test func rejectsNonHTTPSURL() async {
     let api = AlbumsAPI(result: .failure(ImmichError.unreachable))
     let vm = makeVM(api: api)

@@ -2,6 +2,12 @@ import Foundation
 import ImmichClient
 import Observation
 
+/// The user's selection on the first-run choice screen (210, US1).
+public enum OnboardingPathChoice: Sendable, Equatable {
+    case sharedLink
+    case server
+}
+
 @Observable public final class OnboardingViewModel {
     public var step: OnboardingStep = .connection
     public var serverURLInput: String = ""
@@ -38,6 +44,18 @@ import Observation
         self.connectionRetryLimit = connectionRetryLimit
         self.connectionRetryDelay = connectionRetryDelay
         self.sleep = sleep
+    }
+
+    /// Route from the first-run choice screen: the shared-link path goes to the in-place
+    /// link entry (no API key needed); the server path goes to the connection form (210, US1).
+    public func choosePath(_ choice: OnboardingPathChoice) {
+        errorMessage = nil
+        switch choice {
+        case .sharedLink:
+            step = .sharedLinkSetup
+        case .server:
+            step = .connection
+        }
     }
 
     public func submitConnection() async {
