@@ -66,6 +66,16 @@
 		5E0000000000000000000001 /* Immich SlideshowShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Immich SlideshowShareExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5E000000000000000000000E /* Exceptions for "Immich SlideshowShareExtension" folder in "Immich SlideshowShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5E0000000000000000000002 /* Immich SlideshowShareExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3DDA11602FE2D16C0059B8FD /* Immich Slideshow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -85,22 +95,12 @@
 		5E0000000000000000000009 /* Immich SlideshowShareExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				5E000000000000000000000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				5E000000000000000000000E /* Exceptions for "Immich SlideshowShareExtension" folder in "Immich SlideshowShareExtension" target */,
 			);
 			path = "Immich SlideshowShareExtension";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5E000000000000000000000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 5E0000000000000000000002 /* Immich SlideshowShareExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3DDA115B2FE2D16C0059B8FD /* Frameworks */ = {

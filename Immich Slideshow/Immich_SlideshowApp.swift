@@ -525,6 +525,27 @@ enum UITestSupport {
         return URL(string: args[flagIndex + 1])
     }
 
+    /// 60 stub albums with date + count metadata for the searchable-picker UI test (210,
+    /// US3). Includes a diacritic name ("München Trip") so a folded-search assertion is
+    /// meaningful, and varied years/counts so name/year/count search all narrow the list.
+    nonisolated static func manyAlbums() -> [Album] {
+        func midYear(_ year: Int) -> Date {
+            Date(timeIntervalSince1970: TimeInterval(year - 1970) * 31_557_600 + 15_552_000)
+        }
+        var albums = [
+            Album(id: "album-munich", name: "München Trip", assetCount: 99,
+                  startDate: midYear(2024), endDate: midYear(2024))
+        ]
+        for index in 1...59 {
+            let year = 2018 + (index % 7) // 2018…2024
+            albums.append(
+                Album(id: "album-\(index)", name: "Album \(index)", assetCount: index * 3,
+                      startDate: midYear(year), endDate: midYear(year))
+            )
+        }
+        return albums
+    }
+
     /// One album source ("Wohnzimmer" → album a1), active. The Sources-manager UITest
     /// mutates this; the stub `albums()` also offers album a2 ("Urlaub 2026") to add.
     static func seededLibrary() -> SourceLibrary {
@@ -586,7 +607,11 @@ private struct StubImmichAPI: ImmichAPI {
     func serverVersion() async throws -> String { "1.0.0" }
 
     func albums() async throws -> [Album] {
-        [Album(id: "a1", name: "Wohnzimmer"), Album(id: "a2", name: "Urlaub 2026")]
+        // 210 US3: a large, metadata-bearing list drives the searchable-picker UI test.
+        if ProcessInfo.processInfo.arguments.contains("--uitest-albums-many") {
+            return UITestSupport.manyAlbums()
+        }
+        return [Album(id: "a1", name: "Wohnzimmer"), Album(id: "a2", name: "Urlaub 2026")]
     }
 
     func assets(albumID: String) async throws -> [Asset] {

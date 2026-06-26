@@ -100,9 +100,9 @@ by US1, US2, and US4.
 
 - [X] T026 [P] [US3] Red test: `AlbumSearch.filter` — empty query → all (stable order); name/date/count substring match (case/diacritic-insensitive); `nil` date/count tolerated, in `Packages/OnboardingKit/Tests/OnboardingKitTests/AlbumSearchTests.swift`
 - [X] T027 [US3] Implement pure `AlbumSearch.filter` predicate in `Packages/OnboardingKit/Sources/OnboardingKit/AlbumSearch.swift`
-- [ ] T028 [US3] Redesign the onboarding album picker: search field + independently scrollable list + pinned Continue/Add (`safeAreaInset(edge: .bottom)`) + name/date·count subtitle + no-results state, in `Immich Slideshow/Onboarding/SourceStepView.swift`
-- [ ] T029 [US3] Ensure the picker receives album metadata (count/date) and add the `--uitest-albums-many` seam (50+ stub albums with date/count) in `Immich Slideshow/Immich_SlideshowApp.swift`
-- [ ] T030 [US3] XCUITest + screenshot: 50+ albums — search narrows, no-results state shows, action stays pinned (portrait + landscape), in `Immich SlideshowUITests/AlbumSearchUITests.swift`
+- [X] T028 [US3] Redesign the onboarding album picker: search field + independently scrollable list + pinned Continue/Add (`safeAreaInset(edge: .bottom)`) + name/date·count subtitle + no-results state, in `Immich Slideshow/Onboarding/SourceStepView.swift` — `AlbumPickerView` (search field → `AlbumSearch.filter` → `List` + `ContentUnavailableView.search` no-results) + `AddedSourcesBar` pinned via `safeAreaInset(.bottom)`; year·count subtitle (UTC years, matching `AlbumSearch`)
+- [X] T029 [US3] Ensure the picker receives album metadata (count/date) and add the `--uitest-albums-many` seam (50+ stub albums with date/count) in `Immich Slideshow/Immich_SlideshowApp.swift` — `UITestSupport.manyAlbums()` (60 albums incl. diacritic "München Trip", varied years/counts); `StubImmichAPI.albums()` returns it under the flag
+- [X] T030 [US3] XCUITest + screenshot: 50+ albums — search narrows, no-results state shows, action stays pinned (portrait + landscape), in `Immich SlideshowUITests/AlbumSearchUITests.swift` — 2 tests green (portrait + landscape), screenshots attached; SourceOnboardingUITests (120) still green (no regression)
 
 **Checkpoint**: Album selection is usable at 50+ albums.
 
