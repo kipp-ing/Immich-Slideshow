@@ -205,6 +205,21 @@ is one searchable, subscrollable, pinned-confirm screen in both onboarding and S
 onboarding step after the choice has a working Back; a shared-link-only setup reaches the slideshow
 (no API key) instead of a black screen.
 
+### Finding 5 — harmonize the connection editor; make the server editable after onboarding (FR-210-29)
+
+Three divergent connection UIs today: onboarding `ConnectionStepView`, the inline Settings
+`ConnectionSettingsSection` (collapsed DisclosureGroup), and the full-screen `ConnectionSettingsView`
+(slideshow error recovery). The server connection *is* editable in Settings, but it's a different,
+easily-missed inline form. Unify on one editor; Settings → Connection opens the full editor (user
+choice: max harmony). NB: the "couldn't load albums" report was a stale API key — re-saving it in the
+connection editor fixed it; no deeper bug.
+
+- [X] T052 [F5] Extract a shared `Immich Slideshow/Onboarding/ConnectionFieldsView.swift` (server URL + API key + "key is set" + error, Section-based; ids/copy passed in) (keep-inline, SwiftUI).
+- [X] T053 [F5] `ConnectionSettingsView` uses `ConnectionFieldsView`, drops its internal `NavigationStack` (becomes a `Form` + title + toolbar; adds `showsCancelButton`); wrap the error-recovery sheet in `NavigationStack`, in `Immich Slideshow/Slideshow/ConnectionSettingsView.swift` + `SlideshowView.swift`.
+- [X] T054 [F5] Onboarding `ConnectionStepView` uses `ConnectionFieldsView` (ids `onboarding.serverURL`/`onboarding.apiKey`; Continue button kept), in `Immich Slideshow/Onboarding/ConnectionStepView.swift`.
+- [X] T055 [F5] Settings: replace the Connection `DisclosureGroup` with a `NavigationLink` (`settings.connection`) showing the current server → pushes `ConnectionSettingsView` (`showsCancelButton: false`); delete `ConnectionSettingsSection` + the `connectionExpanded`/`--uitest-connection` seam, in `Immich Slideshow/Slideshow/SlideshowSettingsView.swift`.
+- [X] T056 [F5] Update `SettingsUITests` (Connection is now a push row, not a collapsed section: tap `settings.connection` → `connection.url` appears; MQTT stays collapsed). Full XCUITest green.
+
 ---
 
 ## Dependencies & Execution Order

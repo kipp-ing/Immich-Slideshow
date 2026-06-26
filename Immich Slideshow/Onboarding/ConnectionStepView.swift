@@ -22,39 +22,20 @@ struct ConnectionStepView: View {
                     .accessibilityIdentifier("onboarding.connection.description")
             }
 
-            Section {
-                TextField("https://immich.example.com", text: $viewModel.serverURLInput)
-                    .textContentType(.URL)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .disabled(viewModel.isBusy)
-                    .accessibilityIdentifier("onboarding.serverURL")
-            } header: {
-                Text("Server address")
-            } footer: {
-                Text("Address of your Immich instance. Only HTTPS is supported.")
-            }
-
-            Section {
-                SecureField("API Key", text: $viewModel.apiKeyInput)
-                    .textContentType(.password)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .disabled(viewModel.isBusy)
-                    .accessibilityIdentifier("onboarding.apiKey")
-            } header: {
-                Text("API Key")
-            } footer: {
-                Text("Create one in Immich under Account Settings → API Keys.")
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                }
-            }
+            ConnectionFieldsView(
+                serverURL: $viewModel.serverURLInput,
+                apiKey: $viewModel.apiKeyInput,
+                errorMessage: viewModel.errorMessage,
+                isBusy: viewModel.isBusy,
+                serverFooter: "Address of your Immich instance. Only HTTPS is supported.",
+                apiKeyFooter: "Create one in Immich under Account Settings → API Keys.",
+                ids: .init(
+                    url: "onboarding.serverURL",
+                    apiKey: "onboarding.apiKey",
+                    keySet: "onboarding.connection.keySet",
+                    error: "onboarding.connection.error"
+                )
+            )
 
             Section {
                 Button {

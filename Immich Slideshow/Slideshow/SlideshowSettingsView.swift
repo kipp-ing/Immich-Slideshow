@@ -37,9 +37,8 @@ struct SlideshowSettingsView: View {
     @State private var connectionViewModel: ConnectionSettingsViewModel?
     @State private var sourceLibraryViewModel: SourceLibraryViewModel?
     @State private var brokerViewModel: BrokerSetupViewModel
-    // Advanced sections collapse by default (Constitution VII). UI tests pre-expand a
-    // section via a launch argument so its fields are reachable without a tap.
-    @State private var connectionExpanded: Bool
+    // The MQTT section collapses by default (Constitution VII). UI tests pre-expand it via a
+    // launch argument so its fields are reachable without a tap. Connection is a pushed editor.
     @State private var mqttExpanded: Bool
 
     init(
@@ -63,7 +62,6 @@ struct SlideshowSettingsView: View {
         broker.load()
         _brokerViewModel = State(initialValue: broker)
         let args = ProcessInfo.processInfo.arguments
-        _connectionExpanded = State(initialValue: args.contains("--uitest-connection"))
         _mqttExpanded = State(initialValue: args.contains("--uitest-broker"))
     }
 
@@ -154,22 +152,29 @@ struct SlideshowSettingsView: View {
                     }
                 }
 
-                Section {
-                    DisclosureGroup(isExpanded: $connectionExpanded) {
-                        if let connectionViewModel {
-                            ConnectionSettingsSection(viewModel: connectionViewModel) { outcome in
+                if let connectionViewModel {
+                    Section {
+                        NavigationLink {
+                            ConnectionSettingsView(viewModel: connectionViewModel, showsCancelButton: false) { outcome in
                                 onConnectionChanged(outcome)
-                                connectionExpanded = false
                             }
-                        }
-                    } label: {
-                        Label("Connection", systemImage: "server.rack")
+                        } label: {
+                            HStack {
+                                Label("Connection", systemImage: "server.rack")
+                                Spacer()
+                                Text(connectionViewModel.serverURLInput)
+                                    .foregroundStyle(.secondary)
+                                    .font(.footnote)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
                             .accessibilityIdentifier("settings.connection")
+                        }
+                    } header: {
+                        Text("Server")
+                    } footer: {
+                        Text("Change the server address and API key.")
                     }
-                } header: {
-                    Text("Server")
-                } footer: {
-                    Text("Change the server address and API key.")
                 }
 
                 Section {
@@ -233,61 +238,3 @@ struct SlideshowSettingsView: View {
     }
 }
 
-/// Inline connection editor rendered inside the Settings "Connection" disclosure
-/// section (010). Reuses the 009 `ConnectionSettingsViewModel`: validate before
-/// persist, apply live on save, and never display the stored key. The standalone
-/// `ConnectionSettingsView` sheet is kept for the slideshow's error-recovery path.
-private struct ConnectionSettingsSection: View {
-    @Bindable var viewModel: ConnectionSettingsViewModel
-    var onSaved: (ConnectionValidationOutcome) -> Void
-
-    var body: some View {
-        Group {
-            TextField("https://photos.example.com", text: $viewModel.serverURLInput)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
-                .accessibilityIdentifier("connection.url")
-
-            SecureField("New API Key", text: $viewModel.apiKeyInput)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("connection.apiKey")
-
-            if viewModel.keyIsSet {
-                Label("Key is set", systemImage: "key.fill")
-                    .foregroundStyle(.secondary)
-                    .font(.footnote)
-                    .accessibilityIdentifier("connection.keySet")
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red)
-                    .accessibilityIdentifier("connection.error")
-            }
-
-            if viewModel.isBusy {
-                ProgressView()
-            } else {
-                Button("Save connection", action: save)
-                    .disabled(viewModel.serverURLInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("connection.save")
-            }
-        }
-    }
-
-    private func save() {
-        Task {
-            let outcome = await viewModel.save()
-            switch outcome {
-            case .success, .albumMissing:
-                onSaved(outcome)
-            default:
-                // A failure leaves the prior connection intact; the inline error shows
-                // and the section stays open so the user can correct it.
-                break
-            }
-        }
-    }
-}

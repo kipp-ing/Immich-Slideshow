@@ -21,6 +21,7 @@
 - Q: How does the user go back during onboarding (e.g. from the shared-link path back to the path choice)? → A: Every onboarding step after the choice screen MUST offer a Back affordance that returns to the previous step in-place, without restarting the app. (Today there is no back from the shared-link / connection / source steps — the only way back is to kill the app.)
 - Q: Should the album/source picker in onboarding and in Settings → Sources be the same screen? → A: Yes — one reusable picker is used identically in both: Album / Shared-link tabs, a search field, an internally-scrollable album list, and a pinned confirm action, all simultaneously visible on a single screen.
 - Q: In Settings → Sources, how does adding an album behave with the reused picker? → A: Select-then-confirm — tap albums to mark them, then a pinned confirm commits (multiple albums may be added in one pass), matching the onboarding picker rather than the old tap-to-add-and-close behavior.
+- Q: Should the server connection be editable after onboarding, and how should the connection UI be unified? → A: One reusable connection editor (server URL + API key, validated before saving, stored key never shown) is used by onboarding, Settings, and the slideshow's connection-error recovery. Settings → Connection opens that editor (showing the current server) as a pushed page, not a separate inline form.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -165,6 +166,7 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **FR-210-23**: Every onboarding screen MUST display concise helper text describing the step's purpose and the expected action.
 - **FR-210-24**: Network, keychain, shared-link resolver, and album-data dependencies MUST remain injected behind protocols so all new flows are testable without a real server, real Share Sheet, or real Keychain (Modular Isolation).
 - **FR-210-25**: This feature MUST add no Immich backend behavior beyond reusing topic 100 data access and the topic 120 source library; new album-metadata reads MUST be validated against the running server's OpenAPI and MUST NOT bypass TLS.
+- **FR-210-29**: The server-connection editor (server URL + API key, validated before persisting, stored key never displayed, "key is set" indicator) MUST be a single reusable component used identically in onboarding, Settings, and the slideshow's connection-error recovery. The server connection MUST be editable after onboarding via Settings → Connection, which opens that editor showing the current server; there MUST NOT be divergent connection-form implementations.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -189,6 +191,7 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **SC-210-09**: A shared-link-only setup routes straight to the slideshow on relaunch with zero onboarding steps and zero API-key prompts.
 - **SC-210-10**: From any onboarding step after the choice screen, the user can return to the previous step (and ultimately to the path choice) using an in-app Back affordance, without ever needing to kill and relaunch the app.
 - **SC-210-11**: Album selection looks and behaves identically in onboarding and Settings → Sources (one shared picker: tabs, search, internal scroll, pinned select-then-confirm); there is no second, unsearchable album-add screen anywhere in the app.
+- **SC-210-12**: The server URL and API key can be changed after onboarding via Settings → Connection using the same editor as first-run; a successful change reconnects the running slideshow without re-onboarding, and the same editor appears in the slideshow's connection-error recovery.
 
 ## Assumptions
 
