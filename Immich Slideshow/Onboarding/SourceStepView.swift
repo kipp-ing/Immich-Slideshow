@@ -24,6 +24,15 @@ struct SourceStepView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Text("Add at least one source to play — an Immich album or a shared link. The first source you add starts the slideshow.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .accessibilityIdentifier("onboarding.source.description")
+
             Picker("Source type", selection: $kind) {
                 Text("Album").tag(Kind.album)
                 Text("Shared link").tag(Kind.sharedLink)
@@ -204,6 +213,13 @@ struct OnboardingConfirmStepView: View {
 
     var body: some View {
         List {
+            Section {
+                Text("Review your sources, then start the slideshow.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("onboarding.confirm.description")
+            }
+
             Section {
                 ForEach(sourceLibrary.sources) { source in
                     HStack(spacing: 12) {

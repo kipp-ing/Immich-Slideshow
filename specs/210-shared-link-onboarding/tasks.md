@@ -128,8 +128,8 @@ by US1, US2, and US4.
 
 **Independent Test**: Each onboarding screen (choice, shared-link setup, connection, album, confirm) shows a short, accurate description.
 
-- [ ] T034 [US5] Add concise helper text to each onboarding screen in `Immich Slideshow/Onboarding/OnboardingChoiceView.swift`, `SharedLinkSetupView.swift`, `ConnectionStepView.swift`, `SourceStepView.swift`, and the confirm step
-- [ ] T035 [US5] XCUITest/screenshot: each onboarding screen shows description text, in `Immich SlideshowUITests/OnboardingDescriptionsUITests.swift`
+- [X] T034 [US5] Add concise helper text to each onboarding screen in `Immich Slideshow/Onboarding/OnboardingChoiceView.swift`, `SharedLinkSetupView.swift`, `ConnectionStepView.swift`, `SourceStepView.swift`, and the confirm step — choice already carried `onboarding.choice.intro` + per-row descriptions (US1); added an identified step description to the four remaining screens (`onboarding.sharedLink.description`, `onboarding.connection.description`, `onboarding.source.description` above the segmented picker, `onboarding.confirm.description`). Field-level footers kept as complementary helper text. **NOTE:** ConnectionStepView's older 200/010 labels still render German on a German-locale device (legacy `Localizable.xcstrings`); new 210 strings are English-only, consistent with the [[language-english-always]] migration — finishing the catalog migration is topic-200 scope.
+- [X] T035 [US5] XCUITest/screenshot: each onboarding screen shows description text, in `Immich SlideshowUITests/OnboardingDescriptionsUITests.swift` — 4 tests green (choice / shared-link / connection assert their description ids; source + confirm reached via `--uitest-onboarding-source` → add album → continue). Screenshots captured & verified (portrait) for shared-link, connection, and source steps; confirm verified by the navigating test; choice verified earlier in T014.
 
 **Checkpoint**: First-time users are guided on every screen.
 

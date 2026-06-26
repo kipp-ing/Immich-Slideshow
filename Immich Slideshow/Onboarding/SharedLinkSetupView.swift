@@ -31,6 +31,13 @@ struct SharedLinkSetupView: View {
     var body: some View {
         Form {
             Section {
+                Text("Set up a slideshow from just a shared link — no account or API key needed.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("onboarding.sharedLink.description")
+            }
+
+            Section {
                 TextField("https://host/s/slug", text: $urlText)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()

@@ -16,6 +16,13 @@ struct ConnectionStepView: View {
     var body: some View {
         Form {
             Section {
+                Text("Connect to your Immich server with its address and an API key to browse and pick albums.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("onboarding.connection.description")
+            }
+
+            Section {
                 TextField("https://immich.example.com", text: $viewModel.serverURLInput)
                     .textContentType(.URL)
                     .keyboardType(.URL)
