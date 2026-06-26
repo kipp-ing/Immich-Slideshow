@@ -109,12 +109,12 @@ specs/210-shared-link-onboarding/
 ```text
 Packages/ImmichClient/Sources/ImmichClient/
 ├── Models.swift              # Album: add assetCount + date (startDate/endDate) for search; keep id/name back-compatible
-└── SharedLinkResolver.swift  # decode album name into SharedLinkResolution for a default source label (optional)
+└── SharedLinkResolver.swift  # resolve `/share/<key>` via key= and `/s/<slug>` via slug= (key-first, slug fallback); classify 401 by message so an unknown key/slug ≠ passwordRequired
 
 Packages/OnboardingKit/Sources/OnboardingKit/
 ├── OnboardingStep.swift          # add `.choice` entry step (shared-link vs server)
 ├── StartupGate.swift             # shared-link active source ⇒ .done without an API key; empty ⇒ .choice
-├── OnboardingViewModel.swift     # choice routing; shared-link-only path (resolve → pw-if-needed → save active → finish)
+├── OnboardingViewModel.swift     # choice routing; shared-link-only path (resolve → pw-if-needed → save active → finish); back()/canGoBack step navigation
 ├── SourceLibraryViewModel.swift  # two-phase add: resolve(nil) → .needsPassword | .resolved | .error; confirm(password); dedup+activate
 ├── AlbumSearch.swift             # NEW: pure predicate filtering [Album] by name + date + count
 ├── IncomingSharedLink.swift      # NEW: route a pending share URL → onboarding pre-fill | add+activate | switch-to-existing
@@ -125,8 +125,9 @@ Immich Slideshow/
 ├── Onboarding/OnboardingChoiceView.swift (NEW)   # first screen: shared link vs server, with descriptions
 ├── Onboarding/SharedLinkSetupView.swift (NEW)    # shared-link-only entry: link → (pw sheet if needed) → start
 ├── Onboarding/ConnectionStepView.swift           # add concise description copy (US5)
-├── Onboarding/SourceStepView.swift               # resolve-first shared-link section; searchable+subscrollable album picker; pinned action
-└── Slideshow/SourceLibraryView.swift             # Settings → Sources: same resolve-first add-link flow
+├── Onboarding/OnboardingFlowView.swift           # NavigationStack: Back affordance for every step after .choice (canGoBack → back())
+├── Onboarding/SourceStepView.swift               # resolve-first shared-link section; the reusable searchable+subscrollable album picker (search + internal scroll + pinned select-then-confirm)
+└── Slideshow/SourceLibraryView.swift             # Settings → Sources: same resolve-first add-link flow AND the same reusable album picker (no separate unsearchable album-add screen)
 
 Immich SlideshowShareExtension/ (NEW target)
 ├── ShareViewController.swift     # capture the shared URL, write to App Group, hand off to host

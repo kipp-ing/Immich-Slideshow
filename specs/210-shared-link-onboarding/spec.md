@@ -16,6 +16,12 @@
 - Q: How should a shared link get into the app (the "hook")? → A: The app appears in the iOS Share Sheet as a recipient for URLs; sharing an Immich link into it hands the link to the app, which auto-starts or asks for a password.
 - Q: What should album search cover beyond the album name? → A: Name + date + photo count.
 
+### Session 2026-06-26 (manual-test findings)
+
+- Q: How does the user go back during onboarding (e.g. from the shared-link path back to the path choice)? → A: Every onboarding step after the choice screen MUST offer a Back affordance that returns to the previous step in-place, without restarting the app. (Today there is no back from the shared-link / connection / source steps — the only way back is to kill the app.)
+- Q: Should the album/source picker in onboarding and in Settings → Sources be the same screen? → A: Yes — one reusable picker is used identically in both: Album / Shared-link tabs, a search field, an internally-scrollable album list, and a pinned confirm action, all simultaneously visible on a single screen.
+- Q: In Settings → Sources, how does adding an album behave with the reused picker? → A: Select-then-confirm — tap albums to mark them, then a pinned confirm commits (multiple albums may be added in one pass), matching the onboarding picker rather than the old tap-to-add-and-close behavior.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Set up with a shared link alone, no API key (Priority: P1)
@@ -109,6 +115,8 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **Album search with zero matches**: explicit no-results state.
 - **Albums missing date or count metadata**: such albums still appear and remain matchable by name; missing fields simply do not match date/count queries.
 - **Very long album list with the keyboard open**: the primary action remains reachable and the list scrolls independently.
+- **Going back during onboarding**: from any step after the choice screen the user can step back to the previous screen (e.g. shared-link setup → choice, source → connection) without restarting the app; the choice screen itself has nowhere further back.
+- **Same picker in two places**: the album/source picker behaves identically in onboarding and in Settings → Sources (same tabs, search, internal scroll, and pinned confirm); a fix to one is a fix to both.
 - **Secret hygiene across the app boundary**: the share extension passes only the non-secret link; the password (entered later, in the host app) is never written to the App Group container or logs.
 
 ## Requirements *(mandatory)*
@@ -122,6 +130,7 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **FR-210-03**: A shared-link-only configuration MUST run the slideshow from the shared link's base address and slug as the active source, with no server API key required or stored.
 - **FR-210-04**: Startup MUST treat a source library whose active source is a shared link as a complete configuration and route straight to the slideshow, without prompting for an API key.
 - **FR-210-05**: The server-connection path MUST preserve the existing combined server-URL + API-key onboarding behavior owned by topic 200.
+- **FR-210-26**: Every onboarding step after the choice screen (shared-link setup, server connection, source/album, confirm) MUST provide a Back affordance that returns to the immediately preceding step in-place — without requiring an app restart and without discarding already-entered configuration. The choice screen is the first step and has no further back.
 
 #### Shared-link resolution & password-when-needed
 
@@ -148,6 +157,8 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **FR-210-20**: Album search MUST rely on album name, date, and photo/asset count being available from topic 100 Immich data access; albums lacking date or count MUST still appear and remain matchable by name.
 - **FR-210-21**: The album list MUST scroll within its own region while the primary action (Continue/Add) remains pinned and reachable regardless of list length, orientation, reduced width, or keyboard state.
 - **FR-210-22**: Album search results MUST update as the user types, and a no-match state MUST be shown clearly rather than as a blank list.
+- **FR-210-27**: The album/source picker MUST be a single reusable component used identically in onboarding and in Settings → Sources: Album / Shared-link tabs, a search field, an internally-scrollable album list, and a pinned confirm action, all simultaneously visible on one screen. The two surfaces MUST NOT diverge into separate album-picker implementations.
+- **FR-210-28**: In every surface that uses the picker (onboarding and Settings → Sources), adding an album MUST be select-then-confirm: tapping albums marks them and a pinned confirm commits, allowing one or more albums to be added in a single pass; tapping an album MUST NOT immediately add it and dismiss the picker.
 
 #### Descriptions & cross-cutting
 
@@ -176,6 +187,8 @@ Every onboarding screen carries concise helper text that explains what to do on 
 - **SC-210-07**: A shared link already in the library is never duplicated when shared in again.
 - **SC-210-08**: Every onboarding screen shows concise, accurate helper text describing its purpose.
 - **SC-210-09**: A shared-link-only setup routes straight to the slideshow on relaunch with zero onboarding steps and zero API-key prompts.
+- **SC-210-10**: From any onboarding step after the choice screen, the user can return to the previous step (and ultimately to the path choice) using an in-app Back affordance, without ever needing to kill and relaunch the app.
+- **SC-210-11**: Album selection looks and behaves identically in onboarding and Settings → Sources (one shared picker: tabs, search, internal scroll, pinned select-then-confirm); there is no second, unsearchable album-add screen anywhere in the app.
 
 ## Assumptions
 
