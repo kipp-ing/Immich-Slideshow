@@ -124,45 +124,57 @@ private struct SourceRow: View {
     }
 }
 
-/// Add-source sheet: pick the kind (album picker or shared-link form), then add. The
-/// album picker lists the server's albums via the API key; the shared-link form
-/// validates the link (and password, if any) before saving anything.
+/// Add-source sheet: pick the kind, then confirm. The album tab uses the same searchable,
+/// subscrollable `AlbumPickerView` as onboarding (210, FR-210-27/28): tap albums to add them
+/// (select-then-confirm) and Done to finish; the shared-link form validates the link (and
+/// password, if any) before saving anything.
 private struct AddSourceView: View {
     @Bindable var viewModel: SourceLibraryViewModel
     var makeServerAPI: () async -> (any ImmichAPI)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var kind: Kind = .album
+    /// Source count when the sheet opened, so the Done bar can report how many were added
+    /// in this pass rather than the library total.
+    @State private var initialSourceCount: Int?
 
     enum Kind: Hashable { case album, sharedLink }
 
     var body: some View {
         NavigationStack {
-            Form {
+            VStack(spacing: 0) {
                 Picker("Type", selection: $kind) {
                     Text("Album").tag(Kind.album)
                     Text("Shared link").tag(Kind.sharedLink)
                 }
                 .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.top, 8)
                 .accessibilityIdentifier("sources.add.type")
 
                 // Album-add errors surface here; the shared-link form reports its own
                 // resolve / password errors inline (210, US4).
                 if kind == .album, let errorMessage = viewModel.errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .font(.callout)
                         .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                         .accessibilityIdentifier("sources.add.error")
                 }
 
                 switch kind {
                 case .album:
-                    AddAlbumSection(viewModel: viewModel, makeServerAPI: makeServerAPI) { dismiss() }
+                    AddAlbumPicker(viewModel: viewModel, makeServerAPI: makeServerAPI)
                 case .sharedLink:
-                    SharedLinkAddForm(
-                        sourceLibrary: viewModel,
-                        idPrefix: "sources.add",
-                        submitIDSuffix: "submit"
-                    ) { dismiss() }
+                    Form {
+                        SharedLinkAddForm(
+                            sourceLibrary: viewModel,
+                            idPrefix: "sources.add",
+                            submitIDSuffix: "submit"
+                        ) { dismiss() }
+                    }
                 }
             }
             .navigationTitle("Add source")
@@ -173,15 +185,25 @@ private struct AddSourceView: View {
                         .accessibilityIdentifier("sources.add.cancel")
                 }
             }
+            // Albums add on tap; Done finishes. The shared-link tab finishes via its own Add
+            // button, so the pinned Done is album-only (210, FR-210-28).
+            .safeAreaInset(edge: .bottom) {
+                if kind == .album {
+                    AddAlbumDoneBar(addedCount: viewModel.sources.count - (initialSourceCount ?? viewModel.sources.count)) {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear { if initialSourceCount == nil { initialSourceCount = viewModel.sources.count } }
         }
     }
 }
 
-/// Lists the server's albums; tapping one adds it as a source (label = album name).
-private struct AddAlbumSection: View {
+/// Loads the connected server's albums, then shows the shared `AlbumPickerView`. Tapping a
+/// row adds the album to the library; the pinned Done in `AddSourceView` finishes.
+private struct AddAlbumPicker: View {
     @Bindable var viewModel: SourceLibraryViewModel
     var makeServerAPI: () async -> (any ImmichAPI)?
-    var onAdded: () -> Void
 
     @State private var albums: [Album] = []
     @State private var phase: Phase = .loading
@@ -189,29 +211,21 @@ private struct AddAlbumSection: View {
     enum Phase { case loading, loaded, failed }
 
     var body: some View {
-        Section {
+        Group {
             switch phase {
             case .loading:
                 ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .failed:
-                Label("Couldn't load albums", systemImage: "wifi.exclamationmark")
-                    .foregroundStyle(.secondary)
-            case .loaded where albums.isEmpty:
-                Label("No albums", systemImage: "photo.on.rectangle")
-                    .foregroundStyle(.secondary)
-            case .loaded:
-                ForEach(albums, id: \.id) { album in
-                    Button {
-                        viewModel.addAlbumSource(albumID: album.id, label: album.name.isEmpty ? album.id : album.name)
-                        if viewModel.errorMessage == nil { onAdded() }
-                    } label: {
-                        Text(album.name.isEmpty ? album.id : album.name)
-                    }
-                    .accessibilityIdentifier("sources.album.\(album.id)")
+                ContentUnavailableView {
+                    Label("Couldn't load albums", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text("Add a shared link instead.")
                 }
+                .frame(maxHeight: .infinity)
+            case .loaded:
+                AlbumPickerView(albums: albums, sourceLibrary: viewModel, idPrefix: "sources.album")
             }
-        } header: {
-            Text("Choose album")
         }
         .task {
             guard let api = await makeServerAPI() else { phase = .failed; return }
@@ -221,6 +235,31 @@ private struct AddAlbumSection: View {
             } catch {
                 phase = .failed
             }
+        }
+    }
+}
+
+/// The pinned bottom bar on the album tab: a Done action that finishes adding, annotated with
+/// how many albums were added in this pass (210, FR-210-28).
+private struct AddAlbumDoneBar: View {
+    let addedCount: Int
+    let onDone: () -> Void
+
+    var body: some View {
+        Button(action: onDone) {
+            Text(doneLabel).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .padding()
+        .background(.bar)
+        .accessibilityIdentifier("sources.add.done")
+    }
+
+    private var doneLabel: String {
+        switch addedCount {
+        case ..<1: "Done"
+        case 1: "Done · 1 added"
+        default: "Done · \(addedCount) added"
         }
     }
 }

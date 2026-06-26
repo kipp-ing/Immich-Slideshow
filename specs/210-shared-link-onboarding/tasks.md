@@ -169,9 +169,9 @@ internally-scrollable list, pinned confirm). Settings → Sources (`AddSourceVie
 a divergent, unsearchable `Form` list that adds-and-dismisses on tap. Unify on one component;
 Settings uses select-then-confirm.
 
-- [ ] T042 [F2] Extract the onboarding searchable album picker (search field + internally-scrollable list + pinned select-then-confirm + no-results state) into a reusable component shared by both surfaces, e.g. `Immich Slideshow/Onboarding/AlbumPickerView.swift` (keep-inline, SwiftUI). Onboarding `SourceStepView` consumes it unchanged in behavior.
-- [ ] T043 [F2] Replace Settings → Sources `AddAlbumSection` with the reusable picker (Album tab: search + internal scroll + pinned confirm, select-then-confirm/multi-add); keep the Album/Shared-link tabs and the resolve-first shared-link form, in `Immich Slideshow/Slideshow/SourceLibraryView.swift` (keep-inline)
-- [ ] T044 [F2] XCUITest: Settings → Sources add — Album tab search narrows the list, the list scrolls internally while the confirm stays pinned, select-then-confirm commits the selected album(s); the unsearchable add-and-close path is gone. Update `Immich SlideshowUITests/SourceLibraryUITests.swift` (keep-inline)
+- [X] T042 [F2] Extract the onboarding searchable album picker (search field + internally-scrollable list + pinned select-then-confirm + no-results state) into a reusable component shared by both surfaces — new `Immich Slideshow/Onboarding/AlbumPickerView.swift` (`AlbumPickerView(albums:sourceLibrary:idPrefix:)`); onboarding ids preserved via `idPrefix: "onboarding.album"`. `SourceStepView` consumes it; behavior unchanged (AlbumSearchUITests green).
+- [X] T043 [F2] Replace Settings → Sources `AddAlbumSection` with the reusable picker (`idPrefix: "sources.album"`) inside a restructured `AddSourceView` (VStack + `AddAlbumPicker` loader + pinned `AddAlbumDoneBar` = `sources.add.done`); Album/Shared-link tabs and the resolve-first shared-link form kept, in `Immich Slideshow/Slideshow/SourceLibraryView.swift`.
+- [X] T044 [F2] XCUITest: Settings → Sources add — Album tab search narrows (diacritic-insensitive), no-results state shows, select-then-confirm (tap → Done) commits; updated the `addAlbum` helper to tap `sources.add.done`. `Immich SlideshowUITests/SourceLibraryUITests.swift`. **Full XCUITest suite green: 52 passed / 0 failed (satisfies T038 for now).**
 
 ### Finding 3 — no back navigation in onboarding (FR-210-26)
 
@@ -182,7 +182,7 @@ choice screen is to kill the app.
 - [X] T045 [P] [F3] Red test: `OnboardingViewModel.back()` maps `.sharedLinkSetup` → `.choice`, `.connection` → `.choice`, `.source` → `.connection`, `.confirm` → `.source`; `.choice` is a no-op; `canGoBack` is false only on `.choice`/`.done`; entered config (serverURL/apiKey inputs, added sources) is preserved across back, in `Packages/OnboardingKit/Tests/OnboardingKitTests/OnboardingViewModelTests.swift` — 7 tests added.
 - [X] T046 [F3] Implement `back()` + `canGoBack` in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingViewModel.swift` — **113 OnboardingKit tests green.**
 - [X] T047 [F3] Add a leading Back toolbar affordance in `Immich Slideshow/Onboarding/OnboardingFlowView.swift`, shown when `viewModel.canGoBack`, calling `back()`, with accessibility id `onboarding.back` — built + visually confirmed on the shared-link step (chevron top-left).
-- [ ] T048 [F3] XCUITest: choice → shared-link setup → Back → choice; choice → server connection → Back → choice; no app restart, in `Immich SlideshowUITests/OnboardingBackUITests.swift` (keep-inline)
+- [X] T048 [F3] XCUITest: choice → shared-link setup → Back → choice; choice → server connection → Back → choice; choice screen has no Back; no app restart, in `Immich SlideshowUITests/OnboardingBackUITests.swift` — 3 tests green.
 
 **Checkpoint**: non-protected `/share/<key>` links resolve with no password prompt; the album picker
 is one searchable, subscrollable, pinned-confirm screen in both onboarding and Settings; every

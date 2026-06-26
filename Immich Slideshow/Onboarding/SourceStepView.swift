@@ -9,6 +9,7 @@
 //  confirmation step lists the saved library with the active source marked before the
 //  slideshow starts. Both bind the OnboardingViewModel (connection + navigation) and a
 //  SourceLibraryViewModel (the persisted library, shared with the rest of the app).
+//  The album tab uses the shared `AlbumPickerView`, the same picker Settings uses (210, FR-210-27).
 //
 
 import ImmichClient
@@ -56,7 +57,7 @@ struct SourceStepView: View {
 
             switch kind {
             case .album:
-                AlbumPickerView(onboarding: onboarding, sourceLibrary: sourceLibrary)
+                AlbumPickerView(albums: onboarding.albums, sourceLibrary: sourceLibrary, idPrefix: "onboarding.album")
             case .sharedLink:
                 Form {
                     SharedLinkAddForm(
@@ -77,110 +78,6 @@ struct SourceStepView: View {
             }
         }
         .task { await onboarding.loadAlbumsIfNeeded() }
-    }
-}
-
-/// Searchable, independently scrollable album list (210, US3). A search field narrows by
-/// name / year / photo count (case- and diacritic-insensitive via `AlbumSearch`); each row
-/// shows a date·count subtitle; a no-results state appears when nothing matches. Tapping a
-/// row adds the album; already-added albums show a checkmark and are disabled.
-private struct AlbumPickerView: View {
-    @Bindable var onboarding: OnboardingViewModel
-    @Bindable var sourceLibrary: SourceLibraryViewModel
-    @State private var searchText = ""
-
-    private var filteredAlbums: [Album] {
-        AlbumSearch.filter(onboarding.albums, query: searchText)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            searchField
-
-            if onboarding.albums.isEmpty {
-                ContentUnavailableView {
-                    Label("No albums on this server", systemImage: "photo.on.rectangle")
-                } description: {
-                    Text("Add a shared link instead.")
-                }
-                .frame(maxHeight: .infinity)
-            } else if filteredAlbums.isEmpty {
-                ContentUnavailableView.search(text: searchText)
-                    .frame(maxHeight: .infinity)
-                    .accessibilityIdentifier("onboarding.album.noResults")
-            } else {
-                List(filteredAlbums, id: \.id) { album in
-                    albumRow(album)
-                }
-                .listStyle(.plain)
-            }
-        }
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search albums", text: $searchText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("onboarding.album.search")
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding.album.search.clear")
-            }
-        }
-        .padding(10)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-    }
-
-    @ViewBuilder
-    private func albumRow(_ album: Album) -> some View {
-        let label = album.name.isEmpty ? album.id : album.name
-        let isAdded = sourceLibrary.sources.contains { $0.label == label }
-        Button {
-            sourceLibrary.addAlbumSource(albumID: album.id, label: label)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label).foregroundStyle(.primary)
-                    if let subtitle = Self.subtitle(for: album) {
-                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                if isAdded {
-                    Image(systemName: "checkmark").foregroundStyle(.tint)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(isAdded)
-        .accessibilityIdentifier("onboarding.album.\(album.id)")
-    }
-
-    /// "2024 · 120 photos" — the advisory date range and asset count, each omitted when the
-    /// server didn't provide it. Years use a UTC calendar to match `AlbumSearch`'s haystack.
-    private static func subtitle(for album: Album) -> String? {
-        var parts: [String] = []
-        if let dateText = dateText(album.startDate, album.endDate) { parts.append(dateText) }
-        if let count = album.assetCount { parts.append(count == 1 ? "1 photo" : "\(count) photos") }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    private static func dateText(_ start: Date?, _ end: Date?) -> String? {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
-        let years = [start, end].compactMap { $0.map { calendar.component(.year, from: $0) } }
-        guard let first = years.first, let last = years.last else { return nil }
-        return first == last ? "\(first)" : "\(first)–\(last)"
     }
 }
 

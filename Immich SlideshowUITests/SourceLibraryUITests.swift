@@ -76,6 +76,55 @@ final class SourceLibraryUITests: XCTestCase {
         XCTAssertTrue(app.buttons["sources.row.src-a1"].exists)
     }
 
+    /// 210 / FR-210-27/28 — Settings → Sources uses the same searchable, subscrollable album
+    /// picker as onboarding: search narrows (diacritic-insensitive), a no-match shows the
+    /// no-results state, and adding is select-then-confirm (tap album → Done).
+    @MainActor
+    func testSettingsAlbumPickerSearchesAndSelectThenConfirm() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitest", "--uitest-slideshow", "--uitest-chrome", "--uitest-albums-many"]
+        app.launch()
+
+        let image = app.descendants(matching: .any).matching(identifier: "slideshow.image").firstMatch
+        XCTAssertTrue(image.waitForExistence(timeout: 5))
+
+        openSources(in: app)
+        app.buttons["sources.add"].tap()
+
+        // The shared searchable picker is present in Settings (the same component as onboarding).
+        let search = app.textFields["sources.album.search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "Settings add-album should show the search field")
+
+        let munich = app.buttons["sources.album.album-munich"]
+        XCTAssertTrue(munich.waitForExistence(timeout: 5), "the seeded album list should appear")
+        XCTAssertTrue(app.buttons["sources.album.album-1"].waitForExistence(timeout: 2),
+                      "a non-matching album should be present before searching")
+
+        // Diacritic-insensitive narrowing: "munchen" matches only "München Trip".
+        search.tap()
+        search.typeText("munchen")
+        XCTAssertTrue(munich.waitForExistence(timeout: 5), "the matching album should remain after searching")
+        XCTAssertFalse(app.buttons["sources.album.album-1"].exists, "non-matching albums should be filtered out")
+
+        // A query that matches nothing shows the no-results state rather than a blank list.
+        app.buttons["sources.album.search.clear"].tap()
+        search.typeText("zzzqqq")
+        let noResults = app.descendants(matching: .any).matching(identifier: "sources.album.noResults").firstMatch
+        XCTAssertTrue(noResults.waitForExistence(timeout: 5), "a no-match query should show the no-results state")
+
+        // Select-then-confirm: clear, tap the album to add it, then Done finishes (FR-210-28).
+        app.buttons["sources.album.search.clear"].tap()
+        XCTAssertTrue(munich.waitForExistence(timeout: 5))
+        munich.tap()
+        let done = app.buttons["sources.add.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3), "the pinned Done action should be present")
+        done.tap()
+
+        // The added album appears as a new source row in the manager.
+        XCTAssertTrue(app.buttons["München Trip"].waitForExistence(timeout: 5),
+                      "the selected album should be added as a source after Done")
+    }
+
     // MARK: - Helpers
 
     @MainActor
@@ -96,7 +145,9 @@ final class SourceLibraryUITests: XCTestCase {
         let albumButton = app.buttons["sources.album.a2"]
         XCTAssertTrue(albumButton.waitForExistence(timeout: 3), "stub album a2 should be listed")
         albumButton.tap()
-        // The add sheet dismisses on success; the new row appears in the manager.
+        // Select-then-confirm (210, FR-210-28): tapping the album adds it; Done finishes and
+        // dismisses, and the new row appears in the manager.
+        app.buttons["sources.add.done"].tap()
         XCTAssertTrue(app.buttons[name].waitForExistence(timeout: 3))
     }
 
