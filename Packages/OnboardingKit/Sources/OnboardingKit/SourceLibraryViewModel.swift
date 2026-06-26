@@ -10,7 +10,6 @@ import Observation
 @Observable
 public final class SourceLibraryViewModel {
     public private(set) var library: SourceLibrary
-    public var isBusy = false
     public var errorMessage: String?
     /// Drives the resolve-first / ask-password-only-when-needed add-link flow (210).
     public private(set) var addState: SharedLinkAddState = .idle
@@ -56,45 +55,6 @@ public final class SourceLibraryViewModel {
 
         var library = self.library
         library.add(Source(label: trimmed, kind: .album(albumID: albumID)))
-        persist(library)
-    }
-
-    public func addSharedLinkSource(urlString: String, password: String?, label: String) async {
-        errorMessage = nil
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard isLabelAvailable(trimmed) else {
-            errorMessage = Self.duplicateLabelMessage
-            return
-        }
-
-        guard let parsed = SharedLinkURL.parse(urlString) else {
-            errorMessage = String(localized: "Please enter a valid shared-link address.", bundle: .module)
-            return
-        }
-
-        isBusy = true
-        defer { isBusy = false }
-
-        let password = password.flatMap { $0.isEmpty ? nil : $0 }
-        do {
-            // Validate the link (and password, if any) before saving anything; nothing
-            // is persisted when it fails (Konstitution III — no half-written secret).
-            _ = try await resolver.resolve(baseURL: parsed.baseURL, slug: parsed.slug, password: password)
-        } catch let error as ImmichError {
-            errorMessage = ConnectionError.message(for: error)
-            return
-        } catch {
-            errorMessage = String(localized: "Unexpected response from the server.", bundle: .module)
-            return
-        }
-
-        let source = Source(label: trimmed, kind: .sharedLink(baseURL: parsed.baseURL, slug: parsed.slug))
-        if let password {
-            try? secretStore.savePassword(password, forSourceID: source.id)
-        }
-
-        var library = self.library
-        library.add(source)
         persist(library)
     }
 

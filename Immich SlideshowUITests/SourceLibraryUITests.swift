@@ -2,7 +2,7 @@
 //  SourceLibraryUITests.swift
 //  Immich SlideshowUITests
 //
-//  120 / US2 — drives the Settings → Quellen source manager against the hermetic
+//  120 / US2 — drives the Settings → Sources source manager against the hermetic
 //  in-memory source library: open the manager, add a second source, switch the active
 //  one (the running slideshow swaps its photo), and remove a source.
 //
@@ -42,7 +42,7 @@ final class SourceLibraryUITests: XCTestCase {
         newRow.tap()
 
         // Back out of the manager and close settings to see the running slideshow.
-        app.navigationBars["Quellen"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["Sources"].buttons.element(boundBy: 0).tap()
         app.buttons["Fertig"].tap()
 
         XCTAssertTrue(image.waitForExistence(timeout: 3))
@@ -69,7 +69,7 @@ final class SourceLibraryUITests: XCTestCase {
 
         // Swipe-delete the just-added (non-active) source.
         newRow.swipeLeft()
-        app.buttons["Löschen"].firstMatch.tap()
+        app.buttons["Delete"].firstMatch.tap()
 
         XCTAssertFalse(newRow.waitForExistence(timeout: 2), "removed source row should be gone")
         // The seeded source remains.

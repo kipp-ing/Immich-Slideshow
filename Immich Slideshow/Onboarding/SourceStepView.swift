@@ -4,7 +4,8 @@
 //
 //  Onboarding step 2 (120, US2): add the first slideshow source after connecting —
 //  an Immich album (picked from the connected server's albums) or a shared link
-//  (URL + optional password). The first source added becomes active. The matching
+//  (resolve-first; a password is asked for only when the link needs one — 210, US4).
+//  The first source added becomes active. The matching
 //  confirmation step lists the saved library with the active source marked before the
 //  slideshow starts. Both bind the OnboardingViewModel (connection + navigation) and a
 //  SourceLibraryViewModel (the persisted library, shared with the rest of the app).
@@ -32,7 +33,9 @@ struct SourceStepView: View {
             .padding(.top, 8)
             .accessibilityIdentifier("onboarding.source.type")
 
-            if let errorMessage = sourceLibrary.errorMessage {
+            // Album-add errors surface here; the shared-link form reports its own resolve /
+            // password errors inline (210, US4), so this stays scoped to the album tab.
+            if kind == .album, let errorMessage = sourceLibrary.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle")
                     .font(.callout)
                     .foregroundStyle(.red)
@@ -47,7 +50,11 @@ struct SourceStepView: View {
                 AlbumPickerView(onboarding: onboarding, sourceLibrary: sourceLibrary)
             case .sharedLink:
                 Form {
-                    SharedLinkSection(sourceLibrary: sourceLibrary)
+                    SharedLinkAddForm(
+                        sourceLibrary: sourceLibrary,
+                        idPrefix: "onboarding.sharedLink",
+                        submitIDSuffix: "add"
+                    )
                 }
             }
         }
@@ -186,56 +193,6 @@ private struct AddedSourcesBar: View {
         }
         .padding()
         .background(.bar)
-    }
-}
-
-/// Shared-link form: URL + optional password + a label. The link (and password, if
-/// any) is validated against the server before anything is saved.
-private struct SharedLinkSection: View {
-    @Bindable var sourceLibrary: SourceLibraryViewModel
-
-    @State private var urlText = ""
-    @State private var passwordText = ""
-    @State private var labelText = ""
-
-    var body: some View {
-        Section {
-            TextField("https://host/s/slug", text: $urlText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
-                .accessibilityIdentifier("onboarding.sharedLink.url")
-            SecureField("Password (optional)", text: $passwordText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("onboarding.sharedLink.password")
-            TextField("Name", text: $labelText)
-                .accessibilityIdentifier("onboarding.sharedLink.label")
-        } header: {
-            Text("Shared link")
-        } footer: {
-            if sourceLibrary.isBusy {
-                ProgressView()
-            } else {
-                Button("Add") {
-                    Task {
-                        await sourceLibrary.addSharedLinkSource(
-                            urlString: urlText,
-                            password: passwordText,
-                            label: labelText
-                        )
-                        if sourceLibrary.errorMessage == nil {
-                            urlText = ""
-                            passwordText = ""
-                            labelText = ""
-                        }
-                    }
-                }
-                .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty
-                    || labelText.trimmingCharacters(in: .whitespaces).isEmpty)
-                .accessibilityIdentifier("onboarding.sharedLink.add")
-            }
-        }
     }
 }
 

@@ -2,10 +2,11 @@
 //  SourceLibraryView.swift
 //  Immich Slideshow
 //
-//  Settings → Quellen (120, US2): manage the saved slideshow sources (Immich albums
+//  Settings → Sources (120, US2): manage the saved slideshow sources (Immich albums
 //  and shared links). Tap a source to make it active — the running slideshow restarts
 //  from it (the view model delegates to the app-level switch). Swipe to rename/remove,
-//  reorder via the edit button, and add a new album (picker) or shared link (form).
+//  reorder via the edit button, and add a new album (picker) or shared link (resolve-first;
+//  a password is asked for only when the link needs one — 210, US4).
 //
 
 import ImmichClient
@@ -34,13 +35,13 @@ struct SourceLibraryView: View {
                         Button(role: .destructive) {
                             viewModel.remove(id: source.id)
                         } label: {
-                            Label("Löschen", systemImage: "trash")
+                            Label("Delete", systemImage: "trash")
                         }
                         Button {
                             renameText = source.label
                             renameTarget = source
                         } label: {
-                            Label("Umbenennen", systemImage: "pencil")
+                            Label("Rename", systemImage: "pencil")
                         }
                         .tint(.blue)
                     }
@@ -48,13 +49,13 @@ struct SourceLibraryView: View {
                 .onMove { viewModel.move(from: $0, to: $1) }
             } footer: {
                 if viewModel.sources.isEmpty {
-                    Text("Noch keine Quelle. Füge ein Album oder einen geteilten Link hinzu.")
+                    Text("No source yet. Add an album or a shared link.")
                 } else {
-                    Text("Tippe eine Quelle an, um sie zu aktivieren.")
+                    Text("Tap a source to make it active.")
                 }
             }
         }
-        .navigationTitle("Quellen")
+        .navigationTitle("Sources")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -73,11 +74,11 @@ struct SourceLibraryView: View {
         .sheet(isPresented: $showAddSheet) {
             AddSourceView(viewModel: viewModel, makeServerAPI: makeServerAPI)
         }
-        .alert("Umbenennen", isPresented: renameAlertPresented, presenting: renameTarget) { source in
+        .alert("Rename", isPresented: renameAlertPresented, presenting: renameTarget) { source in
             TextField("Name", text: $renameText)
                 .accessibilityIdentifier("sources.rename.field")
-            Button("Sichern") { viewModel.rename(id: source.id, to: renameText) }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Save") { viewModel.rename(id: source.id, to: renameText) }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -110,7 +111,7 @@ private struct SourceRow: View {
             }
             Spacer()
             if isActive {
-                Text("Aktiv")
+                Text("Active")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tint)
                 Image(systemName: "checkmark")
@@ -119,7 +120,7 @@ private struct SourceRow: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(isActive ? "\(source.label), aktiv" : source.label)
+        .accessibilityLabel(isActive ? "\(source.label), active" : source.label)
     }
 }
 
@@ -138,14 +139,16 @@ private struct AddSourceView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("Typ", selection: $kind) {
+                Picker("Type", selection: $kind) {
                     Text("Album").tag(Kind.album)
-                    Text("Geteilter Link").tag(Kind.sharedLink)
+                    Text("Shared link").tag(Kind.sharedLink)
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("sources.add.type")
 
-                if let errorMessage = viewModel.errorMessage {
+                // Album-add errors surface here; the shared-link form reports its own
+                // resolve / password errors inline (210, US4).
+                if kind == .album, let errorMessage = viewModel.errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                         .accessibilityIdentifier("sources.add.error")
@@ -155,14 +158,18 @@ private struct AddSourceView: View {
                 case .album:
                     AddAlbumSection(viewModel: viewModel, makeServerAPI: makeServerAPI) { dismiss() }
                 case .sharedLink:
-                    AddSharedLinkSection(viewModel: viewModel) { dismiss() }
+                    SharedLinkAddForm(
+                        sourceLibrary: viewModel,
+                        idPrefix: "sources.add",
+                        submitIDSuffix: "submit"
+                    ) { dismiss() }
                 }
             }
-            .navigationTitle("Quelle hinzufügen")
+            .navigationTitle("Add source")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button("Cancel") { dismiss() }
                         .accessibilityIdentifier("sources.add.cancel")
                 }
             }
@@ -187,10 +194,10 @@ private struct AddAlbumSection: View {
             case .loading:
                 ProgressView()
             case .failed:
-                Label("Alben konnten nicht geladen werden", systemImage: "wifi.exclamationmark")
+                Label("Couldn't load albums", systemImage: "wifi.exclamationmark")
                     .foregroundStyle(.secondary)
             case .loaded where albums.isEmpty:
-                Label("Keine Alben", systemImage: "photo.on.rectangle")
+                Label("No albums", systemImage: "photo.on.rectangle")
                     .foregroundStyle(.secondary)
             case .loaded:
                 ForEach(albums, id: \.id) { album in
@@ -204,7 +211,7 @@ private struct AddAlbumSection: View {
                 }
             }
         } header: {
-            Text("Album wählen")
+            Text("Choose album")
         }
         .task {
             guard let api = await makeServerAPI() else { phase = .failed; return }
@@ -213,51 +220,6 @@ private struct AddAlbumSection: View {
                 phase = .loaded
             } catch {
                 phase = .failed
-            }
-        }
-    }
-}
-
-/// Shared-link form: URL + optional password + a label. Validates before saving.
-private struct AddSharedLinkSection: View {
-    @Bindable var viewModel: SourceLibraryViewModel
-    var onAdded: () -> Void
-
-    @State private var urlText = ""
-    @State private var passwordText = ""
-    @State private var labelText = ""
-
-    var body: some View {
-        Section {
-            TextField("https://host/s/slug", text: $urlText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
-                .accessibilityIdentifier("sources.add.url")
-            SecureField("Passwort (optional)", text: $passwordText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("sources.add.password")
-            TextField("Name", text: $labelText)
-                .accessibilityIdentifier("sources.add.label")
-        } header: {
-            Text("Geteilter Link")
-        } footer: {
-            if viewModel.isBusy {
-                ProgressView()
-            } else {
-                Button("Hinzufügen") {
-                    Task {
-                        await viewModel.addSharedLinkSource(
-                            urlString: urlText,
-                            password: passwordText,
-                            label: labelText
-                        )
-                        if viewModel.errorMessage == nil { onAdded() }
-                    }
-                }
-                .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || labelText.trimmingCharacters(in: .whitespaces).isEmpty)
-                .accessibilityIdentifier("sources.add.submit")
             }
         }
     }
@@ -276,7 +238,7 @@ private extension SourceKind {
         case .album:
             "Album"
         case let .sharedLink(baseURL, _):
-            baseURL.host ?? "Geteilter Link"
+            baseURL.host ?? "Shared link"
         }
     }
 }
