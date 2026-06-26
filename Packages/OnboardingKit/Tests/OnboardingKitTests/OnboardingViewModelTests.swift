@@ -22,6 +22,83 @@ import ImmichClient
     #expect(vm.step == .connection)
 }
 
+// Finding 3 (FR-210-26): every step after the choice screen can step back in-place, without
+// an app restart and without discarding entered configuration.
+@Test func backFromSharedLinkSetupReturnsToChoice() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .sharedLinkSetup
+
+    vm.back()
+
+    #expect(vm.step == .choice)
+}
+
+@Test func backFromConnectionReturnsToChoice() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .connection
+
+    vm.back()
+
+    #expect(vm.step == .choice)
+}
+
+@Test func backFromSourceReturnsToConnection() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .source
+
+    vm.back()
+
+    #expect(vm.step == .connection)
+}
+
+@Test func backFromConfirmReturnsToSource() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .confirm
+
+    vm.back()
+
+    #expect(vm.step == .source)
+}
+
+@Test func backFromChoiceIsNoOp() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.step = .choice
+
+    vm.back()
+
+    #expect(vm.step == .choice)
+}
+
+@Test func canGoBackIsFalseOnlyAtChoiceAndDone() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+
+    vm.step = .choice
+    #expect(vm.canGoBack == false)
+    vm.step = .done
+    #expect(vm.canGoBack == false)
+    vm.step = .sharedLinkSetup
+    #expect(vm.canGoBack == true)
+    vm.step = .connection
+    #expect(vm.canGoBack == true)
+    vm.step = .source
+    #expect(vm.canGoBack == true)
+    vm.step = .confirm
+    #expect(vm.canGoBack == true)
+}
+
+@Test func backPreservesEnteredConnectionInputs() {
+    let vm = makeVM(api: AlbumsAPI(result: .success([])))
+    vm.serverURLInput = "https://immich.example.test"
+    vm.apiKeyInput = "secret-key"
+    vm.step = .source
+
+    vm.back()
+
+    #expect(vm.step == .connection)
+    #expect(vm.serverURLInput == "https://immich.example.test")
+    #expect(vm.apiKeyInput == "secret-key")
+}
+
 @Test func finishFromSharedLinkOnlyPathCompletesWithoutAPIKeyOrConfig() {
     // The low-friction path: the resolve engine has already made a shared link the active
     // source. Finishing routes to the slideshow with no API key and no AppConfiguration.

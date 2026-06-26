@@ -144,6 +144,52 @@ by US1, US2, and US4.
 
 ---
 
+## Phase 9: Manual-Test Findings (2026-06-26)
+
+**Source**: live walkthrough against a real Immich 2.7.5 server. Three findings; F1 is a defect
+against existing FR-210-06/07, F2/F3 are encoded as FR-210-26/27/28 (spec updated 2026-06-26).
+
+**Orchestration note**: F1 (resolver) and F3's model logic (`back()`) are pure host logic →
+Codex-delegable; the picker extraction, Settings rewire, and the Back affordance are SwiftUI/onboarding
+wiring → keep-inline.
+
+### Finding 1 — false password prompt: `/share/<key>` resolved as a slug (FR-210-06/07)
+
+The segment after `/share/<X>` is the share **key**; the resolver always queries `?slug=<X>`, the
+server returns `401 "Invalid share key/slug"`, and `SharedLinkResolver` maps any 401 (no password) to
+`passwordRequired` — so a non-protected link wrongly prompts for a password.
+
+- [X] T040 [P] [F1] Red test: `SharedLinkResolver` resolves a `/share/<key>` identifier via `key=` → `.resolved` (no `passwordRequired`); an `"Invalid share key"`/`"Invalid share slug"` 401 maps to `invalidShareLink` (not `passwordRequired`); a `/s/<slug>` identifier resolves via the `slug=` fallback; a genuine password 401 still maps to `passwordRequired` (no password) / `wrongPassword` (with password), in `Packages/ImmichClient/Tests/ImmichClientTests/SharedLinkResolverTests.swift` — added 3 tests + a sequenced `MockTransport(sequence:)`; updated the resolution test to assert `key=` first. Confirmed RED (invalid-key 401 → `passwordRequired`).
+- [X] T041 [F1] Implement key-first / slug-fallback resolution + message-aware 401 classification in `Packages/ImmichClient/Sources/ImmichClient/SharedLinkResolver.swift` — key-first; an `"Invalid share key/slug"` 401 (or 404) → internal `IdentifierNotFound` → retry as `slug=`, then `invalidShareLink`; every other 401 → `passwordRequired`/`wrongPassword` (robust to the server's exact password wording). **41 ImmichClient + 106 OnboardingKit tests green.** Live-verified earlier: `?key=<key>` → 200 `"password":null`, `?slug=<key>` → 401 `"Invalid share key"`.
+
+### Finding 2 — one reusable album/source picker in onboarding and Settings (FR-210-27/28)
+
+Onboarding's `SourceStepView` already has the target design (Album/Shared-link tabs, search,
+internally-scrollable list, pinned confirm). Settings → Sources (`AddSourceView`/`AddAlbumSection`) is
+a divergent, unsearchable `Form` list that adds-and-dismisses on tap. Unify on one component;
+Settings uses select-then-confirm.
+
+- [ ] T042 [F2] Extract the onboarding searchable album picker (search field + internally-scrollable list + pinned select-then-confirm + no-results state) into a reusable component shared by both surfaces, e.g. `Immich Slideshow/Onboarding/AlbumPickerView.swift` (keep-inline, SwiftUI). Onboarding `SourceStepView` consumes it unchanged in behavior.
+- [ ] T043 [F2] Replace Settings → Sources `AddAlbumSection` with the reusable picker (Album tab: search + internal scroll + pinned confirm, select-then-confirm/multi-add); keep the Album/Shared-link tabs and the resolve-first shared-link form, in `Immich Slideshow/Slideshow/SourceLibraryView.swift` (keep-inline)
+- [ ] T044 [F2] XCUITest: Settings → Sources add — Album tab search narrows the list, the list scrolls internally while the confirm stays pinned, select-then-confirm commits the selected album(s); the unsearchable add-and-close path is gone. Update `Immich SlideshowUITests/SourceLibraryUITests.swift` (keep-inline)
+
+### Finding 3 — no back navigation in onboarding (FR-210-26)
+
+`OnboardingViewModel` has no generic `back()` and `OnboardingFlowView` swaps the `NavigationStack`
+root per step, so the shared-link / connection / source steps have no Back — the only way back to the
+choice screen is to kill the app.
+
+- [X] T045 [P] [F3] Red test: `OnboardingViewModel.back()` maps `.sharedLinkSetup` → `.choice`, `.connection` → `.choice`, `.source` → `.connection`, `.confirm` → `.source`; `.choice` is a no-op; `canGoBack` is false only on `.choice`/`.done`; entered config (serverURL/apiKey inputs, added sources) is preserved across back, in `Packages/OnboardingKit/Tests/OnboardingKitTests/OnboardingViewModelTests.swift` — 7 tests added.
+- [X] T046 [F3] Implement `back()` + `canGoBack` in `Packages/OnboardingKit/Sources/OnboardingKit/OnboardingViewModel.swift` — **113 OnboardingKit tests green.**
+- [X] T047 [F3] Add a leading Back toolbar affordance in `Immich Slideshow/Onboarding/OnboardingFlowView.swift`, shown when `viewModel.canGoBack`, calling `back()`, with accessibility id `onboarding.back` — built + visually confirmed on the shared-link step (chevron top-left).
+- [ ] T048 [F3] XCUITest: choice → shared-link setup → Back → choice; choice → server connection → Back → choice; no app restart, in `Immich SlideshowUITests/OnboardingBackUITests.swift` (keep-inline)
+
+**Checkpoint**: non-protected `/share/<key>` links resolve with no password prompt; the album picker
+is one searchable, subscrollable, pinned-confirm screen in both onboarding and Settings; every
+onboarding step after the choice has a working Back.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

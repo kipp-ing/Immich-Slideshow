@@ -49,6 +49,20 @@ struct OnboardingFlowView: View {
             }
             .navigationTitle("Setup")
             .navigationBarTitleDisplayMode(.inline)
+            // Steps swap the NavigationStack root (no push), so there is no system back button;
+            // provide our own Back to the previous step for every step after .choice (210, FR-210-26).
+            .toolbar {
+                if viewModel.canGoBack {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            viewModel.back()
+                        } label: {
+                            Label("Back", systemImage: "chevron.backward")
+                        }
+                        .accessibilityIdentifier("onboarding.back")
+                    }
+                }
+            }
         }
     }
 }

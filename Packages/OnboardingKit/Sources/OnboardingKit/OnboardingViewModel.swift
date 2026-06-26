@@ -58,6 +58,33 @@ public enum OnboardingPathChoice: Sendable, Equatable {
         }
     }
 
+    /// Whether the current step has a previous step to return to. False on the first step
+    /// (`.choice`) and once onboarding is `.done` (FR-210-26).
+    public var canGoBack: Bool {
+        switch step {
+        case .choice, .done: false
+        case .sharedLinkSetup, .connection, .source, .confirm: true
+        }
+    }
+
+    /// Step back to the immediately preceding onboarding screen in-place, without restarting
+    /// the app and without discarding entered configuration (FR-210-26). The shared-link and
+    /// server paths both fold back to the choice screen; the source/confirm steps fold back
+    /// toward connection. `.choice` (and `.done`) have nowhere to go.
+    public func back() {
+        errorMessage = nil
+        switch step {
+        case .sharedLinkSetup, .connection:
+            step = .choice
+        case .source:
+            step = .connection
+        case .confirm:
+            step = .source
+        case .choice, .done:
+            break
+        }
+    }
+
     public func submitConnection() async {
         guard !isBusy else { return }
         errorMessage = nil
