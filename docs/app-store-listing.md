@@ -83,8 +83,11 @@ automatically — don't waste keyword characters repeating them.
   (Immich creator) in direct channel contact, 2026-07-09. If App Review asks about trademark
   rights (guideline 5.2.1), reference that exchange. The public listing still carries the
   "independent app, not affiliated" line — that's the correct posture regardless.
-- **Rename follow-through** (before release): app display name, App Store Connect app name,
-  README title. The Xcode project/repo name can stay as-is; it's not user-visible.
+- **Rename follow-through** — done 2026-07-09: README title, ASC app name, and the display
+  name. The **home-screen name is "Photo Frame"** (not the full 22-char name), because iOS
+  truncates icon labels around ~13 characters — "Photo Frame f…" would look broken. The full
+  name lives in the App Store listing; the share-sheet extension and the HA device name also
+  say "Photo Frame". The Xcode project/repo name stays as-is; it's not user-visible.
 - **When 900 (photo-library source) ships**: subtitle becomes
   `Photo Frame for Immich & iCloud` (30/30 chars) and the description gets an Apple
   Photos/iCloud albums section.
