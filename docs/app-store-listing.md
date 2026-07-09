@@ -11,7 +11,7 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 
 ## Subtitle (30 chars max)
 
-    Slideshow for your own server
+    Slideshow for your own server or a shared album. Ultra simple setup.
 
 29/30 chars.
 
@@ -19,7 +19,7 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 
     Your photos on the wall: paste an Immich shared link and the slideshow
     starts. Share an album with your loved ones — when you update it, their
-    frame follows.
+    frame follows. Supports ios17, give your old iPad from 2017 a 2nd life.
 
 157/170 chars.
 
@@ -31,7 +31,7 @@ Photo Frame for Immich turns an iPad into a photo frame for your own Immich serv
 Whether you run your own Immich server or someone shared an album link with you: this app puts that album on the wall. It talks directly to the Immich server over its REST API. No data is collected — it's all yours.
 
 SET UP IN UNDER A MINUTE
-• Paste an Immich shared link and the slideshow starts. No API key, no login. If the link has a password, you're asked for it — that's it.
+• Paste an Immich shared link and the slideshow starts. If the link has a password, you're asked for it — that's it.
 • Or connect with your server URL and an API key to browse your albums in a searchable picker.
 • You can also share an Immich link straight into the app from Safari or another app.
 
@@ -50,7 +50,7 @@ HOME ASSISTANT, IF YOU WANT IT
 • Publishing the photo image itself to your broker is off by default — strictly opt-in.
 
 PRIVACY
-• The app talks only to the server you configure (and your MQTT broker, if you set one up). No analytics, no tracking, no third-party servers.
+• The app talks only to the server you configure (and your MQTT broker, if you set one up). 
 • API keys, shared-link passwords, and broker credentials are stored in the device keychain.
 • Open source (MIT): github.com/kipp-ing/Immich-Slideshow
 
@@ -81,7 +81,7 @@ automatically — don't waste keyword characters repeating them.
 ## Internal notes (not for the listing)
 
 - **Naming provenance**: the name pattern "Photo Frame for Immich" was accepted by Alex
-  (Immich creator) in direct channel contact, 2026-07-09. If App Review asks about trademark
+  (Immich creator) in direct channel contact, 2026-07-05. If App Review asks about trademark
   rights (guideline 5.2.1), reference that exchange. The public listing still carries the
   "independent app, not affiliated" line — that's the correct posture regardless.
 - **Rename follow-through** — done 2026-07-09: README title, ASC app name, and the display
