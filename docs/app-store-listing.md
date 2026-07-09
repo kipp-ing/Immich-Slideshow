@@ -18,7 +18,7 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 ## Promotional text (170 chars max, changeable without review)
 
     Your self-hosted photos on the wall: paste an Immich shared link and the
-    slideshow starts. No account, no extra server, no cloud.
+    slideshow starts. Share and update an album to your beloved ones with ease!
 
 ~128/170 chars.
 
@@ -27,7 +27,7 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 ```
 Photo Frame for Immich turns an iPad into a photo frame for your own Immich server.
 
-You already self-host your photos. This app puts them on the wall. It talks directly to your Immich server over its REST API — no middleware server to install, no third-party cloud, no account with us.
+If you self host or friend gave you a link: This app puts albums on the wall. It talks directly to your Immich server over its REST API. No data collected its all yours.
 
 SET UP IN UNDER A MINUTE
 • Paste an Immich shared link and the slideshow starts. No API key, no login. If the link has a password, you're asked for it — that's it.
