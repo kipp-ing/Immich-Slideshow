@@ -82,16 +82,17 @@ automatically — don't waste keyword characters repeating them.
 
 ## App Review notes (paste into ASC → App Review Information → Notes)
 
-Demo link still to be created (password-free shared link on the demo album); replace the
-placeholder before pasting. `demoAccountRequired` stays **false** — the shared link *is* the
-demo access and reviewers need no account.
+Demo link: **https://bilder.kippings.de/s/Iceland2021** — password-free ALBUM share
+("2021-06-Island best of", 38 images), expires 2027-07-11. Live-validated 2026-07-11 against
+the exact client paths in build 1.0 (3). `demoAccountRequired` stays **false** — the shared
+link *is* the demo access and reviewers need no account.
 
     This app is a slideshow client ("digital photo frame") for Immich, a popular
     open-source, self-hosted photo backup platform (https://immich.app). Reviewers
     do not need an Immich server or an account to test it: on the first onboarding
     screen choose "Shared link" and paste this demo link to a photo album:
 
-    [DEMO SHARED LINK — password-free]
+    https://bilder.kippings.de/s/Iceland2021
 
     The slideshow starts immediately. Settings (transitions, timing, Ken Burns,
     photo info overlay) are available from the gear button once the slideshow runs.
