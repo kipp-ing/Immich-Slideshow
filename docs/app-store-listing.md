@@ -80,6 +80,27 @@ automatically — don't waste keyword characters repeating them.
 - **Privacy nutrition label**: "Data Not Collected" (matches the privacy manifest — the app has
   no analytics and talks only to user-configured endpoints).
 
+## App Review notes (paste into ASC → App Review Information → Notes)
+
+Demo link still to be created (password-free shared link on the demo album); replace the
+placeholder before pasting. `demoAccountRequired` stays **false** — the shared link *is* the
+demo access and reviewers need no account.
+
+    This app is a slideshow client ("digital photo frame") for Immich, a popular
+    open-source, self-hosted photo backup platform (https://immich.app). Reviewers
+    do not need an Immich server or an account to test it: on the first onboarding
+    screen choose "Shared link" and paste this demo link to a photo album:
+
+    [DEMO SHARED LINK — password-free]
+
+    The slideshow starts immediately. Settings (transitions, timing, Ken Burns,
+    photo info overlay) are available from the gear button once the slideshow runs.
+
+    Naming: "Photo Frame for Immich" follows the "…for X" client-app convention;
+    the Immich project's creator personally accepted the app under this name for
+    the App Store (direct contact, July 2026). The app is an independent client
+    and states it is not affiliated with the Immich project.
+
 ## Internal notes (not for the listing)
 
 - **Naming provenance**: the name pattern "Photo Frame for Immich" was accepted by Alex
