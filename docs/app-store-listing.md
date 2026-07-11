@@ -19,9 +19,11 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 
     Your photos on the wall: paste an Immich shared link and the slideshow
     starts. Share an album with your loved ones — when you update it, their
-    frame follows. Supports ios17, give your old iPad from 2017 a 2nd life.
+    frame follows.
 
-157/170 chars.
+157/170 chars. This is the version live in ASC. A third sentence with the
+iOS 17 / old-iPad hook overflowed 170 (214) and was dropped; promo text is
+changeable without review, so a ≤170 variant can be re-added anytime.
 
 ## Description (4000 chars max)
 
