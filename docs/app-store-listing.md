@@ -54,7 +54,7 @@ HOME ASSISTANT, IF YOU WANT IT
 PRIVACY
 • The app talks only to the server you configure (and your MQTT broker, if you set one up). 
 • API keys, shared-link passwords, and broker credentials are stored in the device keychain.
-• Open source (MIT): github.com/kipp-ing/Immich-Slideshow
+• The source code is public (Fair Source; becomes MIT after two years): github.com/kipp-ing/Immich-Slideshow
 
 HONEST LIMITS
 • You need an Immich server reachable over HTTPS with a valid certificate — or a shared link from one. Self-signed certificates aren't supported yet.
