@@ -38,7 +38,7 @@ SET UP IN UNDER A MINUTE
 • You can also share an Immich link straight into the app from Safari or another app.
 
 THE SLIDESHOW
-• Full screen, one photo at a time, with cross-fades or other transitions and optional Ken Burns motion.
+• Full screen, one photo at a time, with cross-fades, dissolves, or slides — every transition is included.
 • Sequential or shuffle, per-photo duration, fit or fill, image quality — every option applies live, no restart.
 • Tap for controls: pause, previous/next, an album browser, and a photo info overlay (date and location).
 
@@ -47,9 +47,17 @@ MADE TO RUN ALL DAY
 • Runs on older iPads (iPadOS 17 and up) — a retired iPad makes a good frame.
 
 HOME ASSISTANT, IF YOU WANT IT
-• Optional MQTT (TLS) with Home Assistant discovery: play/pause, brightness, album selection, next/previous, every display setting, current-photo metadata, and diagnostics appear as entities.
+• Point the frame at your MQTT broker (TLS) and it appears in Home Assistant on its own, no unlock needed: what's playing, the current photo with its date and place, the photo count, and an availability sensor.
+• Publishing the photo image itself to your broker is off by default — strictly opt-in, and also included.
+• Driving the frame from Home Assistant is the Automation unlock: play/pause, brightness, album selection, next/previous, and every display setting as controllable entities — plus Siri Shortcuts and App Intents.
 • Through Home Assistant's HomeKit Bridge those controls also work from the Apple Home app and Siri.
-• Publishing the photo image itself to your broker is off by default — strictly opt-in.
+
+WHAT'S INCLUDED, WHAT'S AN UNLOCK
+• The frame is free and stays whole: every source (your own server, a shared link, or your Photos library), the full slideshow with all transitions, shuffle, timing, fit, quality, brightness, keep-awake, the album browser, the photo info overlay, and the Home Assistant telemetry above.
+• Pro adds the ambient touches: Ken Burns motion and the clock overlay.
+• Automation adds remote control: Home Assistant entities, Siri Shortcuts, and App Intents.
+• One-time purchases — no subscriptions, ever. Family Sharing is on, and one purchase covers iPad, iPhone, and Apple TV.
+• Where your money goes: the unlocks cover the project's running costs — developer account, AI tools, test hardware — and everything beyond that goes back to open-source projects that serve the community.
 
 PRIVACY
 • The app talks only to the server you configure (and your MQTT broker, if you set one up). 
@@ -59,11 +67,16 @@ PRIVACY
 HONEST LIMITS
 • You need an Immich server reachable over HTTPS with a valid certificate — or a shared link from one. Self-signed certificates aren't supported yet.
 • iOS doesn't let apps switch the display off; the app dims the screen instead. Keep-awake and brightness control work while the app is in the foreground — on a dedicated frame that's exactly where it lives.
+• On Apple TV the clock overlay isn't available yet; Ken Burns motion is.
 
 This is an independent app. It is not affiliated with or endorsed by Immich or FUTO.
 ```
 
-~2,300/4,000 chars.
+~3,450/4,000 chars. The "WHAT'S INCLUDED, WHAT'S AN UNLOCK" section and the reworked
+Home Assistant bullets landed with the 1100 purchase gate (2026-07-20) — before that the
+listing described Ken Burns and full HA control as if they were free, which the gated
+build would have made untrue. No price points here on purpose: pricing is set in ASC at
+submission (FR-1100-06).
 
 ## Keywords (100 chars max)
 
@@ -94,8 +107,19 @@ link *is* the demo access and reviewers need no account.
 
     https://bilder.kippings.de/s/Iceland2021
 
-    The slideshow starts immediately. Settings (transitions, timing, Ken Burns,
-    photo info overlay) are available from the gear button once the slideshow runs.
+    The slideshow starts immediately. Settings (transitions, timing, fit, quality,
+    brightness, photo info overlay) are available from the gear button once the
+    slideshow runs, and need no purchase.
+
+    In-app purchases: the app is free and fully usable without any purchase — every
+    photo source, the whole slideshow, and Home Assistant telemetry are included.
+    Two one-time unlocks add optional extras: "Pro" (Ken Burns motion and the clock
+    overlay) and "Automation" (controlling the frame from Home Assistant, plus Siri
+    Shortcuts and App Intents), with an optional bundle of both. There are no
+    subscriptions. The tip jar grants no features at all. Locked settings rows are
+    marked with a lock and open the unlock screen when tapped — the rest of the app
+    never shows purchase UI, so the demo link above exercises the full free
+    experience end to end.
 
     Naming: "Photo Frame for Immich" follows the "…for X" client-app convention;
     the Immich project's creator personally accepted the app under this name for
@@ -116,4 +140,11 @@ link *is* the demo access and reviewers need no account.
 - **When 900 (photo-library source) ships**: subtitle becomes
   `Photo Frame for Immich & iCloud` (30/30 chars) and the description gets an Apple
   Photos/iCloud albums section.
-- **What's New (v1.0)**: "Initial release." — no need to invent history.
+- **What's New**: "Initial release." — no need to invent history. Note the version this
+  ships under is **not** 1.0: approved build 1.0 (8) is deliberately never released, so the
+  gated build is the first version the public ever sees (FR-1100-17). It still is an initial
+  release from a user's point of view, so the copy stands; only the version number moves.
+- **IAP metadata in ASC**: the two unlocks and the bundle are non-consumable, the tips are
+  consumable, and all of them must have Family Sharing enabled (FR-1100-04). Review notes for
+  the IAPs themselves can point at the same demo link — no purchase is needed to reach the
+  unlock screens, only to complete a purchase.

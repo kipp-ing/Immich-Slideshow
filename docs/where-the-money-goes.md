@@ -1,0 +1,47 @@
+# Where your money goes
+
+> **English reference copy.** This is the canonical English text of the transparency
+> statement. The in-app version (see "Short in-app version" below) is the string to be
+> localized in a separate file; this document itself stays English-only.
+
+The paid unlocks in Photo Frame for Immich keep this project alive, and I want to be
+straight with you about where the money goes.
+
+**Costs first.** What comes in first covers what it actually costs me to build and ship
+this app:
+
+- the Apple Developer Program membership,
+- the AI tools I develop with,
+- the hardware I test on.
+
+**Everything above that goes back to the community.** Whatever is left after those costs,
+I give to open-source projects that make the self-hosted world better — the kind of
+projects this app is built on and around. Which projects receive it is my decision;
+giving the surplus back is my promise.
+
+**The free frame stays whole, forever.** You never have to pay to run a beautiful photo
+frame. Every photo source and the full core slideshow are free, and always will be. The
+paid unlocks are for the extras — and for keeping the lights on and paying it forward.
+
+---
+
+*The unlocks are one-time purchases that unlock features. This page is my personal
+commitment about what I do with the proceeds — not a donation, and not a contract.*
+
+## Short in-app version
+
+Condensed copy for the Unlocks settings section (the string to be localized separately):
+
+> The unlocks keep this project going. They cover my costs — Apple Developer Program, AI
+> tools, test hardware — and everything beyond that I give to open-source projects that
+> serve the community. The free frame stays whole, forever.
+
+## Notes (not user-facing)
+
+- **Framing is deliberate.** The purchase buys *features*; this statement is a personal
+  pledge about proceeds. Never present the IAP itself as a donation (App Store rules), and
+  never publish a fixed percentage or an audited promise — the wording keeps the
+  developer's discretion explicit ("my decision", "my promise") so it stays a values
+  statement, not an enforceable term.
+- **No "lifetime".** Per FR-1100-05 the sanctioned term is "one-time purchase".
+- **Statement only** — no transparency log of funded projects (decided 2026-07-20).
