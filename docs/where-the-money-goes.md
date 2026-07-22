@@ -4,7 +4,7 @@
 > statement. The in-app version (see "Short in-app version" below) is the string to be
 > localized in a separate file; this document itself stays English-only.
 
-The paid unlocks in Photo Frame for Immich keep this project alive, and I want to be
+The paid unlocks in OwnFrame keep this project alive, and I want to be
 straight with you about where the money goes.
 
 **Costs first.** What comes in first covers what it actually costs me to build and ship

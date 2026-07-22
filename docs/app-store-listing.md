@@ -1,13 +1,13 @@
-# App Store Listing — Photo Frame for Immich
+# App Store Listing — OwnFrame
 
 Copy-paste source for App Store Connect. Plain, factual tone on purpose — the audience is
 self-hosters; they distrust marketing language. Field limits noted per section.
 
 ## Name (30 chars max)
 
-    Photo Frame for Immich
+    OwnFrame
 
-22/30 chars.
+8/30 chars.
 
 ## Subtitle (30 chars max)
 
@@ -28,7 +28,7 @@ changeable without review, so a ≤170 variant can be re-added anytime.
 ## Description (4000 chars max)
 
 ```
-Photo Frame for Immich turns an iPad into a photo frame for your own Immich server.
+OwnFrame turns an iPad into a photo frame for your own Immich server.
 
 Whether you run your own Immich server or someone shared an album link with you: this app puts that album on the wall. It talks directly to the Immich server over its REST API. No data is collected — it's all yours.
 
@@ -62,7 +62,7 @@ WHAT'S INCLUDED, WHAT'S AN UNLOCK
 PRIVACY
 • The app talks only to the server you configure (and your MQTT broker, if you set one up). 
 • API keys, shared-link passwords, and broker credentials are stored in the device keychain.
-• The source code is public (Fair Source; becomes MIT after two years): github.com/kipp-ing/Immich-Slideshow
+• The source code is public (Fair Source; becomes MIT after two years): github.com/kipp-ing/OwnFrame
 
 HONEST LIMITS
 • You need an Immich server reachable over HTTPS with a valid certificate — or a shared link from one. Self-signed certificates aren't supported yet.
@@ -89,7 +89,7 @@ automatically — don't waste keyword characters repeating them.
 
 - **Primary category**: Photo & Video. **Secondary**: Lifestyle.
 - **Age rating**: 4+ (content comes from the user's own server).
-- **Support URL**: https://github.com/kipp-ing/Immich-Slideshow
+- **Support URL**: https://github.com/kipp-ing/OwnFrame
 - **Privacy nutrition label**: "Data Not Collected" (matches the privacy manifest — the app has
   no analytics and talks only to user-configured endpoints).
 
@@ -121,24 +121,27 @@ link *is* the demo access and reviewers need no account.
     never shows purchase UI, so the demo link above exercises the full free
     experience end to end.
 
-    Naming: "Photo Frame for Immich" follows the "…for X" client-app convention;
-    the Immich project's creator personally accepted the app under this name for
-    the App Store (direct contact, July 2026). The app is an independent client
-    and states it is not affiliated with the Immich project.
+    Naming: "OwnFrame" is a standalone brand name that contains no third-party
+    trademark. The app is an independent client and states it is not affiliated
+    with the Immich project.
 
 ## Internal notes (not for the listing)
 
-- **Naming provenance**: the name pattern "Photo Frame for Immich" was accepted by Alex
-  (Immich creator) in direct channel contact, 2026-07-05. If App Review asks about trademark
-  rights (guideline 5.2.1), reference that exchange. The public listing still carries the
-  "independent app, not affiliated" line — that's the correct posture regardless.
-- **Rename follow-through** — done 2026-07-09: README title, ASC app name, and the display
-  name. The **home-screen name is "Photo Frame"** (not the full 22-char name), because iOS
-  truncates icon labels around ~13 characters — "Photo Frame f…" would look broken. The full
-  name lives in the App Store listing; the share-sheet extension and the HA device name also
-  say "Photo Frame". The Xcode project/repo name stays as-is; it's not user-visible.
-- **When 900 (photo-library source) ships**: subtitle becomes
-  `Photo Frame for Immich & iCloud` (30/30 chars) and the description gets an Apple
+- **Naming provenance**: the app was previously named "Photo Frame for Immich", which Alex
+  (Immich creator) personally accepted in direct channel contact (2026-07-05). It was renamed
+  to **"OwnFrame"** on 2026-07-22 — a standalone brand with no third-party trademark, so the
+  guideline 5.2.1 (trademark) concern no longer applies. The public listing keeps the
+  "independent app, not affiliated" line regardless.
+- **Rename follow-through** — "OwnFrame" is the home-screen name, the share-sheet extension
+  name, and the default HA device name. At 8 characters it fits the icon label with no
+  truncation. The Xcode project, source folders, schemes, and the GitHub repo were also
+  renamed to OwnFrame (2026-07-22); the bundle IDs (`ing.kipp.Immich-Slideshow`) are
+  deliberately unchanged, so the App Store record, Keychain items, and app-group/entitlements
+  are preserved.
+  ⚠️ **ASC still carries the old name** — update the App Store Connect app name (and any
+  name-bearing subtitle) to "OwnFrame" before submission.
+- **When 900 (photo-library source) ships**: subtitle could become
+  `OwnFrame & iCloud` (17/30 chars) and the description gets an Apple
   Photos/iCloud albums section.
 - **What's New**: "Initial release." — no need to invent history. Note the version this
   ships under is **not** 1.0: approved build 1.0 (8) is deliberately never released, so the
