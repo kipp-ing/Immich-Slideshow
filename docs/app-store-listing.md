@@ -62,7 +62,7 @@ WHAT'S INCLUDED, WHAT'S AN UNLOCK
 PRIVACY
 • The app talks only to the server you configure (and your MQTT broker, if you set one up). 
 • API keys, shared-link passwords, and broker credentials are stored in the device keychain.
-• The source code is public (Fair Source; becomes MIT after two years): github.com/kipp-ing/Immich-Slideshow
+• The source code is public (Fair Source; becomes MIT after two years): github.com/kipp-ing/OwnFrame
 
 HONEST LIMITS
 • You need an Immich server reachable over HTTPS with a valid certificate — or a shared link from one. Self-signed certificates aren't supported yet.
@@ -89,7 +89,7 @@ automatically — don't waste keyword characters repeating them.
 
 - **Primary category**: Photo & Video. **Secondary**: Lifestyle.
 - **Age rating**: 4+ (content comes from the user's own server).
-- **Support URL**: https://github.com/kipp-ing/Immich-Slideshow
+- **Support URL**: https://github.com/kipp-ing/OwnFrame
 - **Privacy nutrition label**: "Data Not Collected" (matches the privacy manifest — the app has
   no analytics and talks only to user-configured endpoints).
 
