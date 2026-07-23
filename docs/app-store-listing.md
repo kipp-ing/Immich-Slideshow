@@ -49,15 +49,14 @@ MADE TO RUN ALL DAY
 HOME ASSISTANT, IF YOU WANT IT
 • Point the frame at your MQTT broker (TLS) and it appears in Home Assistant on its own, no unlock needed: what's playing, the current photo with its date and place, the photo count, and an availability sensor.
 • Publishing the photo image itself to your broker is off by default — strictly opt-in, and also included.
-• Driving the frame from Home Assistant is the Automation unlock: play/pause, brightness, album selection, next/previous, and every display setting as controllable entities — plus Siri Shortcuts and App Intents.
+• Driving the frame from Home Assistant is part of the Supporter Unlock: play/pause, brightness, album selection, next/previous, and every display setting as controllable entities — plus Siri Shortcuts and App Intents.
 • Through Home Assistant's HomeKit Bridge those controls also work from the Apple Home app and Siri.
 
-WHAT'S INCLUDED, WHAT'S AN UNLOCK
+WHAT'S INCLUDED, WHAT ONE UNLOCK ADDS
 • The frame is free and stays whole: every source (your own server, a shared link, or your Photos library), the full slideshow with all transitions, shuffle, timing, fit, quality, brightness, keep-awake, the album browser, the photo info overlay, and the Home Assistant telemetry above.
-• Pro adds the ambient touches: Ken Burns motion and the clock overlay.
-• Automation adds remote control: Home Assistant entities, Siri Shortcuts, and App Intents.
-• One-time purchases — no subscriptions, ever. Family Sharing is on, and one purchase covers iPad, iPhone, and Apple TV.
-• Where your money goes: the unlocks cover the project's running costs — developer account, AI tools, test hardware — and everything beyond that goes back to open-source projects that serve the community.
+• One optional Supporter Unlock adds everything else in a single one-time purchase: Ken Burns motion, the clock overlay, and full Home Assistant remote control — every controllable entity, Siri Shortcuts, and App Intents.
+• A one-time purchase — no subscriptions, ever. Family Sharing is on, and one purchase covers iPad, iPhone, and Apple TV.
+• Where your money goes: the Supporter Unlock covers the project's running costs — developer account, AI tools, test hardware — and everything beyond that goes back to open-source projects that serve the community.
 
 PRIVACY
 • The app talks only to the server you configure (and your MQTT broker, if you set one up). 
@@ -72,11 +71,12 @@ HONEST LIMITS
 This is an independent app. It is not affiliated with or endorsed by Immich or FUTO.
 ```
 
-~3,450/4,000 chars. The "WHAT'S INCLUDED, WHAT'S AN UNLOCK" section and the reworked
-Home Assistant bullets landed with the 1100 purchase gate (2026-07-20) — before that the
-listing described Ken Burns and full HA control as if they were free, which the gated
-build would have made untrue. No price points here on purpose: pricing is set in ASC at
-submission (FR-1100-06).
+~3,400/4,000 chars. The "WHAT'S INCLUDED…" section and the reworked Home Assistant
+bullets landed with the 1100 purchase gate (2026-07-20); on 2026-07-22 the two tiers
+(Pro + Automation) and the bundle were consolidated into a single **Supporter Unlock**,
+so this section now names one product, not three. Before the gate the listing described
+Ken Burns and full HA control as if they were free, which the gated build would have made
+untrue. No price points here on purpose: pricing is set in ASC at submission (FR-1100-06).
 
 ## Keywords (100 chars max)
 
@@ -113,13 +113,12 @@ link *is* the demo access and reviewers need no account.
 
     In-app purchases: the app is free and fully usable without any purchase — every
     photo source, the whole slideshow, and Home Assistant telemetry are included.
-    Two one-time unlocks add optional extras: "Pro" (Ken Burns motion and the clock
-    overlay) and "Automation" (controlling the frame from Home Assistant, plus Siri
-    Shortcuts and App Intents), with an optional bundle of both. There are no
-    subscriptions. The tip jar grants no features at all. Locked settings rows are
-    marked with a lock and open the unlock screen when tapped — the rest of the app
-    never shows purchase UI, so the demo link above exercises the full free
-    experience end to end.
+    A single one-time "Supporter Unlock" adds the optional extras: Ken Burns motion,
+    the clock overlay, and controlling the frame from Home Assistant (plus Siri
+    Shortcuts and App Intents). There are no subscriptions and no separate tiers. The
+    tip jar grants no features at all. Locked settings rows are marked with a lock and
+    open the unlock screen when tapped — the rest of the app never shows purchase UI,
+    so the demo link above exercises the full free experience end to end.
 
     Naming: "OwnFrame" is a standalone brand name that contains no third-party
     trademark. The app is an independent client and states it is not affiliated
@@ -147,7 +146,8 @@ link *is* the demo access and reviewers need no account.
   ships under is **not** 1.0: approved build 1.0 (8) is deliberately never released, so the
   gated build is the first version the public ever sees (FR-1100-17). It still is an initial
   release from a user's point of view, so the copy stands; only the version number moves.
-- **IAP metadata in ASC**: the two unlocks and the bundle are non-consumable, the tips are
-  consumable, and all of them must have Family Sharing enabled (FR-1100-04). Review notes for
-  the IAPs themselves can point at the same demo link — no purchase is needed to reach the
-  unlock screens, only to complete a purchase.
+- **IAP metadata in ASC**: the single **Supporter Unlock** is non-consumable and MUST have
+  Family Sharing enabled (FR-1100-06); the tips are consumable and not family-shared. (The
+  earlier plan of two unlocks + a bundle was consolidated to one product on 2026-07-22.) Review
+  notes for the IAP itself can point at the same demo link — no purchase is needed to reach the
+  unlock screen, only to complete a purchase.
