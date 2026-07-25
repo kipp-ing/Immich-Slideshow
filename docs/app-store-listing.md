@@ -3,6 +3,12 @@
 Copy-paste source for App Store Connect. Plain, factual tone on purpose — the audience is
 self-hosters; they distrust marketing language. Field limits noted per section.
 
+Two locales are configured in ASC: **en-US** (primary — the sections below) and **de-DE**
+(under "German listing"). Both were pushed to the iOS **1.1** version record on 2026-07-26;
+until then both carried the pre-rename English text. The push script lives in the session
+scratchpad, not the repo — the API recipe is the `appStoreVersionLocalizations` /
+`appInfoLocalizations` note in `docs/handover-release-prep.md`.
+
 ## Name (30 chars max)
 
     OwnFrame
@@ -22,7 +28,7 @@ link, and the Apple Photos / iCloud library that shipped with 900.
     starts. Share an album with your loved ones — when you update it, their
     frame follows.
 
-157/170 chars. This is the version live in ASC. A third sentence with the
+157/170 chars. In ASC on both 1.0 and 1.1. A third sentence with the
 iOS 17 / old-iPad hook overflowed 170 (214) and was dropped; promo text is
 changeable without review, so a ≤170 variant can be re-added anytime.
 
@@ -81,10 +87,97 @@ untrue. No price points here on purpose: pricing is set in ASC at submission (FR
 
 ## Keywords (100 chars max)
 
-    slideshow,self-hosted,digital,wall,display,home assistant,mqtt,album,kiosk,ambient,selfhosted
+    immich,server,slideshow,selfhosted,digital,wall,display,home assistant,mqtt,album,kiosk,ambient
 
-93/100 chars. Words already in the name/subtitle (photo, frame, immich, server) are indexed
-automatically — don't waste keyword characters repeating them.
+95/100 chars. Words in the name and subtitle are indexed automatically, so *photo*, *photos*
+and *frame* stay out. **`immich` and `server` are back in as of 2026-07-26**: they used to be
+covered by the old subtitle ("Slideshow for your own server"), and the source-neutral rewrite
+dropped both — an app whose whole point is Immich has to be findable under it. `self-hosted`
+came out to make room; the tokenizer splits it into *self* + *hosted* anyway and `selfhosted`
+covers the unhyphenated search.
+
+## German listing (de-DE)
+
+Pushed to ASC 2026-07-26 alongside the English fields. Written *for* German, not
+translated word-for-word, and the terminology matches what the app itself ships in the
+String Catalogs (topic 300): Diashow, Quelle, geteilter Link, Fotos-Mediathek,
+Supporter-Freischaltung, Uhr-Einblendung, Ken-Burns-Bewegung, Kurzbefehle. Informal
+*du*, same as the UI.
+
+### Subtitle (30 chars max)
+
+    Deine Fotos, dein Rahmen
+
+24/30 chars. Mirrors the English subtitle and stays source-neutral.
+
+### Promotional text (170 chars max)
+
+    Deine Fotos an der Wand: geteilten Immich-Link einfügen, und die Diashow
+    läuft. Teile ein Album mit deinen Liebsten — aktualisierst du es, folgt
+    ihr Rahmen von selbst.
+
+167/170 chars.
+
+### Description (4000 chars max)
+
+```
+OwnFrame macht aus einem iPad einen Bilderrahmen für deinen eigenen Immich-Server.
+
+Egal ob du selbst einen Immich-Server betreibst oder dir jemand einen Albumlink geschickt hat: Diese App bringt das Album an die Wand. Sie spricht direkt über die REST-API mit dem Immich-Server. Es werden keine Daten gesammelt — alles bleibt bei dir.
+
+IN UNTER EINER MINUTE EINGERICHTET
+• Geteilten Immich-Link einfügen, und die Diashow startet. Ist der Link passwortgeschützt, wirst du danach gefragt — das war's.
+• Oder verbinde dich mit Serveradresse und API-Schlüssel und wähle deine Alben in einer durchsuchbaren Liste.
+• Du kannst einen Immich-Link auch direkt aus Safari oder einer anderen App teilen.
+
+DIE DIASHOW
+• Bildschirmfüllend, ein Foto nach dem anderen, mit Überblenden, Auflösen oder Schieben — alle Übergänge sind enthalten.
+• Der Reihe nach oder gemischt, Anzeigedauer pro Foto, Einpassen oder Ausfüllen, Bildqualität — jede Einstellung wirkt sofort, ohne Neustart.
+• Tippen öffnet die Steuerung: Pause, vor und zurück, ein Albumbrowser und eine Foto-Info-Einblendung (Datum und Ort).
+
+FÜR DEN DAUERBETRIEB GEMACHT
+• Hält den Bildschirm wach und lässt die Helligkeit dimmen, damit der Rahmen im Raum nicht stört.
+• Läuft auf älteren iPads (ab iPadOS 17) — ein ausgemustertes iPad gibt einen guten Rahmen ab.
+
+HOME ASSISTANT, WENN DU MAGST
+• Verbinde den Rahmen mit deinem MQTT-Broker (TLS), und er erscheint von selbst in Home Assistant, ganz ohne Freischaltung: was gerade läuft, das aktuelle Foto mit Datum und Ort, die Fotoanzahl und ein Verfügbarkeitssensor.
+• Das Foto selbst an den Broker zu senden, ist standardmäßig aus — freiwillig und ebenfalls enthalten.
+• Den Rahmen aus Home Assistant heraus zu steuern, gehört zur Supporter-Freischaltung: Wiedergabe und Pause, Helligkeit, Albumauswahl, vor und zurück sowie jede Anzeigeeinstellung als steuerbare Entität — dazu Kurzbefehle und App-Intents.
+• Über die HomeKit-Bridge von Home Assistant funktionieren diese Steuerungen auch in Apples Home-App und mit Siri.
+
+WAS ENTHALTEN IST, WAS EINE FREISCHALTUNG ERGÄNZT
+• Der Rahmen ist kostenlos und bleibt vollständig: jede Quelle (dein eigener Server, ein geteilter Link oder deine Fotos-Mediathek), die komplette Diashow mit allen Übergängen, Mischen, Anzeigedauer, Einpassen, Qualität, Helligkeit, Bildschirm-wach-halten, der Albumbrowser, die Foto-Info-Einblendung und die genannte Home-Assistant-Telemetrie.
+• Eine optionale Supporter-Freischaltung ergänzt alles Weitere in einem einzigen einmaligen Kauf: Ken-Burns-Bewegung, die Uhr-Einblendung und die volle Home-Assistant-Steuerung — jede steuerbare Entität, Kurzbefehle und App-Intents.
+• Ein einmaliger Kauf — niemals ein Abo. Die Familienfreigabe ist aktiv, und ein Kauf gilt für iPad, iPhone und Apple TV.
+• Wohin dein Geld geht: Die Freischaltung deckt die laufenden Kosten des Projekts — Entwicklerkonto, KI-Werkzeuge, Testgeräte. Alles darüber hinaus fließt zurück an Open-Source-Projekte, die der Gemeinschaft dienen.
+
+DATENSCHUTZ
+• Die App spricht nur mit dem Server, den du einrichtest (und mit deinem MQTT-Broker, falls du einen einrichtest).
+• API-Schlüssel, Passwörter für geteilte Links und Broker-Zugangsdaten liegen im Schlüsselbund des Geräts.
+• Der Quellcode ist öffentlich (Fair Source; wird nach zwei Jahren MIT): github.com/kipp-ing/OwnFrame
+
+EHRLICHE GRENZEN
+• Du brauchst einen Immich-Server, der über HTTPS mit gültigem Zertifikat erreichbar ist — oder einen geteilten Link von einem solchen Server. Selbstsignierte Zertifikate werden noch nicht unterstützt.
+• iOS erlaubt keiner App, das Display abzuschalten; die App dimmt den Bildschirm stattdessen. Wach-halten und Helligkeit wirken, solange die App im Vordergrund läuft — auf einem fest installierten Rahmen ist sie genau dort.
+• Auf dem Apple TV gibt es die Uhr-Einblendung noch nicht; die Ken-Burns-Bewegung schon.
+
+Dies ist eine unabhängige App. Sie steht in keiner Verbindung zu Immich oder FUTO und wird von ihnen nicht unterstützt.
+```
+
+3,982/4,000 chars — tighter headroom than the English text, because German
+runs longer; trim here first if anything gets added.
+
+### Keywords (100 chars max)
+
+    immich,diashow,selfhosted,bilderrahmen,fotorahmen,server,wand,display,home assistant,mqtt,kiosk
+
+95/100 chars. German search does not split compounds, so *bilderrahmen* and
+*fotorahmen* have to be spelled out even though the subtitle carries "Fotos" and
+"Rahmen". `immich` and `server` are here for the same reason as in English.
+
+### What's New
+
+    Erste Veröffentlichung.
 
 ## Categories & misc
 
@@ -138,8 +231,10 @@ link *is* the demo access and reviewers need no account.
   renamed to OwnFrame (2026-07-22); the bundle IDs (`ing.kipp.Immich-Slideshow`) are
   deliberately unchanged, so the App Store record, Keychain items, and app-group/entitlements
   are preserved.
-  ⚠️ **ASC still carries the old name** — update the App Store Connect app name (and any
-  name-bearing subtitle) to "OwnFrame" before submission.
+  **Done in ASC (verified 2026-07-26)**: the app record name is "OwnFrame", and the descriptions
+  and subtitles on the 1.1 version no longer open with "Photo Frame for Immich" in either locale.
+  The 1.0 version record still carries the old text — deliberately left alone, since 1.0 is never
+  released (FR-1100-17).
 - **900 (photo-library source) has shipped** (merged 2026-07-18): the description already covers
   the Photos library, and the subtitle was made source-neutral on 2026-07-26 for the same reason.
 - **What's New**: "Initial release." — no need to invent history. Note the version this
