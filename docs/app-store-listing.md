@@ -11,9 +11,10 @@ self-hosters; they distrust marketing language. Field limits noted per section.
 
 ## Subtitle (30 chars max)
 
-    Slideshow for your own server or a shared album. Ultra simple setup.
+    Your photos, your own frame
 
-29/30 chars.
+27/30 chars. Source-neutral on purpose — it covers an Immich server, a shared
+link, and the Apple Photos / iCloud library that shipped with 900.
 
 ## Promotional text (170 chars max, changeable without review)
 
@@ -72,8 +73,8 @@ This is an independent app. It is not affiliated with or endorsed by Immich or F
 ```
 
 ~3,400/4,000 chars. The "WHAT'S INCLUDED…" section and the reworked Home Assistant
-bullets landed with the 1100 purchase gate (2026-07-20); on 2026-07-22 the two tiers
-(Pro + Automation) and the bundle were consolidated into a single **Supporter Unlock**,
+bullets landed with the 1100 purchase gate (2026-07-20); on 2026-07-23 (`76c9b78`) the two
+tiers (Pro + Automation) and the bundle were consolidated into a single **Supporter Unlock**,
 so this section now names one product, not three. Before the gate the listing described
 Ken Burns and full HA control as if they were free, which the gated build would have made
 untrue. No price points here on purpose: pricing is set in ASC at submission (FR-1100-06).
@@ -139,15 +140,14 @@ link *is* the demo access and reviewers need no account.
   are preserved.
   ⚠️ **ASC still carries the old name** — update the App Store Connect app name (and any
   name-bearing subtitle) to "OwnFrame" before submission.
-- **When 900 (photo-library source) ships**: subtitle could become
-  `OwnFrame & iCloud` (17/30 chars) and the description gets an Apple
-  Photos/iCloud albums section.
+- **900 (photo-library source) has shipped** (merged 2026-07-18): the description already covers
+  the Photos library, and the subtitle was made source-neutral on 2026-07-26 for the same reason.
 - **What's New**: "Initial release." — no need to invent history. Note the version this
   ships under is **not** 1.0: approved build 1.0 (8) is deliberately never released, so the
   gated build is the first version the public ever sees (FR-1100-17). It still is an initial
   release from a user's point of view, so the copy stands; only the version number moves.
 - **IAP metadata in ASC**: the single **Supporter Unlock** is non-consumable and MUST have
   Family Sharing enabled (FR-1100-06); the tips are consumable and not family-shared. (The
-  earlier plan of two unlocks + a bundle was consolidated to one product on 2026-07-22.) Review
+  earlier plan of two unlocks + a bundle was consolidated to one product on 2026-07-23.) Review
   notes for the IAP itself can point at the same demo link — no purchase is needed to reach the
   unlock screen, only to complete a purchase.

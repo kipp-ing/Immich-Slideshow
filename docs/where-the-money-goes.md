@@ -1,8 +1,10 @@
 # Where your money goes
 
 > **English reference copy.** This is the canonical English text of the transparency
-> statement. The in-app version (see "Short in-app version" below) is the string to be
-> localized in a separate file; this document itself stays English-only.
+> statement. The in-app version (see "Short in-app version" below) is already localized and
+> lives in the String Catalogs — `OwnFrame/Localizable.xcstrings` and
+> `OwnFrameTV/Localizable.xcstrings` (English + German since 2026-07-23); this document itself
+> stays English-only.
 
 The Supporter Unlock in OwnFrame keeps this project alive, and I want to be
 straight with you about where the money goes.
@@ -30,7 +32,11 @@ commitment about what I do with the proceeds — not a donation, and not a contr
 
 ## Short in-app version
 
-Condensed copy for the Unlocks settings section (the string to be localized separately):
+Condensed copy for the Unlocks settings section. It already ships localized: the shipped wording is
+its own String Catalog key (`"Where your money goes: the Supporter Unlock covers the project's
+running costs — …"`) in `OwnFrame/Localizable.xcstrings` and `OwnFrameTV/Localizable.xcstrings`,
+with a German translation since 2026-07-23. Edit the catalogs, not this file, to change what users
+read; the paragraph below is the reference the shipped string was condensed from:
 
 > The Supporter Unlock keeps this project going. It covers my costs — Apple Developer
 > Program, AI tools, test hardware — and everything beyond that I give to open-source
