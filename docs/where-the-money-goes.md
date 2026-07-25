@@ -4,7 +4,7 @@
 > statement. The in-app version (see "Short in-app version" below) is the string to be
 > localized in a separate file; this document itself stays English-only.
 
-The paid unlocks in OwnFrame keep this project alive, and I want to be
+The Supporter Unlock in OwnFrame keeps this project alive, and I want to be
 straight with you about where the money goes.
 
 **Costs first.** What comes in first covers what it actually costs me to build and ship
@@ -21,20 +21,20 @@ giving the surplus back is my promise.
 
 **The free frame stays whole, forever.** You never have to pay to run a beautiful photo
 frame. Every photo source and the full core slideshow are free, and always will be. The
-paid unlocks are for the extras — and for keeping the lights on and paying it forward.
+Supporter Unlock is for the extras — and for keeping the lights on and paying it forward.
 
 ---
 
-*The unlocks are one-time purchases that unlock features. This page is my personal
+*The Supporter Unlock is a one-time purchase that unlocks features. This page is my personal
 commitment about what I do with the proceeds — not a donation, and not a contract.*
 
 ## Short in-app version
 
 Condensed copy for the Unlocks settings section (the string to be localized separately):
 
-> The unlocks keep this project going. They cover my costs — Apple Developer Program, AI
-> tools, test hardware — and everything beyond that I give to open-source projects that
-> serve the community. The free frame stays whole, forever.
+> The Supporter Unlock keeps this project going. It covers my costs — Apple Developer
+> Program, AI tools, test hardware — and everything beyond that I give to open-source
+> projects that serve the community. The free frame stays whole, forever.
 
 ## Notes (not user-facing)
 
