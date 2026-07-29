@@ -179,6 +179,58 @@ runs longer; trim here first if anything gets added.
 
     Erste Veröffentlichung.
 
+## In-app purchase copy (ASC → Monetization → In-App Purchases)
+
+Copy-paste source for the four products' **display name** and **description**. These are store
+copy, reviewed together with the build, and were the only listing text not recorded here until
+2026-07-29. Product ids are `ing.kipp.ownframe.*` — no price points here, same rule as above.
+
+**Editing is frozen while a product sits in an open review submission.** ASC answers
+`409 The field (DESCRIPTION) can not be modified`. To change any of the text below: remove the
+product from the review draft → edit → add it back to the draft. Do this *before* submitting.
+
+### Supporter Unlock — `unlock.supporter` (non-consumable, Family Sharing ON)
+
+| | Name | Description |
+|---|---|---|
+| en-US | `Supporter Unlock` | `Ken Burns, clock overlay, Home Assistant.` |
+| de-DE | `Supporter-Freischaltung` | `Ken Burns, Uhr-Einblendung, Home Assistant.` |
+
+### Tips — `tip.small` / `tip.medium` / `tip.large` (consumable, Family Sharing OFF)
+
+**Target text** (2026-07-29 decision — the `Unlocks nothing.` / `Schaltet nichts frei.` tail comes
+out of small and medium):
+
+| | Name | Description |
+|---|---|---|
+| small en-US | `Small Tip` | `A small thank-you.` |
+| small de-DE | `Kleines Trinkgeld` | `Ein kleines Danke.` |
+| medium en-US | `Medium Tip` | `A bigger thank-you.` |
+| medium de-DE | `Mittleres Trinkgeld` | `Ein größeres Danke.` |
+| large en-US | `Large Tip` | `You mean it! Thank you!` |
+| large de-DE | `Großes Trinkgeld` | `Du meinst es ernst! Dankeschön!` |
+
+**Why the tail came out.** It said the same thing three times over, and the app already says it
+better and closer to the user: `TipJarView` carries "A tip unlocks nothing and is never
+required — everything you have keeps working exactly the same" and "Each tip is a one-time
+thank-you. No subscription, no recurring charge, and no features attached." The ASC description
+appears on the store product page, **not** in the app's purchase sheet, so removing it costs no
+clarity where it actually matters. FR-1100-08 is a statement about *behaviour* (a tip changes no
+entitlement), which is pinned by tests — not about this copy.
+
+**The large-tip German still needs a decision.** It currently reads
+`Ein riesiges Dankeschön! Dankeschön!` — "Dankeschön" twice, which looks like a copy-paste
+remnant. The table above proposes `Du meinst es ernst! Dankeschön!`, which mirrors the English
+two-beat rather than repeating a word. Shorter alternative if you prefer: `Ein riesiges
+Dankeschön!`
+
+### Still current in ASC as of 2026-07-29
+
+The unlock strings above are live. The four tip descriptions are **not yet changed** — small and
+medium still carry the `Unlocks nothing.` / `Schaltet nichts frei.` tail, and large still has the
+doubled `Dankeschön`. All four are frozen behind the open review draft; see the note at the top
+of this section.
+
 ## Categories & misc
 
 - **Primary category**: Photo & Video. **Secondary**: Lifestyle.
