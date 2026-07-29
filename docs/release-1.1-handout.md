@@ -229,6 +229,22 @@ FR-1100-17, and both must be deliberately undone:
 Correct order: **1.1 approved → click Release → then turn availability on.** That last step is
 the moment the app becomes public for the first time.
 
+**Why the order is not optional.** Availability is only a switch in front of whatever version is
+currently released. As long as v1.0 holds `READY_FOR_SALE`, opening any territory serves
+**build 8, ungated** — v1.1 cannot be served while it is still `PREPARE_FOR_SUBMISSION`. Once
+1.1 is released it supersedes v1.0, which then becomes a previous version and is no longer
+downloadable. There is no gap between release and availability-on, because the territories are
+still closed during it.
+
+**Submitting does not require an open territory** — an app that is removed from sale can still
+have a new version submitted, reviewed and approved
+([App Store Connect Help — manage availability](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store/)).
+So the FR-1100-17 guard can stay fully closed through the entire review.
+
+One residual back door is also shut: users who previously downloaded an app can normally
+re-download it from purchase history even after it is pulled. **v1.0 had zero downloads**, so
+nobody holds build 8 and nobody can retrieve it.
+
 **If EU trader status has not cleared by then**, enable the non-EU territories and add the 27 EU
 ones later, once Apple's verification completes. Do not hold the whole release for it unless you
 specifically want Germany in the first wave — which, given the de-DE listing, is a fair call to
