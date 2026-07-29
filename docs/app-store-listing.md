@@ -189,6 +189,17 @@ copy, reviewed together with the build, and were the only listing text not recor
 `409 The field (DESCRIPTION) can not be modified`. To change any of the text below: remove the
 product from the review draft → edit → add it back to the draft. Do this *before* submitting.
 
+> **API recipe** (the whole round-trip is scriptable — verified 2026-07-29):
+> a review-submission item for an in-app purchase does **not** hang off the purchase itself. The
+> relationship is **`inAppPurchaseVersion`** → type **`inAppPurchaseVersions`**, whose id comes
+> from `GET /v2/inAppPurchases/{id}/versions`. Both `inAppPurchase` and `inAppPurchaseV2` are
+> rejected with `ENTITY_ERROR.RELATIONSHIP.UNKNOWN`, which is a misleading dead end.
+> Item ids are base64url of `{submissionId}|{typeCode}|{refId}` — type `6` is an app version,
+> type `17` an in-app purchase version. So: `DELETE /v1/reviewSubmissionItems/{id}` →
+> `PATCH /v1/inAppPurchaseLocalizations/{id}` (`name`, `description`) →
+> `POST /v1/reviewSubmissionItems` with the `inAppPurchaseVersion` relationship.
+> Note `GET .../items?include=inAppPurchaseV2` also fails, so map items by decoding their ids.
+
 ### Supporter Unlock — `unlock.supporter` (non-consumable, Family Sharing ON)
 
 | | Name | Description |
@@ -198,17 +209,18 @@ product from the review draft → edit → add it back to the draft. Do this *be
 
 ### Tips — `tip.small` / `tip.medium` / `tip.large` (consumable, Family Sharing OFF)
 
-**Target text** (2026-07-29 decision — the `Unlocks nothing.` / `Schaltet nichts frei.` tail comes
-out of small and medium):
+**Live in ASC since 2026-07-29** — Jan's wording, entered via the API round-trip above and read
+back verified. The ladder escalates by tone rather than by size, and the German is written for
+German rather than mirrored:
 
 | | Name | Description |
 |---|---|---|
-| small en-US | `Small Tip` | `A small thank-you.` |
-| small de-DE | `Kleines Trinkgeld` | `Ein kleines Danke.` |
-| medium en-US | `Medium Tip` | `A bigger thank-you.` |
-| medium de-DE | `Mittleres Trinkgeld` | `Ein größeres Danke.` |
-| large en-US | `Large Tip` | `You mean it! Thank you!` |
-| large de-DE | `Großes Trinkgeld` | `Du meinst es ernst! Dankeschön!` |
+| small en-US | `Small Tip` | `You make my day. Thx!` |
+| small de-DE | `Kleines Trinkgeld` | `Einfach: Danke!` |
+| medium en-US | `Fine Tip` | `Thank you! Community projects will live on!` |
+| medium de-DE | `Schönes Trinkgeld` | `Danke Dir! Davon lebt das Projekt.` |
+| large en-US | `Unreasonable Tip` | `You mean it! Thank you!` |
+| large de-DE | `Feistes Trinkgeld` | `Ein riesiges Dankeschön! Dankeschön!` |
 
 **Why the tail came out.** It said the same thing three times over, and the app already says it
 better and closer to the user: `TipJarView` carries "A tip unlocks nothing and is never
@@ -218,18 +230,22 @@ appears on the store product page, **not** in the app's purchase sheet, so remov
 clarity where it actually matters. FR-1100-08 is a statement about *behaviour* (a tip changes no
 entitlement), which is pinned by tests — not about this copy.
 
-**The large-tip German still needs a decision.** It currently reads
-`Ein riesiges Dankeschön! Dankeschön!` — "Dankeschön" twice, which looks like a copy-paste
-remnant. The table above proposes `Du meinst es ernst! Dankeschön!`, which mirrors the English
-two-beat rather than repeating a word. Shorter alternative if you prefer: `Ein riesiges
-Dankeschön!`
+**The doubled `Dankeschön!` in the large tip is deliberate** — Jan's call, and it carries in
+German as emphasis. Do not "fix" it. The English row does not mirror it; the two locales are
+allowed to differ.
 
-### Still current in ASC as of 2026-07-29
+**No license claim in the tip copy.** An earlier draft read `So lebt open source!`, which was
+dropped: the project is **Fair Source** (FSL-1.1-MIT, MIT after two years), not OSI open source,
+and this listing's own description says so. The audience is self-hosters who care about exactly
+that distinction. `Community projects will live on!` / `Davon lebt das Projekt.` carry the same
+warmth without asserting a license the app does not ship under.
 
-The unlock strings above are live. The four tip descriptions are **not yet changed** — small and
-medium still carry the `Unlocks nothing.` / `Schaltet nichts frei.` tail, and large still has the
-doubled `Dankeschön`. All four are frozen behind the open review draft; see the note at the top
-of this section.
+### Verified state in ASC — 2026-07-29
+
+All six tip fields above were read back from ASC after writing and match this file exactly. All
+four products are `READY_TO_SUBMIT`; character counts are within the 30/45 limits, the tightest
+being the English medium description at **43/45**. The review draft holds **5 items** — app
+version 1.1 (build 9) plus all four purchases — and `submittedDate` is still `null`.
 
 ## Categories & misc
 
