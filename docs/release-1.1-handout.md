@@ -39,10 +39,16 @@ so start it today.**
 > the 1.1 version page, which is why looking for one there leads nowhere. Correct path:
 >
 > 1. Sidebar → **Monetization → In-App Purchases**
-> 2. Click the product → **Add for Review**
-> 3. Because it is the first of its type, ASC now asks for the **platform and app version** —
->    pick iOS / 1.1
-> 4. Repeat for the others, then **Submit for Review** with all items in one submission
+> 2. Click the product → **Add for Review** → repeat for all four. They collect in one draft.
+> 3. **Then add the app version to the same draft**, from the **1.1 Prepare for Submission**
+>    page → **Add for Review** (top right). This step is separate and easy to miss.
+> 4. The draft must show **5 items** (version + 4 IAPs) → **Submit for Review**
+>
+> **Observed 2026-07-29:** a draft holding only the four IAPs reports *"Dein erster In-App-Kauf
+> eines Verbrauchsartikels / nicht verbrauchbaren Artikels muss mit einer neuen App-Version
+> übermittelt werden"* and refuses to submit. Via the API that draft had **0 `appStoreVersion`
+> items** and `platform: None` — the version had simply never been added. Both errors clear as
+> soon as it is.
 >
 > **Both types need this.** The Supporter Unlock is *non-consumable*; the three tips are
 > *consumable*. Apple requires the first of **each type** to ride with a version, so all four
