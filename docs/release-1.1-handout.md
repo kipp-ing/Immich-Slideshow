@@ -28,21 +28,38 @@ so start it today.**
 | `releaseType` | **Changed `AFTER_APPROVAL` → `MANUAL`.** Approval can no longer auto-publish; a second, independent lock on top of the territory switch. |
 | Review submission | **Not yet created.** See the warning immediately below. |
 
-> ### ⚠️ Before hitting Submit — attach the four IAPs to the review submission
+> ### ⚠️ Submit the IAPs **from the IAP page**, not from the version page
 >
-> All four IAPs are `READY_TO_SUBMIT`, which means **eligible, not attached**. There is no open
-> review submission for 1.1 yet.
+> All four IAPs are `READY_TO_SUBMIT` — eligible, but not attached to any review submission, and
+> none exists for 1.1 yet. **First-time IAPs are reviewed only alongside an app version**: submit
+> the version alone and they are never reviewed, and 1.1 ships as a purchase-gated app with **no
+> purchasable products** — the Supporter Unlock unbuyable for everyone.
 >
-> **First-time IAPs are reviewed only if they are items in the same review submission as the
-> build.** Submit the version alone and they stay `READY_TO_SUBMIT`, are never reviewed, and 1.1
-> ships as a purchase-gated app with **no purchasable products** — the Supporter Unlock would be
-> unbuyable for every user.
+> **The association runs from the IAP, not from the version.** There is no "add IAP" control on
+> the 1.1 version page, which is why looking for one there leads nowhere. Correct path:
 >
-> On the 1.1 page, add the four IAPs to the version *before* "Add for Review", then confirm the
-> submission lists **five items**: build 9 + the four `ing.kipp.ownframe.*` products.
+> 1. Sidebar → **Monetization → In-App Purchases**
+> 2. Click the product → **Add for Review**
+> 3. Because it is the first of its type, ASC now asks for the **platform and app version** —
+>    pick iOS / 1.1
+> 4. Repeat for the others, then **Submit for Review** with all items in one submission
 >
-> With all 175 territories off, ASC may also object that no territory is selected. If it does,
-> that is the FR-1100-17 guard talking, not a metadata problem.
+> **Both types need this.** The Supporter Unlock is *non-consumable*; the three tips are
+> *consumable*. Apple requires the first of **each type** to ride with a version, so all four
+> must go with 1.1. After that, later products can be submitted on their own.
+>
+> Requires the **Account Holder, Admin or App Manager** role.
+>
+> The **Paid Applications agreement is already active** — ASC refuses to create in-app purchases
+> at all without it, and all four were created successfully on 2026-07-29. So that common blocker
+> is ruled out.
+>
+> With all 175 territories off, ASC may still object that no territory is selected. If it does,
+> that is the FR-1100-17 guard talking, not a metadata fault.
+>
+> **Pricing** lives on the same product page (Monetization → In-App Purchases → product →
+> *Pricing*), with a base territory and automatic conversion elsewhere. All four already carry a
+> price, set 2026-07-29. Deliberately not repeated here — no price points in this repo.
 
 ---
 
