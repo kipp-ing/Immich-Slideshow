@@ -18,7 +18,35 @@ so start it today.**
 
 ---
 
-## 1. START NOW — EU trader status (multi-day, blocks Germany)
+## STATUS — updated 2026-07-29 (Jan)
+
+| Item | State |
+|---|---|
+| v1.0 downloads in the 07-15 → 07-22 window | **Zero.** "Initial release." is honest; never-claw-back binds to nobody. Section 2 closed. |
+| EU trader status | **In progress with Apple.** Section 1 still open — EU cannot be sold until it clears. |
+| Build 9 attached to the 1.1 record | **Done** — verified via the ASC API. |
+| `releaseType` | **Changed `AFTER_APPROVAL` → `MANUAL`.** Approval can no longer auto-publish; a second, independent lock on top of the territory switch. |
+| Review submission | **Not yet created.** See the warning immediately below. |
+
+> ### ⚠️ Before hitting Submit — attach the four IAPs to the review submission
+>
+> All four IAPs are `READY_TO_SUBMIT`, which means **eligible, not attached**. There is no open
+> review submission for 1.1 yet.
+>
+> **First-time IAPs are reviewed only if they are items in the same review submission as the
+> build.** Submit the version alone and they stay `READY_TO_SUBMIT`, are never reviewed, and 1.1
+> ships as a purchase-gated app with **no purchasable products** — the Supporter Unlock would be
+> unbuyable for every user.
+>
+> On the 1.1 page, add the four IAPs to the version *before* "Add for Review", then confirm the
+> submission lists **five items**: build 9 + the four `ing.kipp.ownframe.*` products.
+>
+> With all 175 territories off, ASC may also object that no territory is selected. If it does,
+> that is the FR-1100-17 guard talking, not a metadata problem.
+
+---
+
+## 1. IN PROGRESS — EU trader status (multi-day, blocks Germany)
 
 **This is the long pole. Nothing else here takes calendar time; this does.**
 
@@ -38,32 +66,25 @@ Act).
 
 ---
 
-## 2. Check whether anyone already downloaded v1.0 (10 minutes, changes what you write)
+## 2. ~~Check whether anyone already downloaded v1.0~~ — CLOSED 2026-07-29
 
-v1.0 was approved **2026-07-14** with `releaseType: AFTER_APPROVAL`, and all 175 territories
-were switched off effective **2026-07-22**. That leaves a **~7-day window (07-15 → 07-22)
-where the ungated build may have been publicly downloadable.**
+**Zero downloads** in the 07-15 → 07-22 window (checked in App Analytics). The ungated v1.0
+build 8 reached nobody.
 
-- **Where:** ASC → **App Analytics** → Downloads, date range 2026-07-14 → 2026-07-23.
-- **If the count is zero:** nothing changes. "Initial release." in What's New is honest.
-- **If anyone installed:** two consequences —
-  1. **Never-claw-back (FR-1100-13) binds for those users** — they have an ungated build and
-     must not lose anything they already had.
-  2. **"Initial release." / "Erste Veröffentlichung." is factually wrong** and should be
-     reworded before submission.
-
-This is cheap to check and it determines whether item 5 below needs an extra upgrade-path pass.
+Consequences, both favourable:
+- **"Initial release." / "Erste Veröffentlichung." is honest** — no rewording needed.
+- **Never-claw-back (FR-1100-13) binds to no existing user**, so section 5's upgrade-path pass
+  is only about *Jan's own* frames, not about strangers holding an ungated build.
 
 ---
 
-## 3. Attach build 9 to the 1.1 version record (2 minutes)
+## 3. ~~Attach build 9 to the 1.1 version record~~ — CLOSED 2026-07-29
 
-Build 9 is uploaded and `VALID`, but the **1.1 version record has no build attached**. The
-submission cannot proceed without it.
+Build 9 is attached, verified via the ASC API.
 
-- **Where:** ASC → the app → **1.1 Prepare for Submission** → *Build* → select build 9.
-- While you are there, attach the **four in-app purchases to the submission** — first-time IAPs
-  are reviewed together with the build, and they will not be reviewed if left off.
+**The IAP half of this item is still open** — see the warning in the STATUS block above. Being
+`READY_TO_SUBMIT` is not the same as being attached to the review submission, and getting it
+wrong ships an unbuyable purchase gate.
 
 ---
 
@@ -171,14 +192,24 @@ missed: **Developer → Enable UI Automation**, and **Auto-Lock → Never**.
 
 ---
 
-## 8. LAST ACTION — flip availability on
+## 8. LAST ACTION — release, then flip availability on
 
-**Do not do this until 1.1 is approved.** All 175 territories are currently `available: false`,
-and that switch is the *only* thing keeping the ungated v1.0 build 8 off the store. Turning
-availability on before 1.1 ships would **publish the ungated build instantly** and break
-FR-1100-17.
+**Do not do either until 1.1 is approved.** There are now **two independent locks** holding
+FR-1100-17, and both must be deliberately undone:
 
-Order: 1.1 approved → then availability on → then the app is public for the first time.
+1. **`releaseType: MANUAL`** (changed 2026-07-29) — approval no longer auto-publishes anything.
+   You must click *Release this version*.
+2. **All 175 territories `available: false`** — the switch that has kept the ungated v1.0 build 8
+   off the store since 07-22. Turning this on *before* 1.1 ships would publish the **ungated**
+   build instantly.
+
+Correct order: **1.1 approved → click Release → then turn availability on.** That last step is
+the moment the app becomes public for the first time.
+
+**If EU trader status has not cleared by then**, enable the non-EU territories and add the 27 EU
+ones later, once Apple's verification completes. Do not hold the whole release for it unless you
+specifically want Germany in the first wave — which, given the de-DE listing, is a fair call to
+make deliberately rather than by accident.
 
 ---
 
