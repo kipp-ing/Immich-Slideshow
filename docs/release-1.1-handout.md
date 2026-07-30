@@ -18,6 +18,20 @@ so start it today.**
 
 ---
 
+## ✅ SUBMITTED — 2026-07-29, 19:54:26 UTC
+
+Review submission `3dfe0464-…` is `WAITING_FOR_REVIEW`, platform IOS, carrying **all five items
+together**: app version 1.1 (build 9), the Supporter Unlock, and the three tips. The first-IAP
+trap is therefore closed — the purchases are reviewed alongside the build, not left behind.
+
+**Both FR-1100-17 locks verified still engaged at submission time:** `releaseType: MANUAL`
+(approval publishes nothing by itself) and **0 of 175 territories available**.
+
+What remains, in order: wait for review → **click Release this version** → **then** open
+territories (section 8). EU territories need trader status, still in progress with Apple.
+
+---
+
 ## STATUS — updated 2026-07-29 (Jan)
 
 | Item | State |
@@ -120,12 +134,27 @@ products**, which is exactly where product-id drift and Family Sharing flags bit
 
 You need: a sandbox tester account, a second device, and a family-member account.
 
+> ### Sandbox sign-in recipe (confirmed 2026-07-30)
+>
+> A dev-signed build purchases against the **sandbox**, and the purchase sheet's Apple-ID
+> prompt **loops forever if fed a real Apple Account** — that repeated login screen is the
+> expected symptom, not an app bug. Working recipe:
+>
+> 1. ASC → **Users and Access → Sandbox → Testers** → create a tester
+>    (`test@kipp.ing` exists since 2026-07-30; must not be an existing Apple ID).
+> 2. On the device: **Settings → Developer → Sandbox Apple Account** (older iOS: bottom of
+>    Settings → App Store) → sign the tester in **there**, never into the real App Store.
+> 3. Retry in-app; the sheet shows **[Environment: Sandbox]** and charges nothing. A fresh
+>    tester may throw one "has not yet been used…" terms prompt — accept, retry once.
+
 **Core purchase flow**
-- [ ] **Products load at all.** If this fails, it is id drift — the ids changed to
-      `ing.kipp.ownframe.*` (ASC rejects hyphens, and the bundle id has one). This is the
-      single most likely failure and the cheapest to spot.
+- [x] **Products load at all.** ~~If this fails, it is id drift — the ids changed to
+      `ing.kipp.ownframe.*` (ASC rejects hyphens, and the bundle id has one).~~
+      **Proven 2026-07-30:** the Supporter Unlock was purchased successfully on the iPhone via
+      the sandbox tester, so the real ASC products resolve — id drift is ruled out.
 - [ ] Buy the **Supporter Unlock** for real → gated features activate **without a relaunch**
-      (SC-1100-03).
+      (SC-1100-03). *The purchase itself succeeded and unlocked on the iPhone (2026-07-30);
+      still to observe deliberately: activation with the app kept open the whole time.*
 - [ ] Buy a **tip** → thank-you state, and **no entitlement change whatsoever** (FR-1100-08).
 - [ ] **Cancel mid-flow** → back to the offer, no charge, no nagging follow-up.
 - [ ] **Ask-to-Buy** with a child account → pending; approve later → entitlement arrives over
